@@ -32,7 +32,9 @@ import {
   MessageOutlined, HistoryOutlined, PaperClipOutlined,
   BookOutlined
 } from '@ant-design/icons';
-import { successAlert, errorAlert, toastAlert } from '../../../../utils/alerts';
+import { successAlert, errorAlert, warningAlert, confirmAlert, toastAlert } from '../../../../utils/alerts';
+import { getPublishReadiness, publishDocumentGroup } from '../../../../api/documents';
+import { getStageBadgeText } from './components/TemplateOverviewTab';
 import AttachmentsTab from './components/AttachmentsTab';
 import ReferencesTab from './components/ReferencesTab';
 import TemplateImpactTab from './components/TemplateImpactTab';
@@ -268,6 +270,7 @@ const DocumentPreview = ({
   };
 
   const handleSubmitWorkflow = async (status) => {
+    const documentId = parsedTemplate?.document_id || parsedTemplate?.id;
     // Save current content first
     await manualSaveContent();
 
@@ -281,6 +284,88 @@ const DocumentPreview = ({
     }
 
     if (status === 'published') {
+      try {
+        const readiness = await getPublishReadiness(documentId);
+        if (readiness && readiness.canPublish === false && Array.isArray(readiness.blockedBy) && readiness.blockedBy.length > 0) {
+          const blockedItemsHtml = readiness.blockedBy
+            .map(
+              (b) =>
+                `<li style="margin-bottom: 8px;"><strong>"${b.title || 'Untitled'}"</strong> is currently in <span style="font-weight: 600; color: #2563eb;">${getStageBadgeText(b.status)}</span></li>`
+            )
+            .join('');
+
+          await warningAlert(
+            'Cannot Publish Document',
+            '',
+            {
+              html: `
+                <div style="text-align: left; font-size: 14px; color: #334155; line-height: 1.6;">
+                  <p style="margin-bottom: 12px;">This document cannot be published individually because it is linked to related document(s) that are still in progress:</p>
+                  <ul style="margin: 0 0 14px 18px; padding: 0; list-style-type: disc;">
+                    ${blockedItemsHtml}
+                  </ul>
+                  <p style="margin: 0; color: #64748b; font-size: 13px;">
+                    All related documents must complete review and approval before they can be published together.
+                  </p>
+                </div>
+              `,
+              confirmButtonText: 'Understood',
+              confirmButtonColor: '#2563eb',
+            }
+          );
+          return false;
+        }
+
+        if (readiness && readiness.groupSize > 1 && Array.isArray(readiness.groupDetails)) {
+          const groupListHtml = readiness.groupDetails
+            .map(
+              (d) =>
+                `<li style="margin-bottom: 6px;"><strong>"${d.title || 'Untitled'}"</strong> (<span style="color: #16a34a; font-weight: 600;">Approved</span>)</li>`
+            )
+            .join('');
+
+          const confirmResult = await confirmAlert(
+            'Publish Related Documents',
+            '',
+            `Publish All (${readiness.groupSize})`,
+            'Cancel',
+            {
+              html: `
+                <div style="text-align: left; font-size: 14px; color: #334155; line-height: 1.6;">
+                  <p style="margin-bottom: 10px;">All <strong>${readiness.groupSize}</strong> documents in this related group have completed approval:</p>
+                  <ul style="margin: 0 0 14px 18px; padding: 0; list-style-type: disc;">
+                    ${groupListHtml}
+                  </ul>
+                  <p style="margin: 0; font-size: 13px; color: #0284c7; font-weight: 500;">
+                    Publishing will atomically publish all ${readiness.groupSize} documents together.
+                  </p>
+                </div>
+              `,
+              confirmButtonColor: '#2563eb',
+            }
+          );
+
+          if (confirmResult.isConfirmed) {
+            try {
+              const docIds = readiness.groupDetails.map((d) => d.document_id);
+              await publishDocumentGroup(docIds);
+              setParsedTemplate((prev) => ({
+                ...prev,
+                status: 'published',
+              }));
+              await successAlert('Published', `Successfully published ${docIds.length} related document(s).`);
+              return true;
+            } catch (pubErr) {
+              errorAlert('Publish Failed', pubErr?.response?.data?.message || 'Failed to publish document group.');
+              return false;
+            }
+          }
+          return false;
+        }
+      } catch (readinessErr) {
+        console.warn('[DocumentPreview] Publish readiness notice:', readinessErr);
+      }
+
       const ok = await persistDocumentWorkflow('published');
       if (ok) {
         await successAlert('Document Published', 'The document has been published successfully.');

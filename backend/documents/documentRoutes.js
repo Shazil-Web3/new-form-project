@@ -1230,11 +1230,17 @@ app.put('/api/update_document/:documentId', authenticateToken, async (req, res) 
       // Use a direct query here to keep things self-contained.
       try {
         const [relRows] = await pool.execute(
-          `SELECT dr.related_document_id, d.title, d.status
+          `SELECT
+             CASE WHEN dr.document_id = ? THEN dr.related_document_id ELSE dr.document_id END AS related_id,
+             d.title,
+             d.status
            FROM document_related dr
-           JOIN documents d ON dr.related_document_id = d.document_id
-           WHERE dr.document_id = ? AND dr.is_sync_required = 1`,
-          [documentId]
+           JOIN documents d ON (
+             CASE WHEN dr.document_id = ? THEN dr.related_document_id ELSE dr.document_id END = d.document_id
+           )
+           WHERE (dr.document_id = ? OR dr.related_document_id = ?)
+             AND dr.is_sync_required = 1`,
+          [documentId, documentId, documentId, documentId]
         );
         const blocked = relRows.filter(r => r.status !== 'published' && r.status !== 'revised');
         if (blocked.length > 0) {

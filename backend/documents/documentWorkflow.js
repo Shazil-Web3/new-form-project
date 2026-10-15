@@ -9,11 +9,17 @@ const { assertUserDocumentAccess, resetWorkflowState, retireParentDocumentsToArc
 async function checkRelatedDocumentsPublishGate(pool, documentId) {
   try {
     const [relRows] = await pool.execute(
-      `SELECT dr.related_document_id, d.title, d.status
+      `SELECT
+         CASE WHEN dr.document_id = ? THEN dr.related_document_id ELSE dr.document_id END AS related_id,
+         d.title,
+         d.status
        FROM document_related dr
-       JOIN documents d ON dr.related_document_id = d.document_id
-       WHERE dr.document_id = ? AND dr.is_sync_required = 1`,
-      [documentId]
+       JOIN documents d ON (
+         CASE WHEN dr.document_id = ? THEN dr.related_document_id ELSE dr.document_id END = d.document_id
+       )
+       WHERE (dr.document_id = ? OR dr.related_document_id = ?)
+         AND dr.is_sync_required = 1`,
+      [documentId, documentId, documentId, documentId]
     );
     const blockedBy = relRows.filter(r => r.status !== 'published' && r.status !== 'revised');
     if (blockedBy.length === 0) return null;

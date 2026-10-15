@@ -7,14 +7,15 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { successAlert, errorAlert, confirmAlert, inputAlert, toastAlert } from '../../utils/alerts';
-import { getMyDocs, getAllDocs, updateStatusSimple, reviewDocument, approveDocument, rejectDocument, togglePinDocument, updateDocumentProgress, removeDocument } from '../../api/documents';
+import { successAlert, errorAlert, confirmAlert, warningAlert, inputAlert, toastAlert } from '../../utils/alerts';
+import { getMyDocs, getAllDocs, updateStatusSimple, getPublishReadiness, publishDocumentGroup, reviewDocument, approveDocument, rejectDocument, togglePinDocument, updateDocumentProgress, removeDocument } from '../../api/documents';
 import { listTemplates, updateTemplateStatus, removeTemplate, listCategories, reviewTemplate, approveTemplate, rejectTemplate, togglePinTemplate, updateTemplateProgress } from '../../api/templates';
 
 import apiClient from '../../api/apiClient';
 import { listDepartments } from '../../api/users';
 import { checkInboundReferences } from '../../api/references';
 import { getDisplayCategory, getApproversForTemplate, getApproversForDoc, computeItemDetailsAndFilter } from '../../pages/new/Hub/utils/dashboardUtils';
+import { getStageBadgeText } from '../../components/Unified/UnifiedTextEditor/Preview/components/TemplateOverviewTab';
 
 export default function useDashboardState(initialType, user, initialActiveTab) {
   const navigate = useNavigate();
@@ -357,7 +358,93 @@ export default function useDashboardState(initialType, user, initialActiveTab) {
       }
     }
     else if (action === 'submit') await updateStatus(targetId, isTemplate, 'Submit', 'pending_review');
-    else if (action === 'publish') await updateStatus(targetId, isTemplate, 'Publish', 'published');
+    else if (action === 'publish') {
+      if (isTemplate) {
+        await updateStatus(targetId, true, 'Publish', 'published');
+        return;
+      }
+
+      // Check publish readiness for document and its related group
+      try {
+        const readiness = await getPublishReadiness(targetId);
+        if (readiness && readiness.canPublish === false && Array.isArray(readiness.blockedBy) && readiness.blockedBy.length > 0) {
+          const blockedItemsHtml = readiness.blockedBy
+            .map(
+              (b) =>
+                `<li style="margin-bottom: 8px;"><strong>"${b.title || 'Untitled'}"</strong> is currently in <span style="font-weight: 600; color: #2563eb;">${getStageBadgeText(b.status)}</span></li>`
+            )
+            .join('');
+
+          await warningAlert(
+            'Cannot Publish Document',
+            '',
+            {
+              html: `
+                <div style="text-align: left; font-size: 14px; color: #334155; line-height: 1.6;">
+                  <p style="margin-bottom: 12px;">This document cannot be published individually because it is linked to related document(s) that are still in progress:</p>
+                  <ul style="margin: 0 0 14px 18px; padding: 0; list-style-type: disc;">
+                    ${blockedItemsHtml}
+                  </ul>
+                  <p style="margin: 0; color: #64748b; font-size: 13px;">
+                    All related documents must complete review and approval before they can be published together.
+                  </p>
+                </div>
+              `,
+              confirmButtonText: 'Understood',
+              confirmButtonColor: '#2563eb',
+            }
+          );
+          return;
+        }
+
+        // If part of an approved related group (groupSize > 1 and all approved)
+        if (readiness && readiness.groupSize > 1 && Array.isArray(readiness.groupDetails)) {
+          const groupListHtml = readiness.groupDetails
+            .map(
+              (d) =>
+                `<li style="margin-bottom: 6px;"><strong>"${d.title || 'Untitled'}"</strong> (<span style="color: #16a34a; font-weight: 600;">Approved</span>)</li>`
+            )
+            .join('');
+
+          const confirmResult = await confirmAlert(
+            'Publish Related Documents',
+            '',
+            `Publish All (${readiness.groupSize})`,
+            'Cancel',
+            {
+              html: `
+                <div style="text-align: left; font-size: 14px; color: #334155; line-height: 1.6;">
+                  <p style="margin-bottom: 10px;">All <strong>${readiness.groupSize}</strong> documents in this related group have completed approval:</p>
+                  <ul style="margin: 0 0 14px 18px; padding: 0; list-style-type: disc;">
+                    ${groupListHtml}
+                  </ul>
+                  <p style="margin: 0; font-size: 13px; color: #0284c7; font-weight: 500;">
+                    Publishing will atomically publish all ${readiness.groupSize} documents together.
+                  </p>
+                </div>
+              `,
+              confirmButtonColor: '#2563eb',
+            }
+          );
+
+          if (confirmResult.isConfirmed) {
+            try {
+              const docIds = readiness.groupDetails.map((d) => d.document_id);
+              await publishDocumentGroup(docIds);
+              successAlert('Published', `Successfully published ${docIds.length} related document(s).`);
+              fetchData();
+            } catch (pubErr) {
+              errorAlert('Publish Failed', pubErr?.response?.data?.message || 'Failed to publish document group.');
+            }
+          }
+          return;
+        }
+      } catch (readinessErr) {
+        console.warn('[useDashboardState] Publish readiness notice:', readinessErr);
+      }
+
+      await updateStatus(targetId, false, 'Publish', 'published');
+    }
     else if (action === 'archive') {
       const s = (item?.status || '').toLowerCase();
       const targetTitle = item?.name || item?.title || 'this item';
