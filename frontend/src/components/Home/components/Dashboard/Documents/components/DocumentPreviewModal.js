@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Modal, Button, Tabs, Spin, Descriptions, Tag, Typography, Card, Alert, Table, Divider } from 'antd';
 import { 
   FileTextOutlined, 
@@ -29,7 +29,7 @@ const DocumentPreviewModal = ({
   const [renderedContent, setRenderedContent] = useState(null);
 
   // Robust parsing of document content
-  const parsedDocument = React.useMemo(() => {
+  const parsedDocument = useMemo(() => {
     if (!document) return null;
     
     let content = document.content || '';

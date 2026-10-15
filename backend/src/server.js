@@ -33,7 +33,7 @@ const { runRelatedDocumentsMigration } = require('./config/relatedDocumentsMigra
 
 
 // Ensure local uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
+const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
   console.log('📁 Created uploads directory at:', uploadsDir);
