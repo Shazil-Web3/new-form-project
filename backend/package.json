@@ -7,6 +7,8 @@
     "start": "node --dns-result-order=ipv4first src/server.js",
     "sync-db": "node src/sync-db.js",
     "init-db": "node src/config/init-db.js",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -26,6 +28,9 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
     "jsdom": "^27.0.1"
   }
 }
