@@ -10,8 +10,8 @@ import '../styles/superscriptSubscript.css';
  * matching Microsoft Word's Font group interface.
  *
  * Keyboard shortcuts:
- * - Subscript: Ctrl + =
- * - Superscript: Ctrl + Shift + = (or Ctrl + +)
+ * - Superscript: Ctrl + 1
+ * - Subscript:   Ctrl + 2
  */
 export const SuperscriptSubscriptButtons = ({
   isSuperscript = false,
@@ -44,7 +44,7 @@ export const SuperscriptSubscriptButtons = ({
         size={size}
         disabled={disabled}
         aria-pressed={isSubscript}
-        title="Subscript (Ctrl+=)"
+        title="Subscript (Ctrl+2)"
         onMouseDown={(e) => e.preventDefault()}
         onClick={onToggleSubscript}
         className={`word-format-btn subscript-btn ${isSubscript ? "active" : ""}`}
@@ -74,7 +74,7 @@ export const SuperscriptSubscriptButtons = ({
         size={size}
         disabled={disabled}
         aria-pressed={isSuperscript}
-        title="Superscript (Ctrl+Shift++)"
+        title="Superscript (Ctrl+1)"
         onMouseDown={(e) => e.preventDefault()}
         onClick={onToggleSuperscript}
         className={`word-format-btn superscript-btn ${isSuperscript ? "active" : ""}`}

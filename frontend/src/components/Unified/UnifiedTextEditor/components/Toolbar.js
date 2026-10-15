@@ -1068,7 +1068,7 @@ const Toolbar = ({
               {
                 id: "superscript",
                 label: "Superscript",
-                shortcut: "Ctrl+Shift++",
+                shortcut: "Ctrl+1",
                 renderIcon: (size) => <SuperscriptIcon size={size} />,
                 onClick: () => {
                   toggleSuperscript({
@@ -1083,7 +1083,7 @@ const Toolbar = ({
               {
                 id: "subscript",
                 label: "Subscript",
-                shortcut: "Ctrl+=",
+                shortcut: "Ctrl+2",
                 renderIcon: (size) => <SubscriptIcon size={size} />,
                 onClick: () => {
                   toggleSubscript({

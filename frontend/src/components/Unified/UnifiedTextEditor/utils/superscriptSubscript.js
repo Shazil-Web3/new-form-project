@@ -311,9 +311,9 @@ export function toggleSubscript({
 }
 
 /**
- * Checks if a keyboard event matches Microsoft Word's Superscript or Subscript shortcuts:
- * - Subscript: Ctrl + = (or Cmd + =)
- * - Superscript: Ctrl + Shift + = (or Ctrl + + / Cmd + Shift + =)
+ * Checks if a keyboard event matches the Superscript or Subscript shortcuts:
+ * - Superscript: Ctrl + 1
+ * - Subscript:   Ctrl + 2
  *
  * @param {KeyboardEvent} e
  * @returns {'superscript' | 'subscript' | null}
@@ -321,24 +321,16 @@ export function toggleSubscript({
 export function getScriptShortcutType(e) {
   if (!e) return null;
   const isMod = e.ctrlKey || e.metaKey;
-  if (!isMod || e.altKey) return null;
+  if (!isMod || e.altKey || e.shiftKey) return null;
 
-  // Subscript: Ctrl + = (without shift)
-  if (!e.shiftKey && (e.key === '=' || e.code === 'Equal')) {
+  // Superscript: Ctrl + 1
+  if (e.key === '1' || e.code === 'Digit1') {
+    return 'superscript';
+  }
+
+  // Subscript: Ctrl + 2
+  if (e.key === '2' || e.code === 'Digit2') {
     return 'subscript';
-  }
-
-  // Superscript: Ctrl + Shift + =  OR  Ctrl + + (with shift, key is '+' or '=')
-  if (
-    e.shiftKey &&
-    (e.key === '+' || e.key === '=' || e.code === 'Equal' || e.code === 'NumpadAdd')
-  ) {
-    return 'superscript';
-  }
-
-  // Also catch Ctrl + '+' on keypad or European layouts
-  if (e.key === '+' || e.code === 'NumpadAdd') {
-    return 'superscript';
   }
 
   return null;
