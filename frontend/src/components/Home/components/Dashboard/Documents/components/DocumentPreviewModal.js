@@ -86,7 +86,9 @@ const DocumentPreviewModal = ({
   }, [document]);
 
   // Render content as static HTML
-  const renderContent = () => {
+  // useCallback prevents a new function reference on every render, which would otherwise
+  // cause the useEffect below to re-fire unnecessarily on every parent re-render.
+  const renderContent = useCallback(() => {
     if (!parsedDocument?.content) return null;
 
     return (
@@ -133,7 +135,7 @@ const DocumentPreviewModal = ({
         </div>
       </div>
     );
-  };
+  }, [parsedDocument]);
 
   useEffect(() => {
     if (visible && document) {
@@ -144,7 +146,7 @@ const DocumentPreviewModal = ({
       }, 400);
       return () => clearTimeout(timer);
     }
-  }, [visible, document]);
+  }, [visible, document, renderContent]);
 
   if (!parsedDocument) return null;
 

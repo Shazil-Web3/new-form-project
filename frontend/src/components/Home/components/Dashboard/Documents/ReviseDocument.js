@@ -727,7 +727,7 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
   }, [templates]);
 
   // Validate fields on tab change
-  const validateTabFields = async (tab) => {
+  const validateTabFields = useCallback(async (tab) => {
     try {
       const tabFieldMapping = {
         basicInfo: ['title'],
@@ -788,7 +788,7 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
       setTabStatus(prev => ({ ...prev, [tab]: "incomplete" }));
       return false;
     }
-  };
+  }, [contentData, impactData, form]);
 
   // Navigation between tabs
   const navigateToTab = (direction) => {
@@ -885,7 +885,7 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
     }));
   };
 
-  const validateAllTabs = async () => {
+  const validateAllTabs = useCallback(async () => {
     const order = ['basicInfo', 'approvers', 'content', 'impact'];
     for (const tab of order) {
       const ok = await validateTabFields(tab);
@@ -895,7 +895,7 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
       }
     }
     return { isValid: true };
-  };
+  }, [validateTabFields]);
 
   const handleDocumentStatusUpdate = async (docId, newStatus) => {
     try {
@@ -909,7 +909,7 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
     }
   };
 
-  const persistDocument = async (docStatus, isAutoSave, overrideContent) => {
+  const persistDocument = useCallback(async (docStatus, isAutoSave, overrideContent) => {
     if (!user || creatorId == null) {
       if (!isAutoSave) errorAlert('Not signed in', 'You must be logged in to save.');
       return false;
@@ -1077,7 +1077,13 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
       }
     }
     return false;
-  };
+  }, [
+    user, creatorId, currentDocumentId, contentData, form,
+    tasks, tempManualReferences, document, impactData,
+    documentRequiredApprovers, documentWorkflowApprovers,
+    sharedDueDate, projectNumber, costCenterNumber, department,
+    onCancel, onSuccess
+  ]);
 
   const handleSubmit = useCallback((status = 'draft', isAutoSave = false, overrideContent = null) => {
     if (isAutoSave) {

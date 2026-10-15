@@ -1,5 +1,18 @@
 const { assertUserTemplateAccess, resetWorkflowState, retireParentTemplatesToArchived } = require('../documents/documentHelpers');
 
+// TODO: stub — document-history AI feature paused mid-development.
+// Replace with the real implementation (strip HTML tags, truncate for token budget, etc.)
+// when the AI change-summary workflow is resumed. Do NOT remove until then; the
+// call-sites in the Gemini prompt below depend on this being defined.
+function cleanContentForAI(html) {
+  if (!html) return '';
+  return String(html)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/[\s\u00A0\u200B]+/g, ' ')
+    .trim();
+}
+
 module.exports = function registerTemplateWorkflowRoutes({
   app,
   pool,
@@ -763,9 +776,8 @@ app.put('/api/templates/:id/status', authenticateToken, async (req, res) => {
     }
 
     // Update the template and return the updated record
-    let result;
     if (shouldUpdateApprovers) {
-      [result] = await pool.query(
+      await pool.query(
         'UPDATE templates SET status = ?, template_approvers = ?, progress_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [status, updatedApprovers, progressVal, id]
       );
@@ -783,7 +795,7 @@ app.put('/api/templates/:id/status', authenticateToken, async (req, res) => {
         console.warn('Could not emit socket event for templateApproversUpdated:', socketErr);
       }
     } else {
-      [result] = await pool.query(
+      await pool.query(
         'UPDATE templates SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
         [status, id]
       );
@@ -881,7 +893,7 @@ app.get('/api/templates/:id/history', authenticateToken, async (req, res) => {
     }
 
     const target = targetTemplate[0];
-    const { organization_id } = target;
+    const { organization_id: orgId } = target;
 
     // Collect all template IDs in this lineage
     const lineageIds = new Set();
@@ -896,7 +908,7 @@ app.get('/api/templates/:id/history', authenticateToken, async (req, res) => {
       lineageIds.add(currentParentId);
       const [parentRows] = await pool.execute(
         'SELECT id, revision_parent_id FROM templates WHERE id = ? AND organization_id = ?',
-        [currentParentId, organization_id]
+        [currentParentId, orgId]
       );
       if (parentRows.length === 0) {
         break;
@@ -913,7 +925,7 @@ app.get('/api/templates/:id/history', authenticateToken, async (req, res) => {
       const [childRows] = await pool.execute(
         `SELECT id FROM templates 
          WHERE revision_parent_id IN (${placeholders}) AND organization_id = ?`,
-        [...idsToExpand, organization_id]
+        [...idsToExpand, orgId]
       );
 
       const newChildren = [];

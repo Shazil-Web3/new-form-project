@@ -80,13 +80,15 @@ const ArchivedDocumentsList = ({
           (doc.status === 'archived' || doc.status === 'revised')
         );
         setOldDocuments(oldDocs);
+      } else {
+        setOldDocuments([]);
       }
     } catch (error) {
       console.error("Failed to fetch old documents:", error);
     } finally {
       setLoading(false);
     }
-  }, [documents, user]);
+  }, [documents]);
 
   // Enhanced format document data function
   const formatDocumentData = (doc) => {
@@ -558,7 +560,7 @@ const OldDocumentPreviewModal = ({
   const [loading, setLoading] = useState(false);
   const [renderedContent, setRenderedContent] = useState(null);
 
-  const renderDocumentContent = () => {
+  const renderDocumentContent = useCallback(() => {
     if (!doc?.content) return null;
 
     try {
@@ -608,17 +610,18 @@ const OldDocumentPreviewModal = ({
         </div>
       );
     }
-  };
+  }, [doc]);
 
   useEffect(() => {
     if (visible && doc) {
       setLoading(true);
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         setRenderedContent(renderDocumentContent());
         setLoading(false);
       }, 800);
+      return () => clearTimeout(timer);
     }
-  }, [visible, doc]);
+  }, [visible, doc, renderDocumentContent]);
 
   if (!doc) return null;
 
