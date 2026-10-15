@@ -30,7 +30,7 @@
 
 /* Role-based edit highlighting */
 .admin-edit {
-    text-decoration: underline;
+    text-decoration: none;
     text-decoration-color: #ffcccc;
     /* Light red */
     -webkit-text-decoration-color: #ffcccc;
@@ -39,7 +39,7 @@
 }
 
 .reviewer-edit {
-    text-decoration: underline;
+    text-decoration: none;
     text-decoration-color: #add8e6;
     /* Light blue */
     -webkit-text-decoration-color: #add8e6;

@@ -47,7 +47,7 @@
 }
 
 /* Role-based edit highlighting in create mode */
-.admin-edit {
+.create-editor-wrapper .admin-edit {
   text-decoration: underline !important;
   text-decoration-color: #ffcccc;
   -webkit-text-decoration-color: #ffcccc;
@@ -55,7 +55,7 @@
   cursor: pointer;
 }
 
-.reviewer-edit {
+.create-editor-wrapper .reviewer-edit {
   text-decoration: underline !important;
   text-decoration-color: #add8e6;
   -webkit-text-decoration-color: #add8e6;
