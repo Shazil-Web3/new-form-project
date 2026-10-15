@@ -927,7 +927,7 @@ export default function useDashboardState(initialType, user, initialActiveTab) {
         if (tabName === 'Draft') match = s === 'draft' || s === 'archive_draft';
         else if (tabName === 'In Progress') match = ['draft', 'archive_draft', 'pending', 'pending_review', 'pending_approval', 'reviewed', 'approved', 'pending_archive_review', 'archive_reviewed', 'pending_archive_approval'].includes(s);
         else if (tabName === 'Published') match = s === 'published' || s === 'active' || s === 'pending_revision';
-        else if (tabName === 'Archived') match = s === 'archived' || s === 'old' || s === 'pending_archive_approval' || s === 'pending_archive_review' || s === 'archive_reviewed';
+        else if (tabName === 'Archived') match = s === 'archived' || s === 'old' || s === 'pending_archive_approval' || s === 'pending_archive_review' || s === 'archive_reviewed' || s === 'revised';
         
         if (!match || !isUserInvolved(item, type)) return false;
 

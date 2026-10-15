@@ -288,7 +288,7 @@ export const computeItemDetailsAndFilter = (item, type, options) => {
     if (activeTab === 'Draft' && s !== 'draft' && s !== 'archive_draft') return null;
     if (activeTab === 'In Progress' && !['draft', 'archive_draft', 'pending', 'pending_review', 'reviewed', 'pending_approval', 'approved', 'rejected', 'pending_archive_review', 'archive_reviewed', 'pending_archive_approval'].includes(s)) return null;
     if (activeTab === 'Published' && s !== 'published' && s !== 'active' && s !== 'pending_revision') return null;
-    if (activeTab === 'Archived' && s !== 'archived' && s !== 'old' && s !== 'pending_archive_approval' && s !== 'pending_archive_review' && s !== 'archive_reviewed') return null;
+    if (activeTab === 'Archived' && s !== 'archived' && s !== 'old' && s !== 'pending_archive_approval' && s !== 'pending_archive_review' && s !== 'archive_reviewed' && s !== 'revised') return null;
   }
 
   if (appliedSearch && typeof appliedSearch === 'string') {

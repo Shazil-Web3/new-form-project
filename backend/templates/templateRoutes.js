@@ -765,8 +765,9 @@ app.put('/api/update_template/:templateId', authenticateToken, async (req, res) 
     }
 
     if (revision_parent_id !== undefined) {
+      const safeParentId = (revision_parent_id && String(revision_parent_id) !== String(templateId)) ? revision_parent_id : null;
       updateParts.push('revision_parent_id = ?');
-      params.push(revision_parent_id || null);
+      params.push(safeParentId);
     }
 
     // Handle approvers update

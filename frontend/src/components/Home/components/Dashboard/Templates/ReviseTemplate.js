@@ -646,7 +646,7 @@ const saveTemplateData = (status, isAutoSave = false, overrideContentData = null
 
       version: template.version + 1,
 
-      revision_parent_id: template.id
+      revision_parent_id: (template.id && String(template.id) !== String(currentTemplateId)) ? template.id : null
     };
     
     if (isAutoSave) {

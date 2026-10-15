@@ -996,7 +996,9 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
           content: JSON.stringify(contentObj),
           elements: JSON.stringify(elementsObj),
           version: document.revision_parent_id ? document.version : (document.version + 1),
-          revision_parent_id: document.revision_parent_id || document.document_id,
+          revision_parent_id: (document.revision_parent_id && String(document.revision_parent_id) !== String(effectiveId))
+            ? document.revision_parent_id
+            : (document.document_id && String(document.document_id) !== String(effectiveId) ? document.document_id : null),
           impact: impactData || {},
           required_approvers: documentRequiredApprovers,
           project_number: projectNumber || document?.project_number || null,

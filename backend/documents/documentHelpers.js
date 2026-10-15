@@ -481,14 +481,28 @@ async function retireParentDocumentsToArchived(dbPool, documentId) {
     if (docRows && docRows.length > 0) {
       const publishedDocVersion = parseInt(docRows[0].version, 10) || 1;
       let currParentId = docRows[0].revision_parent_id;
-      const visited = new Set();
+
+      // Defensive check: If revision_parent_id points to documentId itself, clear it and return
+      if (currParentId && String(currParentId) === String(documentId)) {
+        console.warn(`[retireParentDocumentsToArchived] Self-referencing revision_parent_id detected on doc ${documentId}. Clearing it.`);
+        await dbPool.execute(
+          'UPDATE documents SET revision_parent_id = NULL WHERE document_id = ?',
+          [documentId]
+        );
+        return;
+      }
+
+      if (!currParentId) {
+        return;
+      }
 
       // Collect all ancestor versions to determine the correct version for the published doc
       let maxAncestorVersion = 0;
       let walkId = currParentId;
-      const walkVisited = new Set();
-      while (walkId && !walkVisited.has(walkId)) {
-        walkVisited.add(walkId);
+      const walkVisited = new Set([String(documentId)]);
+      while (walkId && !walkVisited.has(String(walkId))) {
+        if (String(walkId) === String(documentId)) break;
+        walkVisited.add(String(walkId));
         const [pRows] = await dbPool.execute(
           'SELECT version, revision_parent_id FROM documents WHERE document_id = ?',
           [walkId]
@@ -510,8 +524,12 @@ async function retireParentDocumentsToArchived(dbPool, documentId) {
         console.log(`[retireParentDocumentsToArchived] Corrected version of published doc ${documentId} from ${publishedDocVersion} to ${correctVersion}`);
       }
 
-      while (currParentId && !visited.has(currParentId)) {
-        visited.add(currParentId);
+      const visited = new Set([String(documentId)]);
+      while (currParentId && !visited.has(String(currParentId))) {
+        if (String(currParentId) === String(documentId)) {
+          break;
+        }
+        visited.add(String(currParentId));
         await dbPool.execute(
           `UPDATE documents SET status = 'archived', updated_at = CURRENT_TIMESTAMP 
            WHERE document_id = ? AND status IN ('published', 'pending_revision', 'revised')`,
@@ -538,9 +556,27 @@ async function retireParentTemplatesToArchived(dbPool, templateId) {
     );
     if (tplRows && tplRows.length > 0) {
       let currParentId = tplRows[0].revision_parent_id;
-      const visited = new Set();
-      while (currParentId && !visited.has(currParentId)) {
-        visited.add(currParentId);
+
+      // Defensive check: If revision_parent_id points to templateId itself, clear it and return
+      if (currParentId && String(currParentId) === String(templateId)) {
+        console.warn(`[retireParentTemplatesToArchived] Self-referencing revision_parent_id detected on template ${templateId}. Clearing it.`);
+        await dbPool.execute(
+          'UPDATE templates SET revision_parent_id = NULL WHERE id = ?',
+          [templateId]
+        );
+        return;
+      }
+
+      if (!currParentId) {
+        return;
+      }
+
+      const visited = new Set([String(templateId)]);
+      while (currParentId && !visited.has(String(currParentId))) {
+        if (String(currParentId) === String(templateId)) {
+          break;
+        }
+        visited.add(String(currParentId));
         await dbPool.execute(
           `UPDATE templates SET status = 'archived', updated_at = CURRENT_TIMESTAMP 
            WHERE id = ? AND status IN ('published', 'pending_revision', 'revised')`,

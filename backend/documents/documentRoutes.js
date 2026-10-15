@@ -785,7 +785,7 @@ app.post('/api/create-document', authenticateToken, async (req, res) => {
           finalWorkflowJson,
           finalRequiredApprovers ? (typeof finalRequiredApprovers === 'string' ? finalRequiredApprovers : JSON.stringify(finalRequiredApprovers)) : null,
           docVersion,
-          revision_parent_id || null,
+          (revision_parent_id && String(revision_parent_id) !== String(docId)) ? revision_parent_id : null,
           impact ? JSON.stringify(impact) : null,
           notes || null,
           docNumber || null,
@@ -1392,8 +1392,9 @@ app.put('/api/update_document/:documentId', authenticateToken, async (req, res) 
       params.push(parseInt(version, 10) || 1);
     }
     if (revision_parent_id !== undefined) {
+      const safeParentId = (revision_parent_id && String(revision_parent_id) !== String(documentId)) ? revision_parent_id : null;
       updateParts.push('revision_parent_id = ?');
-      params.push(revision_parent_id || null);
+      params.push(safeParentId);
     }
     if (impact !== undefined) {
       updateParts.push('impact = ?');

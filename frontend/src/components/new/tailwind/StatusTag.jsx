@@ -13,6 +13,7 @@ export default function StatusTag({ status }) {
     active: 'bg-brand-green-50 text-brand-green-500 border-brand-green-100',
     revision: 'bg-brand-orange-50 text-brand-orange-500 border-brand-orange-100',
     pending_revision: 'bg-amber-50 text-amber-700 border-amber-200',
+    revised: 'bg-brand-red-50 text-brand-red-500 border-brand-red-100',
   };
 
   const labelMap = {
@@ -24,6 +25,7 @@ export default function StatusTag({ status }) {
     active: 'Active',
     revision: 'Revision',
     pending_revision: 'In Revision',
+    revised: 'Archived',
   };
 
   const styleClass = statusStyles[normalized] || 'bg-brand-slate-100 text-brand-slate-500 border-brand-slate-200';
