@@ -446,7 +446,7 @@ const TemplatePreviewHeader = ({
       )}
 
       {/* Reference View Badge */}
-      {isReadMode && (
+      {isReferenceView && (
         <Tag color="cyan" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', borderRadius: 4, fontWeight: 500, margin: 0 }}>
           <EyeOutlined /> Reference View (Read-Only)
         </Tag>

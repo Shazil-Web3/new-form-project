@@ -190,11 +190,11 @@ export default function EditDocumentHub() {
   const docStatus = String(document?.status || '').toLowerCase();
   const isPublished = docStatus === 'published' || docStatus === 'active';
   const isDraft = docStatus === 'draft';
-  // Lock content for the whole in-progress lifecycle (sent for review/approval through
-  // published), not just once published — matching the approval workflow requirement.
+  // Lock content once past the review phase (pending_approval and beyond).
+  // Documents in 'pending_review' remain editable so reviewers can add comments/suggestions.
   // A document that was rejected and sent back stays on 'pending_review' too, so an
   // unresolved rejection on it keeps the content editable for the author to address it.
-  const LOCKED_WORKFLOW_STATUSES = ['pending_review', 'pending_approval', 'reviewed', 'approved', 'published', 'active', 'revised'];
+  const LOCKED_WORKFLOW_STATUSES = ['pending_approval', 'reviewed', 'approved', 'published', 'active', 'revised'];
   const { reviewers: docReviewers, approvers: docApprovers } = parseWorkflowParticipants(document?.approvers);
   const hasUnresolvedRejection = [...docReviewers, ...docApprovers].some(
     (participant) => String(participant?.status || '').toLowerCase() === 'rejected'

@@ -32,11 +32,11 @@ import UnaddressedCommentsWarningModal from '../../UnifiedCommentSystem/componen
 import { hasUnaddressedItems } from '../../UnifiedCommentSystem/utils/unaddressedCommentsHelper';
 import ReviewPendingModal from './components/ReviewPendingModal';
 
-// Lock content for the whole in-progress lifecycle (sent for review/approval through
-// published) — matching what EditDocumentHub already does for documents. A rejected
-// template goes back to 'pending_review' too, so an unresolved rejection on it keeps
+// Lock content once past the review phase (pending_approval and beyond).
+// Documents in 'pending_review' remain editable so reviewers can add comments/suggestions.
+// A rejected template goes back to 'pending_review' too, so an unresolved rejection on it keeps
 // the content editable for the author to address it.
-const LOCKED_TEMPLATE_STATUSES = ['pending_review', 'pending_approval', 'reviewed', 'approved', 'published', 'active', 'revised'];
+const LOCKED_TEMPLATE_STATUSES = ['pending_approval', 'reviewed', 'approved', 'published', 'active', 'revised'];
 
 const parseWorkflowParticipants = (raw) => {
   if (!raw) return { reviewers: [], approvers: [] };
