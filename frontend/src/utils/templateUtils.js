@@ -560,16 +560,10 @@ export const assignAuthorOwnershipToHtml = (html, authorInfo) => {
       if (spanEmail && spanEmail.toLowerCase() !== 'unknown') {
         // Guarantee title always accurately reflects the span's user email
         span.title = `Edited by: ${spanEmail}`;
-        const color = getTrackedColor(spanEmail || spanOwnerId);
-        span.style.setProperty('text-decoration-color', color, 'important');
-        span.style.setProperty('-webkit-text-decoration-color', color, 'important');
       } else if (authorEmail && (!spanOwnerId || spanOwnerId === authorId || span.classList.contains('admin-edit'))) {
         // Heal author span that was missing email attribute
         span.setAttribute('data-user-email', authorEmail);
         span.title = `Edited by: ${authorEmail}`;
-        const color = getTrackedColor(authorEmail || authorId);
-        span.style.setProperty('text-decoration-color', color, 'important');
-        span.style.setProperty('-webkit-text-decoration-color', color, 'important');
       }
     });
     // Pass 2: Select all editable content blocks and containers for unowned text
@@ -619,10 +613,10 @@ export const assignAuthorOwnershipToHtml = (html, authorInfo) => {
         span.setAttribute('data-creator-role', creatorRole);
         if (authorEmail) span.title = `Edited by: ${authorEmail}`;
 
-        span.style.setProperty('text-decoration-line', 'underline');
-        span.style.setProperty('text-decoration-thickness', '2px');
-        span.style.setProperty('text-decoration-color', underlineColor, 'important');
-        span.style.setProperty('-webkit-text-decoration-color', underlineColor, 'important');
+        // NOTE: No inline text-decoration styles here intentionally.
+        // Initial/author content spans carry ownership metadata for protection
+        // but should not show an underline. The underline is reserved for text
+        // actively typed or pasted by a reviewer/author during review.
 
         span.textContent = node.textContent;
         if (node.parentNode) {
