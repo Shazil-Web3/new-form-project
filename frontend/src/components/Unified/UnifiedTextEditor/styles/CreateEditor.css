@@ -1,0 +1,64 @@
+/* CreateEditor.css
+ * Styles specific to Create mode
+ * - Full editing capabilities
+ * - Toolbar visible
+ * - No comment system
+ */
+
+.create-editor-main {
+  /* content layout */
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: #f5f5f5;
+  position: relative;
+  /* Ensure it's a positioning context */
+}
+
+.create-editor-wrapper {
+    width: 100%;
+    height: 100%;
+    background: #f5f5f5;
+    position: relative;
+}
+
+/* Ensure editor takes full space */
+.create-editor-wrapper>* {
+  width: 100%;
+  height: 100%;
+}
+
+/* Create mode specific overrides */
+.create-editor-wrapper .page {
+  /* Add any create-specific page styling here */
+}
+
+/* 
+ * CRITICAL: Add large right margin to the document renderer 
+ * to accommodate the Comment Rail which is positioned 280px + Width to the right.
+ * This ensures the editor scroll container allows scrolling right to see the rail.
+ */
+.create-editor-wrapper .main-container > .content-container .document-renderer,
+.create-editor-wrapper .document-renderer {
+  margin-left: 8px !important;
+  margin-right: 500px !important;
+  padding-top: 4px !important;
+}
+
+/* Role-based edit highlighting in create mode */
+.admin-edit {
+  text-decoration: underline !important;
+  text-decoration-color: #ffcccc;
+  -webkit-text-decoration-color: #ffcccc;
+  text-decoration-thickness: 2px;
+  cursor: pointer;
+}
+
+.reviewer-edit {
+  text-decoration: underline !important;
+  text-decoration-color: #add8e6;
+  -webkit-text-decoration-color: #add8e6;
+  text-decoration-thickness: 2px;
+  cursor: pointer;
+}

@@ -1,0 +1,277 @@
+/* Custom scrollbar for TOC sidebar */
+.toc-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.toc-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toc-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.toc-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Collapsed state - like dashboard sidebar collapsed */
+.toc-sidebar[style*="width: 65px"] {
+  width: 65px !important;
+  padding: 8px 4px;
+  border-radius: 0;
+}
+
+/* Hide title when collapsed, center toggle button */
+.toc-sidebar[style*="width: 65px"] .toc-toggle {
+  position: relative !important;
+  left: auto !important;
+  top: auto !important;
+  width: 32px !important;
+  height: 32px !important;
+  margin: 0 auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center;
+}
+
+/* Center icon in collapsed state */
+.toc-sidebar[style*="width: 65px"] .toc-icon {
+  margin-top: 20px;
+}
+
+/* Alternative selector for collapsed state */
+.toc-sidebar.toc-collapsed {
+  width: 65px;
+  padding: 8px 4px;
+  border-radius: 0;
+}
+
+/* TOC Scrollable Content */
+.toc-scroll {
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+.toc-title {
+  font-weight: bold;
+  color: #333;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Empty TOC Message */
+.toc-empty {
+  text-align: center;
+  color: #777;
+  font-style: italic;
+}
+
+/* TOC List Items */
+.toc-item {
+  margin-bottom: 6px;
+  font-size: 14px;
+  transition: all 0.2s ease-in-out;
+}
+
+/* TOC Links */
+.toc-link {
+  text-decoration: none !important;
+  /* Removes underline */
+  color: #333;
+  /* Adjust color as needed */
+  display: block;
+  padding: 5px 0;
+}
+
+.toc-link:hover {
+  color: #007bff;
+  /* Change color on hover */
+}
+
+/* Smooth Scroll Effect */
+html {
+  scroll-behavior: smooth;
+}
+
+h1[id^="heading-"],
+h2[id^="heading-"],
+h3[id^="heading-"],
+h4[id^="heading-"],
+h5[id^="heading-"],
+h6[id^="heading-"] {
+  scroll-margin-top: 180px !important;
+}
+
+/* Display relative TOC heading number in front of heading text */
+h1[data-toc-number]::before,
+h2[data-toc-number]::before,
+h3[data-toc-number]::before,
+h4[data-toc-number]::before,
+h5[data-toc-number]::before,
+h6[data-toc-number]::before,
+.page h1[data-toc-number]::before,
+.page h2[data-toc-number]::before,
+.page h3[data-toc-number]::before,
+.page h4[data-toc-number]::before,
+.page h5[data-toc-number]::before,
+.page h6[data-toc-number]::before {
+  content: attr(data-toc-number) " ";
+  font-weight: bold;
+  margin-right: 0.35em;
+  display: inline-block;
+}
+
+.highlighted-text {
+  position: relative;
+  border-radius: 3px;
+}
+
+button.floating-collapse-btn {
+  color: black !important;
+  background-color: #f8f9fa !important;
+  border: 1px solid #dee2e6 !important;
+  border-radius: 50% !important;
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+}
+
+button.floating-collapse-btn:hover {
+  background-color: #e9ecef !important;
+}
+
+/* For the comment and suggested edit textareas */
+.item-input .form-control {
+  font-size: 13px;
+}
+
+/* For the reply input fields */
+.floating-comment .form-control,
+.floating-suggestededit .form-control {
+  font-size: 13px;
+}
+
+/* For buttons inside floating elements */
+.item-input .btn,
+.floating-comment .btn,
+.floating-suggestededit .btn {
+  font-size: 13px;
+}
+
+.quick-access-toolbar {
+  position: absolute;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 500;
+}
+
+.toolbar-btn {
+  padding: 4px 8px;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+}
+
+/* Delete Button */
+.delete-floating-item {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #dc3545;
+  padding: 2px 5px;
+  border-radius: 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.delete-floating-item:hover {
+  opacity: 1;
+  background: rgba(220, 53, 69, 0.1);
+}
+
+/* Floating Elements */
+.floating-comment,
+.floating-suggestededit {
+  position: absolute;
+  background: white;
+  border: 1px solid black;
+  padding: 5px;
+  border-radius: 5px;
+  width: 300px;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  cursor: pointer;
+  font-size: 13px;
+  /* Added this line */
+}
+
+/* Input Fields */
+.item-input {
+  position: absolute;
+  background: white;
+  border: 1px solid black;
+  padding: 5px;
+  border-radius: 5px;
+  width: 300px;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  /* Added this line */
+}
+
+.floating-item {
+  border-left: 3px solid #28a745;
+  padding-left: 10px;
+  margin-bottom: 8px;
+  word-break: break-word;
+  /* Force break long words */
+  overflow-wrap: break-word;
+  /* Alternate for word-wrap */
+  font-size: 13px;
+  /* Added this line */
+}
+
+.badge-ellipsis {
+  font-weight: normal;
+  white-space: nowrap;
+  /* Prevent text from wrapping */
+  overflow: hidden;
+  /* Hide overflowing content */
+  text-overflow: ellipsis;
+  /* Display ellipsis */
+  max-width: 270px;
+  /* Set a maximum width (adjust as needed) */
+  display: inline-block;
+  /* allows max-width to work */
+  font-size: 12px;
+  /* Added this line */
+}
+
+.highlighted-active {
+  background-color: yellow !important;
+  transition: background-color 0.3s ease;
+}
+
+.comment-active {
+  background-color: rgba(255, 215, 0, 0.3);
+  border-left: 3px solid gold;
+  transition: background-color 0.3s ease;
+}
+

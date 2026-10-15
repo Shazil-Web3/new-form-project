@@ -1,0 +1,72 @@
+/* PreviewEditor.css
+ * Styles specific to Preview mode
+ * - Read-only display
+ * - Comments visible on the right
+ * - No toolbar
+ */
+
+.preview-editor-wrapper {
+    position: relative !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 100%;
+    background: #ffffff;
+    overflow: visible;
+}
+
+.preview-editor-wrapper .document-renderer {
+    margin-right: 500px !important;
+}
+
+/* Make editor read-only visually */
+.preview-editor-wrapper [contenteditable="true"] {
+    cursor: default;
+}
+
+/* Preview mode specific overrides */
+.preview-editor-wrapper .page {
+    /* Add any preview-specific page styling here */
+}
+
+/* Role-based edit highlighting */
+.admin-edit {
+    text-decoration: underline;
+    text-decoration-color: #ffcccc;
+    /* Light red */
+    -webkit-text-decoration-color: #ffcccc;
+    text-decoration-thickness: 2px;
+    cursor: pointer;
+}
+
+.reviewer-edit {
+    text-decoration: underline;
+    text-decoration-color: #add8e6;
+    /* Light blue */
+    -webkit-text-decoration-color: #add8e6;
+    text-decoration-thickness: 2px;
+    cursor: pointer;
+}
+
+/* Clean View Mode overrides */
+body .template-page.clean-view .admin-edit,
+body .template-page.clean-view .reviewer-edit,
+body .template-page.clean-view [data-edit-id],
+body .template-page.clean-view [data-creator-role],
+body .template-page.clean-view [data-user-email],
+.clean-view-active .admin-edit,
+.clean-view-active .reviewer-edit,
+.clean-view-active [data-edit-id],
+.clean-view-active [data-creator-role],
+.clean-view-active [data-user-email],
+.clean-view-active.document-renderer .admin-edit,
+.clean-view-active.document-renderer .reviewer-edit,
+.clean-view-active.document-renderer [data-edit-id],
+.clean-view-active.document-renderer [data-creator-role],
+.clean-view-active.document-renderer [data-user-email] {
+    text-decoration: none !important;
+    text-decoration-line: none !important;
+    -webkit-text-decoration-line: none !important;
+    -webkit-text-decoration: none !important;
+    border-bottom: none !important;
+    cursor: text !important;
+}

@@ -1,0 +1,278 @@
+/* Image blocks in page context */
+.page img[data-block-id] {
+  max-width: 100%;
+  height: auto;
+  margin: 1.5em 0;
+  display: block;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.page img[data-block-id]:hover {
+  transform: scale(1.02);
+}
+
+/* Google Docs-style image blocks */
+figure.img-block {
+  display: block;
+  width: fit-content;
+  margin: 8px 0;
+  margin-right: auto;
+  position: relative;
+  outline: none;
+  border-radius: 4px;
+  transition: box-shadow 0.2s ease, margin 0.15s ease;
+  max-width: 100%;
+  line-height: 0;
+}
+
+/* ---- Alignment via data-align attribute ---- */
+figure.img-block[data-align="left"] {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+figure.img-block[data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+figure.img-block[data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+figure.img-block:hover {
+  box-shadow: 0 0 0 2px rgba(76, 159, 254, 0.4);
+}
+
+figure.img-block.selected {
+  box-shadow: 0 0 0 2px #4c9ffe;
+  background-color: rgba(76, 159, 254, 0.05);
+  cursor: move;
+}
+
+figure.img-block>img {
+  max-width: 100%;
+  display: block;
+  pointer-events: none;
+  border-radius: 4px;
+}
+
+/* ---- Resize handles: 4 corners + 4 edges ---- */
+figure.img-block .img-resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 2px solid #4c9ffe;
+  border-radius: 50%;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+/* Show handles on hover and selection */
+figure.img-block:hover .img-resize-handle,
+figure.img-block.selected .img-resize-handle {
+  opacity: 1;
+}
+
+/* Handle hover effect */
+figure.img-block .img-resize-handle:hover {
+  background: #4c9ffe;
+  transform: scale(1.3);
+}
+
+/* -- Corner handles -- */
+figure.img-block .img-resize-handle[data-resize="nw"] {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+
+figure.img-block .img-resize-handle[data-resize="ne"] {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+
+figure.img-block .img-resize-handle[data-resize="se"] {
+  bottom: -5px;
+  right: -5px;
+  cursor: nwse-resize;
+}
+
+figure.img-block .img-resize-handle[data-resize="sw"] {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+
+/* -- Edge handles -- */
+figure.img-block .img-resize-handle[data-resize="n"] {
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+figure.img-block .img-resize-handle[data-resize="s"] {
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+figure.img-block .img-resize-handle[data-resize="e"] {
+  top: 50%;
+  right: -5px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+figure.img-block .img-resize-handle[data-resize="w"] {
+  top: 50%;
+  left: -5px;
+  transform: translateY(-50%);
+  cursor: ew-resize;
+}
+
+/* Keep hover scale without overriding edge transforms */
+figure.img-block .img-resize-handle[data-resize="n"]:hover,
+figure.img-block .img-resize-handle[data-resize="s"]:hover {
+  transform: translateX(-50%) scale(1.3);
+}
+
+figure.img-block .img-resize-handle[data-resize="e"]:hover,
+figure.img-block .img-resize-handle[data-resize="w"]:hover {
+  transform: translateY(-50%) scale(1.3);
+}
+
+/* Prevent cursor flicker during active resize */
+figure.img-block.resizing .img-resize-handle {
+  opacity: 1;
+}
+
+/* Drag-to-reposition visual feedback */
+figure.img-block.dragging {
+  opacity: 0.8;
+  z-index: 100;
+  cursor: move;
+}
+
+/* Image loading states */
+figure.img-block.loading {
+  background: #f8f9fa;
+  border: 1px dashed #dee2e6;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+figure.img-block.loading::after {
+  content: "Loading image...";
+  color: #6c757d;
+  font-size: 14px;
+}
+
+figure.img-block.error {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+figure.img-block.error::after {
+  content: "Failed to load image";
+  color: #721c24;
+  font-size: 14px;
+}
+
+/* Divider blocks in page context */
+.page hr[data-block-id] {
+  margin: 2em 0;
+  border: none;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #007bff, transparent);
+  opacity: 0.6;
+}
+
+/* Page break simulation */
+.page-break {
+  page-break-before: always;
+  break-before: page;
+}
+
+
+/* Responsive design for pages */
+@media (max-width: 768px) {
+  .document-renderer {
+    padding: 10px;
+  }
+
+  .page {
+    transform: scale(0.8);
+    transform-origin: top center;
+    margin-bottom: 10px;
+  }
+
+  .page-content {
+    padding: 1cm;
+  }
+}
+
+@media (max-width: 480px) {
+  .page {
+    transform: scale(0.6);
+    margin-bottom: 0;
+  }
+
+  .page-content {
+    padding: 0.5cm;
+  }
+}
+
+
+
+/* Animation for new blocks */
+@keyframes slideInBlock {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.block-wrapper.new-block {
+  animation: slideInBlock 0.3s ease-out;
+}
+
+/* Loading states */
+.page.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.page.loading::after {
+  content: "Loading...";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1em 2em;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+

@@ -1,0 +1,387 @@
+/* Comment and Edit Functionality Styles */
+
+/* Highlighted text for comments and suggested edits */
+.highlighted-text {
+  position: relative;
+  border-radius: 3px;
+  padding: 1px 2px;
+  margin: 0 1px;
+  transition: all 0.2s ease;
+}
+
+.highlighted-text:hover {
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.3);
+}
+
+/* Comment highlights */
+[data-comment-id] {
+  background-color: rgba(40, 167, 69, 0.2) !important;
+  border-bottom: none;
+}
+
+[data-comment-id]:hover,
+[data-comment-id].editor-highlight-hovered {
+  border-bottom: 2px solid #28a745;
+}
+
+[data-comment-id][data-comment-status="resolved"],
+[data-comment-id].comment-resolved {
+  border-bottom: 2px solid #28a745;
+}
+
+/* Suggested edit highlights */
+[data-suggestededit-id] {
+  background-color: rgba(0, 123, 255, 0.2) !important;
+  border-bottom: none !important;
+}
+
+/* Suggested edit del/ins tags */
+del {
+  background-color: rgba(220, 53, 69, 0.2);
+  text-decoration: line-through;
+  color: #dc3545;
+}
+
+ins {
+  background-color: rgba(40, 167, 69, 0.2);
+  text-decoration: underline;
+  color: #28a745;
+}
+
+/* Floating elements container */
+.floating-elements-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 999;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 10px;
+}
+
+/* Floating comment and suggested edit cards */
+.floating-comment,
+.floating-suggested-edit {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.floating-comment:hover,
+.floating-suggested-edit:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Active state for floating elements */
+.floating-comment[style*="lightyellow"],
+.floating-suggested-edit[style*="lightyellow"] {
+  border-color: #ffc107;
+  box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
+}
+
+/* Comment input modal */
+.comment-input-modal,
+.suggest-edit-input-modal {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+/* Quick access toolbar */
+.quick-access-toolbar {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-btn {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #333;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-btn:hover {
+  background: #f8f9fa;
+  border-color: #007bff;
+  color: #007bff;
+}
+
+.toolbar-btn:active {
+  transform: translateY(1px);
+}
+
+/* Badge styles for selected text */
+.badge {
+  font-size: 0.75rem;
+  padding: 0.25em 0.5em;
+  border-radius: 4px;
+  font-weight: 500;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.badge.bg-success {
+  background-color: #28a745 !important;
+  color: white;
+}
+
+.badge.bg-primary {
+  background-color: #007bff !important;
+  color: white;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+  color: #212529;
+}
+
+.badge.bg-danger {
+  background-color: #dc3545 !important;
+  color: white;
+}
+
+/* Status badges for suggested edits */
+.floating-suggested-edit .badge {
+  margin-right: 8px;
+}
+
+/* Delete button for floating elements */
+.btn-outline-danger {
+  color: #dc3545;
+  border-color: #dc3545;
+  background: transparent;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-danger:hover {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* Reply section */
+.reply-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+}
+
+.reply-item {
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 0.875rem;
+}
+
+.reply-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Form controls in floating elements */
+.floating-comment .form-control,
+.floating-suggested-edit .form-control,
+.comment-input-modal .form-control,
+.suggest-edit-input-modal .form-control {
+  font-size: 0.875rem;
+  border-radius: 6px;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+
+.floating-comment .form-control:focus,
+.floating-suggested-edit .form-control:focus,
+.comment-input-modal .form-control:focus,
+.suggest-edit-input-modal .form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+/* Button styles in floating elements */
+.floating-comment .btn,
+.floating-suggested-edit .btn,
+.comment-input-modal .btn,
+.suggest-edit-input-modal .btn {
+  font-size: 0.875rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+/* Action buttons for suggested edits */
+.floating-suggested-edit .btn-success {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.floating-suggested-edit .btn-success:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+.floating-suggested-edit .btn-danger {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.floating-suggested-edit .btn-danger:hover {
+  background-color: #c82333;
+  border-color: #bd2130;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .floating-elements-container {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: 300px;
+  }
+
+  .comment-input-modal,
+  .suggest-edit-input-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 400px;
+  }
+
+  .quick-access-toolbar {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .toolbar-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Hide rail on very small screens to prevent overlap */
+  .doc-rail {
+    display: none;
+  }
+}
+
+/* Medium screens - adjust rail positioning */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .doc-rail {
+    margin-left: 10px;
+    /* Reduce spacing on medium screens */
+  }
+
+  /* Medium screens - adjust for centered layout */
+  .toc-sidebar {
+    width: 220px;
+    /* Slightly smaller on medium screens */
+  }
+
+  .toc-sidebar[style*="width: 65px"] {
+    width: 60px !important;
+    /* Smaller collapsed width on medium screens */
+  }
+}
+
+/* Small screens - mobile-friendly adjustments */
+@media (max-width: 768px) {
+
+  /* Hide doc-rail on very small screens to prevent overlap */
+  .doc-rail {
+    display: none;
+  }
+
+  /* Adjust TOC for small screens */
+  .toc-sidebar {
+    width: 200px;
+  }
+
+  .toc-sidebar[style*="width: 65px"] {
+    width: 50px !important;
+    /* Very compact on mobile */
+  }
+
+  /* Make main container stack vertically on very small screens */
+  .main-container {
+    flex-direction: column;
+    height: auto;
+  }
+}
+
+/* Animation for new floating elements */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.floating-comment,
+.floating-suggested-edit {
+  animation: slideInFromRight 0.3s ease-out;
+}
+
+/* Scrollbar styling for floating elements container */
+.floating-elements-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.floating-elements-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.floating-elements-container::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.floating-elements-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* ===== TOC Collapse/Expand Transitions ===== */
+/* Transition is already defined in the main .toc-sidebar rule above */
+

@@ -1,0 +1,33 @@
+/* CreateComments.css
+ * Styles specific to Create mode comments (minimal/none)
+ */
+
+.create-comments-wrapper {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+    /* Ensure it's above editor but below modals */
+}
+
+.create-comments-wrapper>* {
+    pointer-events: auto;
+}
+
+/* If we do show minimal internal notes */
+.create-comments-wrapper.with-notes {
+    display: block;
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 250px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 12px;
+}

@@ -1,0 +1,147 @@
+/* editorCommentRail.css
+ * Clean View overrides and Editor-level comment integration rules.
+ * Core comment rail styles are maintained in UnifiedCommentSystem/styles/modules/commentCoreRail.css
+ */
+
+/* When comments are active, clean right padding/margin */
+.content-container.comments-active {
+  background: transparent;
+  padding-right: 0;
+  margin-right: 0;
+}
+
+/* ===== Docs-like selection pill (small icons) ===== */
+.selection-pill {
+  position: absolute;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 6px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid #e6e6e6;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+  width: 32px;
+  align-items: center;
+}
+
+.selection-pill button {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  transition: background .15s ease;
+  cursor: pointer;
+}
+
+.selection-pill button:hover {
+  background: #f4f4f4;
+}
+
+.selection-pill i {
+  font-size: 14px;
+}
+
+/* Don't show old big on-page cards over content */
+.floating-comment,
+.floating-suggested-edit,
+.comment-input-modal,
+.suggest-edit-input-modal {
+  display: none !important;
+}
+
+/* Status badges */
+.badge {
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+/* Button grouping */
+.btn-group-vertical .btn {
+  margin-bottom: 4px;
+}
+
+.btn-group-vertical .btn:last-child {
+  margin-bottom: 0;
+}
+
+/* =========================================
+   Clean View Mode overrides
+   Applied when .clean-view class is on .template-page OR when .clean-view-active is set
+   ========================================= */
+body .template-page.clean-view .highlighted-text,
+body .template-page.clean-view .highlighted-text[data-comment-id],
+body .template-page.clean-view .highlighted-text[data-suggestededit-id],
+body .template-page.clean-view [data-comment-id],
+body .template-page.clean-view [data-suggestededit-id],
+.clean-view-active .highlighted-text,
+.clean-view-active .highlighted-text[data-comment-id],
+.clean-view-active .highlighted-text[data-suggestededit-id],
+.clean-view-active [data-comment-id],
+.clean-view-active [data-suggestededit-id],
+.clean-view-active.document-renderer .highlighted-text,
+.clean-view-active.document-renderer .highlighted-text[data-comment-id],
+.clean-view-active.document-renderer .highlighted-text[data-suggestededit-id],
+.clean-view-active.document-renderer [data-comment-id],
+.clean-view-active.document-renderer [data-suggestededit-id] {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+body .template-page.clean-view .admin-edit,
+body .template-page.clean-view .reviewer-edit,
+.clean-view-active .admin-edit,
+.clean-view-active .reviewer-edit,
+.clean-view-active.document-renderer .admin-edit,
+.clean-view-active.document-renderer .reviewer-edit {
+  text-decoration: none !important;
+  -webkit-text-decoration: none !important;
+  border-bottom: none !important;
+}
+
+/* Mode 1: Clean View WITH Accepted Suggestions */
+.clean-view-active:not(.clean-view-rejected) [data-suggestededit-id] del,
+.clean-view-active-accepted [data-suggestededit-id] del,
+.clean-view-active.document-renderer:not(.clean-view-rejected) [data-suggestededit-id] del,
+body .template-page.clean-view:not(.clean-view-rejected) [data-suggestededit-id] del,
+body .template-page.clean-view-accepted [data-suggestededit-id] del {
+  display: none !important;
+}
+
+.clean-view-active:not(.clean-view-rejected) [data-suggestededit-id] ins,
+.clean-view-active-accepted [data-suggestededit-id] ins,
+.clean-view-active.document-renderer:not(.clean-view-rejected) [data-suggestededit-id] ins,
+body .template-page.clean-view:not(.clean-view-rejected) [data-suggestededit-id] ins,
+body .template-page.clean-view-accepted [data-suggestededit-id] ins {
+  display: inline !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+/* Mode 2: Clean View WITHOUT Accepted Suggestions (Original Text) */
+.clean-view-active-rejected [data-suggestededit-id] del,
+.clean-view-active.document-renderer.clean-view-rejected [data-suggestededit-id] del,
+body .template-page.clean-view-rejected [data-suggestededit-id] del {
+  display: inline !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+.clean-view-active-rejected [data-suggestededit-id] ins,
+.clean-view-active.document-renderer.clean-view-rejected [data-suggestededit-id] ins,
+body .template-page.clean-view-rejected [data-suggestededit-id] ins {
+  display: none !important;
+}

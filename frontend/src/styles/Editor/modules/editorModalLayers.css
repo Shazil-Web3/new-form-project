@@ -1,0 +1,86 @@
+/* Ant Design Modal and Mask Layering - Always above sticky bars with transparent dimming backdrop */
+.ant-modal-mask {
+  z-index: 10000 !important;
+  background-color: rgba(0, 0, 0, 0.45) !important;
+}
+
+.ant-modal-wrap {
+  z-index: 10001 !important;
+}
+
+.ant-modal {
+  z-index: 10002 !important;
+}
+
+/* Ant Design Dropdowns, DatePickers, Selects, Tooltips, Popovers inside/outside Modals */
+.ant-select-dropdown,
+.ant-picker-dropdown,
+.ant-dropdown,
+.ant-popover,
+.ant-tooltip,
+.ant-message,
+.ant-notification,
+.ant-cascader-dropdown,
+.ant-tree-select-dropdown {
+  z-index: 10050 !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   INLINE HYPERLINK BADGE STYLES (inside Editor & Preview content)
+   ══════════════════════════════════════════════════════════════════ */
+
+.doc-mention-link,
+a[data-type="doc-hyperlink"],
+a[href*="/document/"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 7px 2px 5px !important;
+  margin: 0 2px !important;
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 6px !important;
+  font-size: 0.9em !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  line-height: 1.4 !important;
+  vertical-align: baseline !important;
+  cursor: pointer !important;
+  user-select: all !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.doc-mention-link:hover,
+a[data-type="doc-hyperlink"]:hover,
+a[href*="/document/"]:hover {
+  background-color: #dbeafe !important;
+  border-color: #93c5fd !important;
+  color: #1e40af !important;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.12) !important;
+  transform: translateY(-1px) !important;
+}
+
+.doc-mention-link-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 12px !important;
+  color: #3b82f6 !important;
+  pointer-events: none !important;
+}
+
+.doc-mention-link-text {
+  font-weight: 600 !important;
+  pointer-events: none !important;
+}
+
+.doc-mention-link-version {
+  font-size: 10px !important;
+  padding: 0 4px !important;
+  border-radius: 3px !important;
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  margin-left: 2px !important;
+  pointer-events: none !important;
+}

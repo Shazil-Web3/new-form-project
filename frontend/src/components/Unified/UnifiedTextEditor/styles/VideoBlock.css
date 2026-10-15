@@ -1,0 +1,171 @@
+/* ==========================================================================
+   VideoBlock.css — Dedicated Standalone Styling for Video Blocks & Resizing
+   ========================================================================== */
+
+/* Main Video Block Container */
+.document-renderer .page figure.video-block {
+  display: block !important;
+  position: relative !important;
+  max-width: 100% !important;
+  margin: 16px auto !important;
+  outline: none !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  user-select: none !important;
+}
+
+/* Selected Video Block State */
+.document-renderer .page figure.video-block.selected {
+  outline: 2px solid #4f46e5 !important;
+  outline-offset: 3px !important;
+  border-radius: 6px !important;
+}
+
+/* Alignment Utilities */
+.document-renderer .page figure.video-block[data-align="left"] {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.document-renderer .page figure.video-block[data-align="center"] {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.document-renderer .page figure.video-block[data-align="right"] {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+/* Inner Video Wrapper */
+.document-renderer .page figure.video-block .video-wrapper {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15) !important;
+  background-color: #000000 !important;
+}
+
+/* Video & Iframe elements */
+.document-renderer .page figure.video-block video,
+.document-renderer .page figure.video-block iframe {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 90px !important;
+  object-fit: contain !important;
+  border: 0 !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Disable pointer events on video/iframe while resizing to prevent cursor flicker */
+.document-renderer .page figure.video-block.resizing video,
+.document-renderer .page figure.video-block.resizing iframe {
+  pointer-events: none !important;
+}
+
+/* 8-Point Resize Handles */
+.document-renderer .page figure.video-block .video-resize-handle {
+  position: absolute !important;
+  width: 12px !important;
+  height: 12px !important;
+  background: #ffffff !important;
+  border: 2px solid #4f46e5 !important;
+  border-radius: 50% !important;
+  z-index: 99 !important;
+  display: none !important;
+  pointer-events: auto !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+/* Show handles on hover and selection */
+.document-renderer .page figure.video-block:hover .video-resize-handle,
+.document-renderer .page figure.video-block.selected .video-resize-handle {
+  display: block !important;
+}
+
+.document-renderer .page figure.video-block .video-resize-handle:hover {
+  background: #4f46e5 !important;
+  transform: scale(1.35) !important;
+}
+
+/* Corner Handles */
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="nw"] {
+  top: -6px !important;
+  left: -6px !important;
+  cursor: nwse-resize !important;
+}
+
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="ne"] {
+  top: -6px !important;
+  right: -6px !important;
+  cursor: nesw-resize !important;
+}
+
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="se"] {
+  bottom: -6px !important;
+  right: -6px !important;
+  cursor: nwse-resize !important;
+}
+
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="sw"] {
+  bottom: -6px !important;
+  left: -6px !important;
+  cursor: nesw-resize !important;
+}
+
+/* Edge Handles */
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="n"] {
+  top: -6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  cursor: ns-resize !important;
+}
+
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="s"] {
+  bottom: -6px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  cursor: ns-resize !important;
+}
+
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="e"] {
+  top: 50% !important;
+  right: -6px !important;
+  transform: translateY(-50%) !important;
+  cursor: ew-resize !important;
+}
+
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="w"] {
+  top: 50% !important;
+  left: -6px !important;
+  transform: translateY(-50%) !important;
+  cursor: ew-resize !important;
+}
+
+/* Edge Hover Scaling */
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="n"]:hover,
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="s"]:hover {
+  transform: translateX(-50%) scale(1.35) !important;
+}
+
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="e"]:hover,
+.document-renderer .page figure.video-block .video-resize-handle[data-resize="w"]:hover {
+  transform: translateY(-50%) scale(1.35) !important;
+}
+
+/* Resizing Lock Mask Overlay */
+body.video-resizing-active {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+body.video-resizing-active * {
+  cursor: inherit !important;
+}

@@ -1,0 +1,81 @@
+/* Header Logo Upload Component Styles */
+
+.header-logo-container {
+  position: relative;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fafafa;
+  z-index: 1;
+  overflow: visible;
+}
+
+.header-logo-container img {
+  max-height: 40px;
+  max-width: 150px;
+  object-fit: contain;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.header-logo-buttons {
+  position: absolute;
+  right: 5px;
+  top: 2px;
+  display: flex;
+  gap: 3px;
+  z-index: 1000;
+  pointer-events: auto;
+  background: transparent;
+}
+
+.header-logo-buttons .btn {
+  font-size: 8px;
+  padding: 2px 5px;
+  line-height: 1.05;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1001;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.header-logo-buttons .btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.header-logo-buttons .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .header-logo-buttons {
+    position: static;
+    margin-top: 5px;
+    justify-content: center;
+  }
+
+  .header-logo-container {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-logo-container img {
+    margin-bottom: 5px;
+  }
+}

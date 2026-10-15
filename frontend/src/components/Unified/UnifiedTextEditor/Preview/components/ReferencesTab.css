@@ -1,0 +1,153 @@
+.references-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 16px;
+  background: #fff;
+}
+
+.references-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  gap: 12px;
+}
+
+.ref-search {
+  flex: 1;
+}
+
+.references-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.references-list {
+  padding: 0 12px;
+}
+
+.ref-section-header {
+  padding: 0 12px 8px 12px;
+  margin-bottom: 8px;
+}
+
+.ref-section-header h5.ant-typography {
+  margin: 0;
+  color: #595959;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+
+.reference-item {
+  background: #fff;
+  border: 1px solid #e8e8e8 !important;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  padding: 8px 12px !important;
+  transition: all 0.3s ease;
+}
+
+.reference-item:last-child {
+  margin-bottom: 4px;
+}
+
+.reference-item:hover {
+  background: #fff;
+  border-color: #1890ff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.reference-item.highlight-glow {
+  animation: glow 2s ease-in-out;
+  background: #e6f7ff;
+  border-color: #1890ff !important;
+}
+
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 0 rgba(24, 144, 255, 0);
+  }
+
+  50% {
+    box-shadow: 0 0 10px rgba(24, 144, 255, 0.3);
+  }
+
+  100% {
+    box-shadow: 0 0 0 rgba(24, 144, 255, 0);
+  }
+}
+
+.reference-item-content {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.ref-number-badge {
+  color: #1890ff;
+  font-weight: bold;
+  font-size: 14px;
+  padding: 4px 0;
+  height: fit-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+}
+
+.ref-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: calc(100% - 36px);
+}
+
+.ref-actions {
+  display: flex;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.reference-item:hover .ref-actions {
+  opacity: 1;
+}
+
+.ref-content-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+}
+
+.ref-textarea {
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  resize: none;
+  font-size: 14px;
+  width: 100%;
+  color: #262626;
+}
+
+.ref-textarea:focus {
+  background: transparent;
+}
+
+.ref-content-display {
+  padding: 4px 0;
+  white-space: pre-wrap;
+  min-height: 24px;
+  font-size: 14px;
+  color: #262626;
+}

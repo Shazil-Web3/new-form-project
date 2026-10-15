@@ -1,0 +1,68 @@
+/* PreviewComments.css
+ * Styles specific to Preview mode comments
+ * - Full comment system visible
+ * - Right rail for comments
+ * - Floating toolbar for adding comments
+ */
+
+.preview-comments-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.preview-comments-wrapper>* {
+    pointer-events: auto;
+}
+
+/* Comment cards in preview mode */
+.preview-comments-wrapper .comment-card {
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 14px;
+}
+
+.preview-comments-wrapper .comment-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Comment author */
+.preview-comments-wrapper .comment-author {
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+/* Comment timestamp */
+.preview-comments-wrapper .comment-timestamp {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+}
+
+/* Comment text */
+.preview-comments-wrapper .comment-text {
+    color: #444;
+    line-height: 1.5;
+}
+
+/* Highlighted text in editor */
+.preview-comments-wrapper .commented-text {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+.preview-comments-wrapper .suggestion-text {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}

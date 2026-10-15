@@ -1,0 +1,79 @@
+/* ReviewEditor.css
+ * Styles specific to Review mode
+ * - Editable for suggestions
+ * - Comments with approval actions
+ * - Toolbar visible
+ */
+
+.review-editor-wrapper .review-comments-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.review-editor-wrapper {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 100%;
+    position: relative !important;
+    background: #ffffff;
+    overflow: visible;
+}
+
+/* Fix: Ensure the document renderer has enough margin to the right for the rail in Review/Preview modes */
+.template-page .review-editor-wrapper .document-renderer,
+.template-page .preview-editor-wrapper .document-renderer {
+    margin-right: 500px !important;
+}
+
+/* Highlight areas that can be edited for suggestions */
+.review-editor-wrapper [contenteditable="true"]:hover {
+    background: rgba(255, 193, 7, 0.1);
+}
+
+/* Role-based edit highlighting */
+.admin-edit {
+    text-decoration: underline;
+    text-decoration-color: #ffcccc;
+    /* Light red */
+    -webkit-text-decoration-color: #ffcccc;
+    text-decoration-thickness: 2px;
+    cursor: pointer;
+}
+
+.reviewer-edit {
+    text-decoration: underline;
+    text-decoration-color: #add8e6;
+    /* Light blue */
+    -webkit-text-decoration-color: #add8e6;
+    text-decoration-thickness: 2px;
+    cursor: pointer;
+}
+
+/* Clean View Mode overrides */
+body .template-page.clean-view .admin-edit,
+body .template-page.clean-view .reviewer-edit,
+body .template-page.clean-view [data-edit-id],
+body .template-page.clean-view [data-creator-role],
+body .template-page.clean-view [data-user-email],
+.clean-view-active .admin-edit,
+.clean-view-active .reviewer-edit,
+.clean-view-active [data-edit-id],
+.clean-view-active [data-creator-role],
+.clean-view-active [data-user-email],
+.clean-view-active.document-renderer .admin-edit,
+.clean-view-active.document-renderer .reviewer-edit,
+.clean-view-active.document-renderer [data-edit-id],
+.clean-view-active.document-renderer [data-creator-role],
+.clean-view-active.document-renderer [data-user-email] {
+    text-decoration: none !important;
+    text-decoration-line: none !important;
+    -webkit-text-decoration-line: none !important;
+    -webkit-text-decoration: none !important;
+    border-bottom: none !important;
+    cursor: text !important;
+}

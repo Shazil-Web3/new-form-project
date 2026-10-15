@@ -1,0 +1,614 @@
+/* Page Styles */
+.page {
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 20px;
+  transition: box-shadow 0.3s ease;
+  cursor: text;
+  /* Make page area behave like a text surface */
+  /* Make sure page box is the physical paper and doesn't auto-expand */
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  /* header | content | footer */
+  overflow: hidden;
+  /* no spill outside the paper */
+}
+
+.page:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.page.a4 {
+  width: 210mm;
+  min-height: 297mm;
+  max-height: 297mm;
+}
+
+/* Orientation modifiers - Strict per-page overrides */
+.page.portrait,
+.page.portrait.a4,
+.document-renderer .page.portrait,
+.document-renderer[data-orientation="portrait"] .page.portrait,
+.document-renderer[data-orientation="landscape"] .page.portrait,
+.document-renderer[data-paper="a4"][data-orientation="landscape"] .page.portrait,
+.document-renderer[data-paper="a4"][data-orientation="portrait"] .page.portrait {
+  width: 210mm !important;
+  min-height: 297mm !important;
+  max-height: 297mm !important;
+}
+
+.page.landscape,
+.page.landscape.a4,
+.document-renderer .page.landscape,
+.document-renderer[data-orientation="landscape"] .page.landscape,
+.document-renderer[data-orientation="portrait"] .page.landscape,
+.document-renderer[data-paper="a4"][data-orientation="landscape"] .page.landscape,
+.document-renderer[data-paper="a4"][data-orientation="portrait"] .page.landscape {
+  width: 297mm !important;
+  min-height: 297mm !important;
+  max-height: 297mm !important;
+}
+
+/* Paper size specific rules */
+.page.portrait.letter,
+.document-renderer .page.portrait.letter,
+.document-renderer[data-paper="letter"] .page.portrait {
+  width: 216mm !important;
+  min-height: 279mm !important;
+  max-height: 279mm !important;
+}
+
+.page.landscape.letter,
+.document-renderer .page.landscape.letter,
+.document-renderer[data-paper="letter"] .page.landscape {
+  width: 279mm !important;
+  min-height: 279mm !important;
+  max-height: 279mm !important;
+}
+
+.page.portrait.legal,
+.document-renderer .page.portrait.legal,
+.document-renderer[data-paper="legal"] .page.portrait {
+  width: 216mm !important;
+  min-height: 356mm !important;
+  max-height: 356mm !important;
+}
+
+.page.landscape.legal,
+.document-renderer .page.landscape.legal,
+.document-renderer[data-paper="legal"] .page.landscape {
+  width: 356mm !important;
+  min-height: 356mm !important;
+  max-height: 356mm !important;
+}
+
+.page.letter {
+  width: 216mm;
+  min-height: 279mm;
+  max-height: 279mm;
+}
+
+.page.legal {
+  width: 216mm;
+  min-height: 356mm;
+  max-height: 356mm;
+}
+
+/* Page Content - Strict height enforcement */
+.page-content {
+  padding: 0.5cm 2cm 0.8cm 2cm;
+  /* Reduced top padding from 2cm to 0.5cm */
+  height: 100%;
+  overflow: hidden;
+  /* Critical: prevent any content overflow */
+  position: relative;
+  /* The content height is set by JS (height + max-height).
+     We enforce overflow hidden to prevent content from spilling beyond page boundaries. */
+  min-height: 0;
+  /* important in a grid so height is exactly what we set */
+  box-sizing: border-box;
+  /* Include padding in height calculation */
+}
+
+/* Preserve spaces and line breaks like Google Docs */
+.page-content p,
+.page-content h1,
+.page-content h2,
+.page-content h3,
+.page-content h4,
+.page-content h5,
+.page-content h6,
+.page-content blockquote,
+.page-content pre,
+.page-content li {
+  white-space: pre-wrap;
+  /* preserve spaces & soft line breaks */
+}
+
+/* Keep semantic defaults inside the page, so pasted HTML looks like itself */
+.page .page-content {
+  font: inherit;
+  line-height: inherit;
+}
+
+.page .page-content h1,
+.page .page-content h2,
+.page .page-content h3,
+.page .page-content h4,
+.page .page-content h5,
+.page .page-content h6 {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0.6em 0 0.4em;
+}
+
+.page .page-content p {
+  margin: 0.6em 0;
+}
+
+.page .page-content ol,
+.page .page-content ul {
+  padding-inline-start: 2rem;
+  margin: 0.6em 0;
+}
+
+.page .page-content blockquote {
+  margin: 0.6em 0;
+  padding-left: 1rem;
+  border-left: 3px solid rgba(0, 0, 0, 0.2);
+}
+
+.page .page-content pre,
+.page .page-content code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.page .page-content pre {
+  white-space: pre;
+  /* preserve copied indentation exactly */
+  padding: 0.5rem 0.75rem;
+  margin: 0.6em 0;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 4px;
+}
+
+/* Tables: keep cells readable without changing pasted structure */
+.page .page-content table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0.6em 0;
+  width: 100%;
+}
+
+.page .page-content th,
+.page .page-content td {
+  padding: 0.35rem 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  vertical-align: top;
+}
+
+/* Ensure HTML formatting is preserved and displayed correctly */
+.page-content strong,
+.page-content b {
+  font-weight: bold;
+}
+
+.page-content em,
+.page-content i {
+  font-style: italic;
+}
+
+.page-content u {
+  text-decoration: underline;
+}
+
+.page-content s,
+.page-content strike {
+  text-decoration: line-through;
+}
+
+.page-content sup {
+  vertical-align: super;
+  font-size: smaller;
+}
+
+.page-content sub {
+  vertical-align: sub;
+  font-size: smaller;
+}
+
+.page-content mark {
+  background-color: yellow;
+  color: black;
+}
+
+.page-content code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.page-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* Page chrome (header/content/footer) with optimized spacing */
+.page {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  /* header | content | footer */
+  gap: 0;
+  /* Remove any gaps between header, content, and footer */
+}
+
+.page-header,
+.page-footer {
+  padding: 0 2cm;
+}
+
+.page-header {
+  min-height: 18mm;
+  /* adjust to your template */
+  display: flex;
+  align-items: flex-end;
+}
+
+.page-footer {
+  min-height: 15mm;
+  /* adjust */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10pt;
+  color: #666;
+}
+
+/* The content area already had padding in your CSS */
+.page-content {
+  overflow: hidden;
+  /* critical: prevent content from peeking under footer */
+  outline: none;
+  /* avoid outline flicker */
+}
+
+/* Avoid accidental scrolling in blocks */
+.block-wrapper [contenteditable="true"] {
+  overflow: visible;
+  max-height: none;
+}
+
+/* Prevent accidental layout shifts from images while loading (optional) */
+.page-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Ensure the content area always has some height to click into */
+.page-content:empty::before {
+  content: "\200B";
+  /* zero-width space so the caret can land inside */
+  display: inline-block;
+}
+
+/* Headers/footers styling - Google Docs style */
+.page-header,
+.page-footer {
+  cursor: text;
+  position: relative;
+  min-height: 20px;
+  padding: 8px 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  /* Prevent margin collapse and allow text selection when editing */
+  display: flow-root;
+  /* Prevent horizontal overflow and force wrapping */
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* When editing header or footer, allow selecting/typing inside */
+.hf-mode--header .page-header,
+.hf-mode--footer .page-footer {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+/* When not editing, prevent selection for normal browsing */
+.page-header:not(.hf-master):not(.hf-mirror),
+.page-footer:not(.hf-master):not(.hf-mirror) {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Prevent first/last child margins from collapsing out of the chrome */
+.page-header,
+.page-footer {
+  /* flow-root already prevents margin-collapsing, but add padding for visual containment */
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* Zero out default paragraph margins inside header/footer */
+.page-header p:first-child,
+.page-header h1:first-child,
+.page-header h2:first-child,
+.page-header h3:first-child {
+  margin-top: 0;
+}
+
+.page-footer p:last-child {
+  margin-bottom: 0;
+}
+
+/* Pages themselves are never editable */
+.page {
+  -webkit-user-modify: read-only;
+}
+
+.page-header {
+  margin-top: 0;
+  margin-bottom: 8px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  max-height: 2.5em;
+  /* Limit to approx 2 lines */
+  overflow: hidden;
+}
+
+.page-footer {
+  margin-top: 8px;
+  margin-bottom: 12px;
+  padding-top: 8px;
+  padding-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-footer .footer-left {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.page-footer .footer-right {
+  flex: 1;
+  text-align: right;
+  font-size: 12px;
+  color: #666;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Floating page counter (like Docs, bottom center-ish) */
+.page-counter-chip {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  background: rgba(32, 33, 36, 0.9);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  z-index: 1100;
+  pointer-events: none;
+}
+
+/* Optional: hint if a single block is taller than a page */
+.oversized-block {
+  outline: 2px dashed #dc3545;
+}
+
+/* Page numbering */
+.page::after {
+  content: attr(data-page-index);
+  position: absolute;
+  bottom: 1cm;
+  right: 2cm;
+  font-size: 10pt;
+  color: #666;
+  font-family: 'Times New Roman', serif;
+}
+
+/* ToggleLock System Styles */
+
+/* Locked section styles */
+.locked-section {
+  pointer-events: auto;
+  background-color: #f4f4f4;
+  opacity: 0.8;
+  border: 1px dashed #bbb;
+  color: #888;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  padding: 1em;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+/* Editable block styles */
+.editable-block {
+  font-family: 'Times New Roman', serif;
+  font-size: 12pt;
+  line-height: 1.5;
+  color: #333;
+  outline: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.editable-block:hover {
+  background-color: transparent !important;
+}
+
+.editable-block:focus {
+  background-color: transparent !important;
+  outline: none !important;
+}
+
+/* Template content styles */
+.template-content {
+  direction: ltr;
+  unicode-bidi: normal;
+  transform: none;
+}
+
+/* Locked block styles */
+.locked-block {
+  border: 1px dashed #bbb;
+  background-color: #f5f5f5;
+  color: #888;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  padding: 1em;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.locked-block.header {
+  border-bottom: 1px solid #ccc;
+  padding: 8px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.locked-block.footer {
+  border-top: 1px solid #ccc;
+  padding: 8px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Template heading styles */
+.template-heading {
+  font-weight: bold;
+  margin: 1em 0;
+  color: #333;
+}
+
+/* Template editable styles */
+.template-editable {
+  background-color: rgba(40, 167, 69, 0.1);
+  border: 1px solid rgba(40, 167, 69, 0.3);
+  border-radius: 3px;
+  padding: 2px 4px;
+  margin: 0 1px;
+}
+
+.template-editable:hover {
+  background-color: rgba(40, 167, 69, 0.15);
+  border-color: rgba(40, 167, 69, 0.5);
+}
+
+/* Lock indicator styles */
+.lock-indicator {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background-color: #dc3545;
+  color: white;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  z-index: 10;
+}
+
+/* Toggle lock button styles */
+.toggle-lock-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.locked-section:hover .toggle-lock-btn,
+.editable-block:hover .toggle-lock-btn {
+  opacity: 1;
+}
+
+.toggle-lock-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Selection pill styles for floating toolbar */
+.selection-pill {
+  position: absolute;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  z-index: 1500;
+}
+
+.selection-pill button {
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  border-radius: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  color: #666;
+}
+
+.selection-pill button:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.selection-pill button i {
+  font-size: 12px;
+}
+

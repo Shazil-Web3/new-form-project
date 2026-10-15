@@ -1,0 +1,132 @@
+/* Toolbar - Fixed at the Top */
+.toolbar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 150;
+  background-color: #f8f9fa;
+  padding: 10px;
+  border-bottom: 2px solid #dee2e6;
+  margin-bottom: 5px;
+  max-height: 55px;
+}
+
+/* Enhanced Editor CSS with Block Support */
+
+/* Main Container - Flexbox layout similar to Ant Design */
+.main-container {
+  display: flex;
+  height: calc(100vh - 60px);
+  flex-wrap: nowrap;
+  overflow: visible;
+  /* Allow sticky TOC sidebar to stick to viewport */
+  width: 100%;
+  flex: 1;
+}
+
+/* Content Wrapper - Adjusts automatically based on TOC width */
+.content-container {
+  position: relative;
+  flex: 1;
+  /* Take remaining space after TOC */
+  min-width: 0;
+  /* Allow shrinking */
+  overflow: visible;
+  /* Allow sticky elements inside */
+  display: flex;
+  flex-direction: column;
+  background-color: #f0f2f5;
+  /* Consistent background */
+}
+
+/* When comments are visible, remove right padding/margin to eliminate gray space */
+.content-container:has(.doc-rail[style*="display: block"]) {
+  padding-right: 0;
+  margin-right: 0;
+}
+
+/* Alternative selector for browsers without :has() support */
+.content-container.comments-active {
+  padding-right: 0;
+  margin-right: 0;
+}
+
+.editor-container {
+  position: relative;
+  flex: 1;
+  padding: 0;
+  /* Remove padding to eliminate gray space */
+  display: flex;
+  justify-content: flex-start;
+  /* Align document to left side */
+  overflow: auto;
+  /* Allow scrolling if needed */
+  height: 100%;
+  background-color: transparent;
+  /* Remove background */
+}
+
+/* Add these styles to your existing Editor.css */
+
+/* Inline Locked Text Styles */
+.locked-text.locked,
+[data-locked="true"] {
+  background-color: #f1f3f4 !important;
+  color: inherit !important;
+  padding: 1px 4px !important;
+  border-radius: 2px !important;
+  display: inline !important;
+  user-select: text !important;
+  cursor: text !important;
+  transition: background-color 0.15s ease;
+}
+
+.locked-text.locked:hover,
+[data-locked="true"]:hover {
+  background-color: #e8eaed !important;
+}
+
+/* Document Renderer */
+.document-renderer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  /* Align pages to left edge so portrait pages stay fixed next to TOC */
+  gap: 20px;
+  padding: 4px 20px 20px 20px;
+  background-color: #f0f2f5;
+  min-height: calc(100vh - 80px);
+  width: fit-content;
+  margin-left: 20px;
+  margin-right: 20px;
+  transition: margin-left 0.3s ease-in-out;
+  max-width: calc(100vw - 300px);
+}
+
+.document-renderer .page:first-child {
+  margin-top: 4px !important;
+}
+
+/* Dynamic positioning based on TOC state */
+.main-container:has(.toc-sidebar[style*="width: 200px"]) .document-renderer,
+.main-container:has(.toc-sidebar[style*="width: 250px"]) .document-renderer {
+  margin-left: 40px;
+  /* Normal margin when TOC is expanded */
+}
+
+.main-container:has(.toc-sidebar[style*="width: 65px"]) .document-renderer {
+  margin-left: 10px;
+  /* Reduced margin when TOC is collapsed to use freed space without causing overflow */
+}
+
+/* Fallback for browsers without :has() support */
+.document-renderer.toc-expanded {
+  margin-left: 40px;
+}
+
+.document-renderer.toc-collapsed {
+  margin-left: 10px;
+  /* Reduced margin when TOC collapsed, keeps A4 page fully visible */
+}
+

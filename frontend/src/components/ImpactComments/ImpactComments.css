@@ -1,0 +1,858 @@
+/* ==========================================================================
+   Impact Comments System Styles
+   ========================================================================== */
+
+/* ── Container positioning ───────────────────────────────────────────────── */
+.impact-comment-system-root {
+  position: relative;
+  width: 100%;
+}
+
+.impact-form-content-area {
+  position: relative;
+  width: 100%;
+}
+
+/* ── Highlighted text in the Impact form ──────────────────────────────────── */
+.impact-comment-highlight {
+  background: rgba(254, 240, 138, 0.65);
+  border-bottom: 2px solid #eab308;
+  border-radius: 2px;
+  cursor: pointer;
+  padding: 1px 2px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.impact-comment-highlight:hover {
+  background: rgba(253, 224, 71, 0.9);
+  border-bottom-color: #ca8a04;
+}
+
+.impact-comment-highlight.active {
+  background: rgba(191, 219, 254, 0.85);
+  border-bottom: 2px solid #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.impact-comment-highlight.resolved {
+  background: rgba(220, 252, 231, 0.6);
+  border-bottom: 2px solid #16a34a;
+}
+
+/* ── Floating selection popover pill ─────────────────────────────────────── */
+.impact-selection-pill {
+  position: fixed;
+  z-index: 9999;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1e293b;
+  color: #ffffff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transform: translate(-50%, -100%) translateY(-10px);
+  animation: impactPillPop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  user-select: none;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.impact-selection-pill:hover {
+  background: #0f172a;
+  transform: translate(-50%, -100%) translateY(-12px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+.impact-selection-pill .pill-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.impact-selection-pill::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0;
+  border-style: solid;
+  border-color: #1e293b transparent transparent transparent;
+}
+
+@keyframes impactPillPop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -100%) translateY(0) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -100%) translateY(-10px) scale(1);
+  }
+}
+
+/* ── Inline composer floating card ───────────────────────────────────────── */
+.impact-composer-card {
+  position: fixed;
+  z-index: 10000;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
+  animation: impactFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes impactFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.impact-composer-quote {
+  font-size: 12px;
+  color: #475569;
+  background: #f1f5f9;
+  border-left: 3px solid #3b82f6;
+  padding: 6px 10px;
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 12px;
+  max-height: 70px;
+  overflow-y: auto;
+  line-height: 1.4;
+  font-style: italic;
+  word-break: break-word;
+}
+
+.impact-composer-author-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.impact-composer-textarea {
+  width: 100%;
+  min-height: 70px;
+  max-height: 160px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #1e293b;
+  resize: vertical;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.impact-composer-textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.impact-composer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.impact-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  outline: none;
+  user-select: none;
+}
+
+.impact-btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.impact-btn-primary:hover:not(:disabled) {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.impact-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.impact-btn-secondary {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.impact-btn-secondary:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.impact-btn-ghost {
+  background: transparent;
+  color: #64748b;
+  padding: 4px 8px;
+}
+
+.impact-btn-ghost:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.impact-btn-danger {
+  background: transparent;
+  color: #dc2626;
+  padding: 4px 8px;
+}
+
+.impact-btn-danger:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+/* ── Role Badges ─────────────────────────────────────────────────────────── */
+.impact-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 7px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.impact-role-badge.admin {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.impact-role-badge.reviewer {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.impact-role-badge.approver {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.impact-role-badge.member,
+.impact-role-badge.author {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+/* ── Sidebar panel ───────────────────────────────────────────────────────── */
+.impact-comments-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 320px;
+  bottom: 0;
+  background: #ffffff;
+  border-left: 1px solid #e2e8f0;
+  border-radius: 0 8px 8px 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.04);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (max-width: 900px) {
+  .impact-comments-sidebar {
+    position: fixed;
+    top: 60px;
+    right: 0;
+    bottom: 0;
+    width: 330px;
+    z-index: 10000;
+    box-shadow: -8px 0 25px rgba(0, 0, 0, 0.18);
+  }
+}
+
+.impact-comments-sidebar-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+}
+
+.impact-comments-sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.impact-comments-count-pill {
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 12px;
+  padding: 1px 7px;
+}
+
+.impact-comments-filters {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+}
+
+.impact-filter-tab {
+  flex: 1;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.impact-filter-tab:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.impact-filter-tab.active {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.impact-comments-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ── Comment Card ────────────────────────────────────────────────────────── */
+.impact-comment-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.impact-comment-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.impact-comment-card.active {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.impact-comment-card.resolved {
+  background: #fcfdfd;
+  opacity: 0.85;
+}
+
+.impact-comment-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.impact-author-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.impact-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.impact-author-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.impact-comment-time {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.impact-quoted-snippet {
+  background: #f8fafc;
+  border-left: 2px solid #3b82f6;
+  padding: 4px 8px;
+  border-radius: 0 4px 4px 0;
+  font-size: 11px;
+  color: #475569;
+  font-style: italic;
+  margin: 6px 0 8px;
+  cursor: pointer;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.impact-quoted-snippet:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.impact-comment-text {
+  font-size: 12px;
+  color: #1e293b;
+  line-height: 1.45;
+  margin-bottom: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.impact-comment-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  border-top: 1px solid #f8fafc;
+  font-size: 11px;
+}
+
+.impact-resolve-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.12s ease;
+}
+
+.impact-resolve-btn:hover {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+.impact-resolve-btn.is-resolved {
+  color: #16a34a;
+}
+
+/* ── Threaded Replies ────────────────────────────────────────────────────── */
+.impact-reply-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.impact-reply-trigger-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #2563eb;
+}
+
+.impact-replies-list {
+  margin-top: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.impact-reply-item {
+  padding-bottom: 8px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.impact-reply-item:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.impact-reply-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.impact-reply-author-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.impact-reply-time {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.impact-reply-delete-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.impact-reply-delete-btn:hover {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.impact-reply-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1e293b;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.impact-reply-input-box {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  animation: impactFadeIn 0.18s ease;
+}
+
+.impact-reply-persona-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.impact-reply-as-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.impact-reply-as-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.impact-reply-textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  outline: none;
+  font-family: inherit;
+  background: #ffffff;
+  resize: vertical;
+  min-height: 52px;
+  max-height: 140px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.impact-reply-textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+}
+
+.impact-reply-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── Empty State ─────────────────────────────────────────────────────────── */
+.impact-comments-empty {
+  text-align: center;
+  padding: 36px 16px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.impact-comments-empty-icon {
+  font-size: 28px;
+  margin-bottom: 6px;
+  opacity: 0.6;
+}
+
+/* ── Header Trigger Button in ImpactFormEditor ─────────────────────────────── */
+.impact-header-comment-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.impact-header-comment-trigger:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.impact-header-comment-trigger.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.impact-header-comment-trigger .trigger-count {
+  background: #e2e8f0;
+  color: #1e293b;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.impact-header-comment-trigger.active .trigger-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* ── Field Pill Badges ───────────────────────────────────────────────────── */
+.impact-field-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  letter-spacing: 0.2px;
+  line-height: 1.4;
+  user-select: none;
+}
+
+/* ── Comments UI Grid Section ────────────────────────────────────────────── */
+.impact-comments-grid-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 22px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.impact-comments-grid-container:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  border-color: #cbd5e1;
+}
+
+.impact-comments-grid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 16px;
+}
+
+.impact-comments-grid-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.impact-comments-grid-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.impact-comments-grid-icon {
+  font-size: 16px;
+}
+
+.impact-comments-grid-subtitle {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.impact-comments-grid-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.impact-comments-filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: #f1f5f9;
+  padding: 3px;
+  border-radius: 8px;
+}
+
+.impact-comments-filters-bar .impact-filter-tab {
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  color: #64748b;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.impact-comments-filters-bar .impact-filter-tab:hover {
+  color: #1e293b;
+}
+
+.impact-comments-filters-bar .impact-filter-tab.active {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Inline Quick Add Composer in Grid ───────────────────────────────────── */
+.impact-grid-inline-composer {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 18px;
+  animation: impactFadeIn 0.2s ease;
+}
+
+.impact-grid-topic-select {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: #1e293b;
+  outline: none;
+  cursor: pointer;
+}
+
+/* ── Cards Grid ──────────────────────────────────────────────────────────── */
+.impact-comments-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 680px) {
+  .impact-comments-cards-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.impact-comments-grid-empty {
+  text-align: center;
+  padding: 36px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+}

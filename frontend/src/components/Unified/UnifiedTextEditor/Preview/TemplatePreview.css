@@ -1,0 +1,449 @@
+.template-page {
+    background-color: transparent;
+    min-height: 100vh;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.template-page-header {
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    padding: 16px 24px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* NOT sticky — should scroll away so only the tabs + toolbar remain at top */
+}
+
+.template-page-content {
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.template-content-preview,
+.template-editor-wrapper,
+.preview-editor-wrapper,
+.review-editor-wrapper {
+    width: 100% !important;
+    min-width: 100% !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+}
+
+.template-content {
+    background-color: #fff;
+    min-height: 100vh;
+    border-radius: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Sticky tab navigation for the Pending Review / Preview page */
+.template-content>.ant-tabs>.ant-tabs-nav {
+    position: sticky;
+    top: 0 !important;
+    z-index: 500 !important;
+    background-color: #f0f2f5;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    border-bottom: none !important;
+}
+
+.template-content>.ant-tabs>.ant-tabs-nav .ant-tabs-extra-content {
+    display: flex;
+    align-items: center;
+    padding-right: 12px;
+}
+
+/* Remove the AntD nav bottom line */
+.template-content>.ant-tabs>.ant-tabs-nav::before {
+    display: none !important;
+}
+
+/* In TemplatePreview, toolbar sits below the sticky tabs */
+.template-content .editor-toolbar {
+    position: sticky;
+    top: 38px !important;
+    /* Flush with tabs height */
+    z-index: 450 !important;
+    background-color: #f8f9fa;
+    border-top: none !important;
+    margin-top: 0 !important;
+}
+
+/* In TemplatePreview / tabbed pages, TOC sits flush under tabs + toolbar */
+.template-content .toc-sidebar,
+.template-page .toc-sidebar {
+    top: 78px !important;
+    height: calc(100vh - 78px) !important;
+    max-height: calc(100vh - 78px) !important;
+    z-index: 90 !important;
+}
+
+/* Ant Design Tabs overrides to prevent breaking position: sticky */
+.template-content .ant-tabs-content-holder,
+.template-content .ant-tabs-content,
+.template-content .ant-tabs-tabpane {
+    overflow: visible !important;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* TemplateEditor-style classes */
+.template-container {
+    background-color: #f5f5f5;
+    min-height: 100vh;
+}
+
+.template-container.full-screen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    background-color: white;
+}
+
+.main-container {
+    display: flex;
+    height: calc(100vh - 60px);
+    overflow: visible;
+}
+
+.content-container {
+    flex: 1;
+    display: flex;
+    position: relative;
+    flex-direction: row;
+    overflow: visible;
+    /* Ensure comments panel sits to the right */
+}
+
+.editor-container {
+    flex: 1;
+    position: relative;
+    overflow: auto;
+    scroll-behavior: auto;
+    scrollbar-gutter: stable;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    padding: 0;
+    background-color: transparent;
+}
+
+.document-renderer {
+    width: fit-content;
+    /* Match TemplateEditor behavior */
+    max-width: none;
+    margin: 0 12px;
+    /* Tighter spacing to reduce gaps */
+    position: relative;
+}
+
+/* Fix: Ensure the document renderer has enough margin to the right for the rail in Review/Preview modes */
+.template-page .review-editor-wrapper .document-renderer,
+.template-page .preview-editor-wrapper .document-renderer {
+    margin-right: 500px !important;
+}
+
+/* Extra-tighten spacing between TOC and editor */
+.template-page .main-container>.content-container .document-renderer {
+    margin-left: 8px !important;
+    padding-top: 4px !important;
+}
+
+/* Pending Review specific sizing for rail */
+.template-page .doc-rail {
+    padding: 6px 4px 36px 6px;
+    margin-left: 0;
+    margin-right: 0 !important;
+    max-width: none !important;
+    right: 0 !important;
+}
+
+.template-page .doc-rail__card {
+    padding: 6px;
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.template-page .doc-rail__composer .form-control {
+    font-size: 11px;
+    min-height: 40px;
+    max-height: 100px;
+    padding: 4px 6px;
+}
+
+.template-page .doc-rail__chip {
+    font-size: 10px;
+    padding: 1px 4px;
+    max-width: 150px;
+}
+
+.template-page .selection-pill {
+    gap: 4px;
+    padding: 4px;
+    border-radius: 12px;
+    width: 28px;
+}
+
+.template-page .selection-pill button {
+    width: 22px;
+    height: 22px;
+}
+
+.template-page .selection-pill i {
+    font-size: 12px;
+}
+
+/* Legacy duplicate overrides removed for layout and measurement parity with EditorCore.css */
+
+.page-counter-chip {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    z-index: 1000;
+}
+
+.toc-toggle-button {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 950;
+    background: #1890ff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Comments Panel Styles */
+.comments-panel {
+    flex: 0 0 400px;
+    border-left: 1px solid #e8e8e8;
+    padding: 16px;
+    background-color: #f9f9f9;
+    overflow-y: auto;
+    max-height: 100vh;
+}
+
+.comments-panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+.comments-panel::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.comments-panel::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+.comments-panel::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+.show-comments-btn {
+    position: fixed;
+    right: 24px;
+    top: 400px;
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.comment-card,
+.suggestion-card {
+    transition: all 0.2s ease;
+    border-radius: 8px !important;
+}
+
+.comment-card:hover,
+.suggestion-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.highlighted-active {
+    border-left-color: #52c41a !important;
+    background-color: #f6ffed !important;
+}
+
+/* Duplicate empty paragraph and caret overrides removed for parity */
+
+/* small accessibility tweak so clicks focus editor area */
+.document-renderer {
+    cursor: text;
+}
+
+
+
+/* Responsive adjustments */
+@media (max-width: 1400px) {
+    .comments-panel {
+        flex: 0 0 350px;
+    }
+}
+
+@media (max-width: 1200px) {
+    .comments-panel {
+        flex: 0 0 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .template-page-content {
+        padding: 0 12px 12px 12px;
+    }
+
+    .template-page-header {
+        padding: 12px 16px;
+        flex-direction: column;
+        gap: 12px;
+        align-items: stretch;
+    }
+
+    .comments-panel {
+        flex: 0 0 100%;
+        border-left: none;
+        border-top: 1px solid #e8e8e8;
+        max-height: 50vh;
+    }
+
+    .main-container {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .editor-container {
+        padding: 12px;
+    }
+
+    .page {
+        width: 100% !important;
+        min-height: auto !important;
+        max-height: none !important;
+        margin-bottom: 20px;
+    }
+
+    .show-comments-btn {
+        position: absolute;
+        right: 12px;
+        top: 12px;
+    }
+}
+
+/* =========================================
+   Clean View / Focus Mode overrides
+   ========================================= */
+.template-page.clean-view .comments-panel,
+.template-page.clean-view .doc-rail,
+.template-page.clean-view .preview-comments-wrapper,
+.template-page.clean-view .comments-container,
+.template-page.clean-view .floating-toolbar,
+.template-page.clean-view .selection-pill,
+.template-page.clean-view .backspace-strike-popup,
+.template-page.clean-view .right-rail-composer,
+.template-page.clean-view .show-comments-btn {
+    display: none !important;
+}
+
+.template-page.clean-view .review-editor-wrapper .document-renderer,
+.template-page.clean-view .preview-editor-wrapper .document-renderer {
+    margin-right: auto !important;
+    margin-left: auto !important;
+}
+
+.template-page.clean-view .highlighted-text,
+.template-page.clean-view [data-comment-id],
+.template-page.clean-view [data-suggestededit-id] {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    border-bottom: none !important;
+    cursor: text !important;
+    box-shadow: none !important;
+    transition: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.template-page.clean-view .admin-edit,
+.template-page.clean-view .reviewer-edit {
+    text-decoration: none !important;
+    border-bottom: none !important;
+    cursor: text !important;
+}
+
+.template-page.clean-view [data-backspace-strike-id],
+.template-page.clean-view .backspace-strike-text {
+    display: none !important;
+}
+
+/* Mode 1: Clean View WITH Accepted Suggestions */
+.template-page.clean-view:not(.clean-view-rejected) del,
+.template-page.clean-view-accepted del,
+.template-page.clean-view:not(.clean-view-rejected) .deleted-text,
+.template-page.clean-view-accepted .deleted-text {
+    display: none !important;
+}
+
+.template-page.clean-view:not(.clean-view-rejected) [data-suggestededit-id] ins,
+.template-page.clean-view-accepted [data-suggestededit-id] ins,
+.template-page.clean-view:not(.clean-view-rejected) ins,
+.template-page.clean-view-accepted ins {
+    display: inline !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+/* Mode 2: Clean View WITHOUT Accepted Suggestions (Original Text) */
+.template-page.clean-view-rejected del,
+.template-page.clean-view-rejected .deleted-text {
+    display: inline !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    background-color: transparent !important;
+    color: inherit !important;
+}
+
+.template-page.clean-view-rejected [data-suggestededit-id] ins,
+.template-page.clean-view-rejected ins {
+    display: none !important;
+}
+
+.template-page.clean-view .presence-indicator,
+.template-page.clean-view .collaboration-badge,
+.template-page.clean-view .user-badge,
+.template-page.clean-view .presence-badge,
+.template-page.clean-view .change-badge,
+.template-page.clean-view .attribution-indicator,
+.template-page.clean-view .revision-underline,
+.template-page.clean-view .presence-list,
+.template-page.clean-view .collaboration-cursor {
+    display: none !important;
+}
+
+/* Minimize gap between toolbar and first page sheet */
+.template-page .document-renderer .page:first-child {
+    margin-top: 4px !important;
+}

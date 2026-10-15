@@ -1,0 +1,48 @@
+/* Clean Overlapping Hover Sidebar System - Zero Page Reflow */
+
+.clean-hover-sider {
+  position: sticky !important;
+  top: 64px !important;
+  height: calc(100vh - 64px) !important;
+  width: 64px !important;
+  min-width: 64px !important;
+  max-width: 64px !important;
+  flex: 0 0 64px !important;
+  z-index: 800 !important;
+  background: #ffffff !important;
+  overflow: visible !important; /* Allows inner panel to float outwards over content */
+  user-select: none;
+}
+
+.clean-overlap-panel {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 64px;
+  background: #ffffff;
+  z-index: 850 !important;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+  transition: width 0.3s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.3s ease !important;
+  will-change: width, box-shadow;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border-right: 1px solid #f0f0f0;
+}
+
+.clean-overlap-panel.is-expanded {
+  width: 250px !important;
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Menu item text title smooth fade in/out */
+.clean-overlap-panel .ant-menu-title-content {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: opacity 0.25s ease !important;
+}
+
+.clean-overlap-panel:not(.is-expanded) .ant-menu-title-content {
+  opacity: 0;
+}
