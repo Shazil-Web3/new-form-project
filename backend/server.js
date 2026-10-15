@@ -29,6 +29,7 @@ const { runDeduplicationMigration } = require('./config/deduplicationMigration')
 const { cleanStaleWorkflowApprovers } = require('./config/workflowMigration');
 const { runGanttMigration } = require('./config/ganttMigration');
 const { runLmsMigration } = require('./config/lmsMigration');
+const { runRelatedDocumentsMigration } = require('./config/relatedDocumentsMigration');
 
 
 // Ensure local uploads directory exists
@@ -98,6 +99,7 @@ const initDb = async () => {
     await runNumberingMigration(pool).catch(e => console.log('Numbering notice:', e.message));
     await runDeduplicationMigration(pool).catch(e => console.log('Deduplication notice:', e.message));
     await cleanStaleWorkflowApprovers(pool).catch(e => console.log('Workflow notice:', e.message));
+    await runRelatedDocumentsMigration(pool).catch(e => console.log('Related documents notice:', e.message));
   } catch (error) {
     console.error('❌ Error initializing database:', error);
   }

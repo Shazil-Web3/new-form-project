@@ -1007,6 +1007,32 @@ function getSafeUploadPath(baseUploadsDir, targetPath) {
         }, true);
       }
 
+      // 8. Persist related documents if provided (only in-flight: draft/review/approval; published cannot be selected)
+      const relatedDocumentIds = req.body.related_document_ids || req.body.relatedDocumentIds;
+      if (Array.isArray(relatedDocumentIds) && relatedDocumentIds.length > 0) {
+        const uniqueRelated = Array.from(new Set(relatedDocumentIds.map(String).filter(rid => rid !== String(docId))));
+        for (const rid of uniqueRelated) {
+          try {
+            const [targetCheck] = await connection.execute(
+              'SELECT status FROM documents WHERE document_id = ?',
+              [rid]
+            );
+            if (targetCheck.length && ['published', 'revised', 'archived', 'disabled'].includes(targetCheck[0].status)) {
+              console.warn(`[create-document] Skipping related doc ${rid}: published documents cannot be selected as related.`);
+              continue;
+            }
+            await connection.execute(
+              `INSERT INTO document_related (document_id, related_document_id, relationship_type, is_sync_required, created_by)
+               VALUES (?, ?, 'pending_dependency', 1, ?)
+               ON DUPLICATE KEY UPDATE relationship_type = 'pending_dependency', is_sync_required = 1`,
+              [docId, rid, userId]
+            );
+          } catch (relErr) {
+            console.warn(`[create-document] Could not insert related doc ${rid}:`, relErr.message);
+          }
+        }
+      }
+
       // Commit transaction
       await connection.commit();
       connection.release();
@@ -1195,6 +1221,32 @@ app.put('/api/update_document/:documentId', authenticateToken, async (req, res) 
         success: false,
         error: 'Access denied: Only administrators are authorized to publish documents.'
       });
+    }
+
+    // Related-documents publish gate
+    if (status === 'published') {
+      const { checkRelatedDocumentsPublishGate } = require('./documentWorkflow').relatedGate || {};
+      // Inline the gate check since we can't import from documentWorkflow (circular).
+      // Use a direct query here to keep things self-contained.
+      try {
+        const [relRows] = await pool.execute(
+          `SELECT dr.related_document_id, d.title, d.status
+           FROM document_related dr
+           JOIN documents d ON dr.related_document_id = d.document_id
+           WHERE dr.document_id = ? AND dr.is_sync_required = 1`,
+          [documentId]
+        );
+        const blocked = relRows.filter(r => r.status !== 'published' && r.status !== 'revised');
+        if (blocked.length > 0) {
+          return res.status(409).json({
+            success: false,
+            message: `Cannot publish: the following related document(s) in the publishing group are not yet published: ${blocked.map(b => `"${b.title}" (${b.status})`).join(', ')}. All required related documents must be published first, or use the group publish action.`,
+            blockedBy: blocked
+          });
+        }
+      } catch (gateErr) {
+        console.warn('[update_document publish gate] Notice:', gateErr.message);
+      }
     }
 
     // Check if status is transitioning to an archive status - block if actively referenced
@@ -1410,6 +1462,33 @@ app.put('/api/update_document/:documentId', authenticateToken, async (req, res) 
           syncItemReferences(pool, 'document', documentId, content, elements, userId).catch(e => console.warn('Ref sync error in update_document:', e.message));
         }
       } catch (_) {}
+    }
+
+    // Persist related documents if provided in the update payload (only in-flight: draft/review/approval; published cannot be selected)
+    const updatedRelatedDocIds = req.body.related_document_ids || req.body.relatedDocumentIds;
+    if (Array.isArray(updatedRelatedDocIds)) {
+      try {
+        await pool.execute('DELETE FROM document_related WHERE document_id = ?', [documentId]);
+        const uniqueRelated = Array.from(new Set(updatedRelatedDocIds.map(String).filter(rid => rid !== String(documentId))));
+        for (const rid of uniqueRelated) {
+          const [targetCheck] = await pool.execute(
+            'SELECT status FROM documents WHERE document_id = ?',
+            [rid]
+          );
+          if (targetCheck.length && ['published', 'revised', 'archived', 'disabled'].includes(targetCheck[0].status)) {
+            console.warn(`[update_document] Skipping related doc ${rid}: published documents cannot be selected as related.`);
+            continue;
+          }
+          await pool.execute(
+            `INSERT INTO document_related (document_id, related_document_id, relationship_type, is_sync_required, created_by)
+             VALUES (?, ?, 'pending_dependency', 1, ?)
+             ON DUPLICATE KEY UPDATE relationship_type = 'pending_dependency', is_sync_required = 1`,
+            [documentId, rid, userId]
+          );
+        }
+      } catch (relErr) {
+        console.warn('[update_document] Notice updating related docs:', relErr.message);
+      }
     }
 
     res.json({ success: true, message: 'Document updated', documentId });

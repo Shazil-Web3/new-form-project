@@ -48,13 +48,14 @@ import DocumentContentTab from "./tabs/DocumentContentTab";
 import DocumentReviewTab from "./tabs/DocumentReviewTab";
 import useDocumentNumbering from "./hooks/useDocumentNumbering";
 import useDocumentPersistence from "./hooks/useDocumentPersistence";
+import { getDocumentsForRelated } from "../../../../../api/documents";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
 // Helpers & constants extracted to ./helpers/createDocumentHelpers.js
-const CreateDocument = ({ navigate: propNavigate, user, users, templates, template, document, departments = [], onSuccess, onCancel }) => {
+const CreateDocument = ({ navigate: propNavigate, user, users, templates, template, document, departments = [], relatedDocumentCandidates = [], publishedDocuments = [], onSuccess, onCancel }) => {
   const [form] = Form.useForm();
   const hookNavigate = useNavigate();
   const navigate = propNavigate || hookNavigate;
@@ -102,6 +103,26 @@ const CreateDocument = ({ navigate: propNavigate, user, users, templates, templa
   const appliedTemplateRef = useRef(undefined);
   const [currentDocumentId, setCurrentDocumentId] = useState(null);
   const [documentNotes, setDocumentNotes] = useState('');
+
+  // Related Documents: in-flight documents (draft, review, approval) selected in Basic Info
+  const [relatedDocumentIds, setRelatedDocumentIds] = useState([]);
+  const [fetchedRelatedCandidates, setFetchedRelatedCandidates] = useState([]);
+  useEffect(() => {
+    let isMounted = true;
+    getDocumentsForRelated()
+      .then(docs => {
+        if (isMounted && Array.isArray(docs)) {
+          setFetchedRelatedCandidates(docs);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+  const candidateList = (relatedDocumentCandidates && relatedDocumentCandidates.length > 0)
+    ? relatedDocumentCandidates
+    : (publishedDocuments && publishedDocuments.length > 0)
+      ? publishedDocuments
+      : fetchedRelatedCandidates;
   const [tempAttachments, setTempAttachments] = useState([]);
   const [tempReferences, setTempReferences] = useState([]);
   const [tempManualReferences, setTempManualReferences] = useState([]);
@@ -893,6 +914,7 @@ const CreateDocument = ({ navigate: propNavigate, user, users, templates, templa
     setActiveTab,
     validateAllTabs,
     onSuccess,
+    relatedDocumentIds,
   });
 
   const { debouncedSave } = useAutoSave({
@@ -1024,6 +1046,10 @@ const CreateDocument = ({ navigate: propNavigate, user, users, templates, templa
                       debouncedSave={debouncedSave}
                       handleTemplateSelectChange={handleTemplateSelectChange}
                       handleImpactTemplateChange={handleImpactTemplateChange}
+                      relatedDocumentCandidates={candidateList}
+                      publishedDocuments={candidateList}
+                      relatedDocumentIds={relatedDocumentIds}
+                      onRelatedDocumentsChange={setRelatedDocumentIds}
                     />
                   )
                 },

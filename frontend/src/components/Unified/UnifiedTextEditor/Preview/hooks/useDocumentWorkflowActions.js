@@ -112,6 +112,15 @@ export const useDocumentWorkflowActions = (parsedTemplate, setParsedTemplate, cu
       if (metadata.description !== undefined) {
         payload.description = metadata.description;
       }
+      if (metadata.category_id !== undefined) {
+        payload.category_id = metadata.category_id;
+      }
+      if (metadata.category !== undefined) {
+        payload.category = metadata.category;
+      }
+      if (metadata.related_document_ids !== undefined) {
+        payload.related_document_ids = metadata.related_document_ids;
+      }
 
       if (Object.keys(payload).length === 0) {
         return false;

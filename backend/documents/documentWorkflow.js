@@ -1,5 +1,30 @@
 const { assertUserDocumentAccess, resetWorkflowState, retireParentDocumentsToArchived } = require('./documentHelpers');
 
+/**
+ * Related-documents publish gate.
+ * Before allowing a single-document publish, verify that every related document
+ * with is_sync_required=1 is already published.
+ * Returns null if safe to publish, or an object { blockedBy } if blocked.
+ */
+async function checkRelatedDocumentsPublishGate(pool, documentId) {
+  try {
+    const [relRows] = await pool.execute(
+      `SELECT dr.related_document_id, d.title, d.status
+       FROM document_related dr
+       JOIN documents d ON dr.related_document_id = d.document_id
+       WHERE dr.document_id = ? AND dr.is_sync_required = 1`,
+      [documentId]
+    );
+    const blockedBy = relRows.filter(r => r.status !== 'published' && r.status !== 'revised');
+    if (blockedBy.length === 0) return null;
+    return { blockedBy };
+  } catch (err) {
+    // Log but do not block publish if the table doesn't exist yet (fresh install before migration)
+    console.warn('[checkRelatedDocumentsPublishGate] Notice:', err.message);
+    return null;
+  }
+}
+
 module.exports = function registerDocumentWorkflowRoutes({
   app,
   pool,
@@ -226,6 +251,18 @@ app.put('/api/update-document-status/:documentId', authenticateToken, async (req
   }
 
   try {
+    // Related-documents publish gate: block if required related docs are not yet published
+    if (status === 'published') {
+      const gate = await checkRelatedDocumentsPublishGate(pool, documentId);
+      if (gate) {
+        return res.status(409).json({
+          success: false,
+          message: `Cannot publish: the following related document(s) in the publishing group are not yet published: ${gate.blockedBy.map(b => `"${b.title}" (${b.status})`).join(', ')}. All required related documents must be published first, or use the group publish action.`,
+          blockedBy: gate.blockedBy
+        });
+      }
+    }
+
     // Start transaction
     const connection = await pool.getConnection();
     await connection.beginTransaction();
@@ -317,6 +354,19 @@ app.put('/api/documents/:documentId/workflow-status', authenticateToken, async (
         message: 'Access denied: Only administrators are authorized to publish documents.'
       });
     }
+
+    // Related-documents publish gate
+    if (status === 'published') {
+      const gate = await checkRelatedDocumentsPublishGate(pool, documentId);
+      if (gate) {
+        return res.status(409).json({
+          success: false,
+          message: `Cannot publish: the following related document(s) in the publishing group are not yet published: ${gate.blockedBy.map(b => `"${b.title}" (${b.status})`).join(', ')}. All required related documents must be published first, or use the group publish action.`,
+          blockedBy: gate.blockedBy
+        });
+      }
+    }
+
     const ok = await assertUserDocumentAccess(documentId, userId);
     if (!ok) return res.status(403).json({ success: false, message: 'Access denied' });
 
@@ -402,6 +452,18 @@ app.put('/api/documents/:id/status', authenticateToken, async (req, res) => {
         success: false,
         message: 'Access denied: Only administrators are authorized to publish documents.'
       });
+    }
+
+    // Related-documents publish gate
+    if (status === 'published') {
+      const gate = await checkRelatedDocumentsPublishGate(pool, id);
+      if (gate) {
+        return res.status(409).json({
+          success: false,
+          message: `Cannot publish: the following related document(s) in the publishing group are not yet published: ${gate.blockedBy.map(b => `"${b.title}" (${b.status})`).join(', ')}. All required related documents must be published first, or use the group publish action.`,
+          blockedBy: gate.blockedBy
+        });
+      }
     }
 
     const isAuthorized = await assertUserDocumentAccess(id, userId);

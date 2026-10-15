@@ -120,3 +120,85 @@ export const deleteDocumentImpactComment = async (documentId, commentId) => {
   return response.data;
 };
 
+
+// ─── Related Documents API ────────────────────────────────────────────────────
+
+/**
+ * Fetch related documents for a document.
+ * Returns { success, relatedDocuments: Array }
+ */
+export const getRelatedDocuments = async (documentId) => {
+  const response = await apiClient.get(`/api/documents/${documentId}/related`);
+  return response.data;
+};
+
+/**
+ * Replace the full list of related documents for a document.
+ * Published documents CANNOT be selected in related documents.
+ * Only documents in review, approval, or draft can be selected.
+ * @param {string} documentId
+ * @param {string[]} relatedDocumentIds
+ * @param {string} relationshipType
+ */
+export const setRelatedDocuments = async (documentId, relatedDocumentIds, relationshipType = 'pending_dependency') => {
+  const response = await apiClient.put(`/api/documents/${documentId}/related`, {
+    relatedDocumentIds,
+    relationshipType,
+  });
+  return response.data;
+};
+
+/**
+ * Get documents eligible for the Related Documents drop-down:
+ * Published documents CANNOT be selected. Other than published documents,
+ * documents in review, documents in approval, as well as in draft can be selected.
+ */
+export const getDocumentsForRelated = async (excludeId) => {
+  try {
+    const response = await apiClient.get('/api/documents-for-related', {
+      params: { excludeId },
+    });
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      return response.data;
+    }
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+  } catch (err) {
+    console.warn('[getDocumentsForRelated] Primary endpoint notice, using all-docs fallback:', err.message);
+  }
+
+  try {
+    const res = await apiClient.get('/api/all-docs');
+    const all = Array.isArray(res.data) ? res.data : [];
+    const forbidden = ['published', 'revised', 'archived', 'disabled'];
+    return all.filter(d =>
+      !forbidden.includes(d.status) &&
+      (!excludeId || String(d.document_id) !== String(excludeId))
+    );
+  } catch (fallbackErr) {
+    console.error('[getDocumentsForRelated] Candidates fetch failed:', fallbackErr);
+    return [];
+  }
+};
+
+export const getUnpublishedDocumentsForRelated = getDocumentsForRelated;
+export const getPublishedDocumentsForRelated = getDocumentsForRelated;
+
+/**
+ * Check whether a document and its full publishing group are ready to publish.
+ * Returns { canPublish, groupSize, groupDetails, blockedBy, message }
+ */
+export const getPublishReadiness = async (documentId) => {
+  const response = await apiClient.get(`/api/documents/${documentId}/publish-readiness`);
+  return response.data;
+};
+
+/**
+ * Admin-only: publish an entire group of related documents in one atomic operation.
+ * @param {string[]} documentIds
+ */
+export const publishDocumentGroup = async (documentIds) => {
+  const response = await apiClient.post('/api/documents/publish-group', { documentIds });
+  return response.data;
+};

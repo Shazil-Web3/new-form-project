@@ -32,6 +32,7 @@ export function useDocumentPersistence({
   setActiveTab,
   validateAllTabs,
   onSuccess,
+  relatedDocumentIds = [],
 }) {
   const buildResolvedTemplateContent = useCallback((templateId) => {
     if (!templateId) return null;
@@ -123,7 +124,8 @@ export function useDocumentPersistence({
       department: formValues.department || '',
       document_number: documentNumber || formValues.documentNumber || null,
       project_number: projectNumber || formValues.projectNumber || null,
-      cost_center_number: costCenterNumber || formValues.costCenterNumber || null
+      cost_center_number: costCenterNumber || formValues.costCenterNumber || null,
+      related_document_ids: relatedDocumentIds || [],
     };
 
     if (docStatus === 'pending_review' || docStatus === 'pending_approval') {
@@ -145,7 +147,8 @@ export function useDocumentPersistence({
     documentRequiredApprovers,
     documentNumber,
     projectNumber,
-    costCenterNumber
+    costCenterNumber,
+    relatedDocumentIds,
   ]);
 
   const buildUpdateBody = useCallback((formValues, activeContent, docStatus, workflowForSubmit, touchStatus) => {
@@ -213,7 +216,8 @@ export function useDocumentPersistence({
       required_approvers: documentRequiredApprovers,
       department: formValues.department || '',
       project_number: projectNumber || formValues.projectNumber || null,
-      cost_center_number: costCenterNumber || formValues.costCenterNumber || null
+      cost_center_number: costCenterNumber || formValues.costCenterNumber || null,
+      related_document_ids: relatedDocumentIds || [],
     };
 
     if (touchStatus && docStatus) {
@@ -232,7 +236,8 @@ export function useDocumentPersistence({
     impactData,
     documentRequiredApprovers,
     projectNumber,
-    costCenterNumber
+    costCenterNumber,
+    relatedDocumentIds,
   ]);
 
   const persistDocument = useCallback(async (docStatus, isAutoSave, overrideContent) => {
@@ -337,7 +342,7 @@ export function useDocumentPersistence({
     setCurrentDocumentId,
     setDocumentNumber,
     onSuccess,
-    setActiveTab
+    setActiveTab,
   ]);
 
   const handleSubmit = useCallback((status = 'draft', isAutoSave = false, overrideContent = null) => {

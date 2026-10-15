@@ -18,8 +18,41 @@ export const DocumentBasicInfoTab = ({
   setContentData,
   debouncedSave,
   handleTemplateSelectChange,
-  handleImpactTemplateChange
+  handleImpactTemplateChange,
+  // Related Documents props:
+  // Published documents CANNOT be selected in related documents.
+  // Documents in review, documents in approval, as well as in draft can be selected.
+  relatedDocumentCandidates = [],
+  publishedDocuments = [],
+  relatedDocumentIds = [],
+  onRelatedDocumentsChange,
 }) => {
+  const candidateDocs = (relatedDocumentCandidates && relatedDocumentCandidates.length > 0)
+    ? relatedDocumentCandidates
+    : publishedDocuments;
+
+  // Filter: published, revised, and archived documents CANNOT be selected.
+  // Documents in draft, review, and approval CAN be selected.
+  const selfId = currentDocumentId || document?.document_id || document?.id;
+  const relatedDocOptions = candidateDocs
+    .filter(doc => 
+      doc.status !== 'published' && 
+      doc.status !== 'revised' && 
+      doc.status !== 'archived' && 
+      doc.status !== 'disabled' &&
+      (!selfId || String(doc.document_id) !== String(selfId))
+    )
+    .map((doc) => ({
+      value: String(doc.document_id || ''),
+      label: String(doc.title || ''),
+      badge: doc.status
+        ? doc.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        : undefined,
+    }));
+
+  // Currently selected IDs always as strings
+  const selectedRelatedIds = (relatedDocumentIds || []).map(String);
+
   return (
     <Card bordered={false} title="Basic Document Information">
       <Form.Item
@@ -268,6 +301,111 @@ export const DocumentBasicInfoTab = ({
               </Option>
             ))
           }
+        </Select>
+      </Form.Item>
+
+      {/* ── Related Documents ─────────────────────────────────────────────────
+          Published documents CANNOT be selected in related documents.
+          Documents in review, documents in approval, and in draft can be selected.
+      ─────────────────────────────────────────────────────────────────────── */}
+      <Form.Item
+        name="related_document_ids"
+        label={
+          <span style={{ fontWeight: 600 }}>
+            Related Documents{' '}
+            <span style={{ fontWeight: 400, fontSize: 12, color: '#94a3b8' }}>(Optional)</span>
+          </span>
+        }
+        extra={
+          selectedRelatedIds.length > 0
+            ? '⚡ Synchronized publishing active — this document cannot be published until all selected related documents are also approved and published.'
+            : 'Select related documents in Draft, Under Review, or Under Approval. Published documents cannot be selected.'
+        }
+      >
+        <Select
+          mode="multiple"
+          allowClear
+          showSearch
+          placeholder={
+            relatedDocOptions.length === 0
+              ? 'No draft, review, or approval documents available'
+              : 'Select related documents (draft, review, approval)...'
+          }
+          value={selectedRelatedIds}
+          onChange={(ids) => {
+            if (typeof onRelatedDocumentsChange === 'function') {
+              onRelatedDocumentsChange(ids);
+            }
+          }}
+          disabled={relatedDocOptions.length === 0}
+          style={{ width: '100%' }}
+          filterOption={(input, option) => {
+            const labelStr = String(option?.title || option?.value || '');
+            return labelStr.toLowerCase().includes(input.toLowerCase());
+          }}
+          tagRender={({ label, value, closable, onClose }) => {
+            const opt = relatedDocOptions.find(o => String(o.value) === String(value));
+            const badge = opt?.badge;
+            return (
+              <Tag
+                closable={closable}
+                onClose={onClose}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  marginRight: 4,
+                  marginTop: 2,
+                  marginBottom: 2,
+                  borderRadius: 6,
+                  padding: '2px 8px',
+                  backgroundColor: '#eff6ff',
+                  borderColor: '#bfdbfe',
+                  color: '#1e40af',
+                  fontWeight: 500,
+                }}
+              >
+                <span>{opt?.label || label}</span>
+                {badge && (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      padding: '0 4px',
+                      borderRadius: 4,
+                      backgroundColor: '#dbeafe',
+                      color: '#1e40af',
+                      marginLeft: 4,
+                    }}
+                  >
+                    {badge}
+                  </span>
+                )}
+              </Tag>
+            );
+          }}
+        >
+          {relatedDocOptions.map((doc) => (
+            <Option key={doc.value} value={doc.value} title={doc.label}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {doc.label}
+                </span>
+                {doc.badge && (
+                  <Tag
+                    color={
+                      doc.badge.toLowerCase().includes('draft') ? 'default' :
+                      doc.badge.toLowerCase().includes('review') ? 'processing' :
+                      doc.badge.toLowerCase().includes('approv') ? 'warning' : 'blue'
+                    }
+                    style={{ marginLeft: 8, fontSize: 10, lineHeight: '16px' }}
+                  >
+                    {doc.badge}
+                  </Tag>
+                )}
+              </div>
+            </Option>
+          ))}
         </Select>
       </Form.Item>
     </Card>

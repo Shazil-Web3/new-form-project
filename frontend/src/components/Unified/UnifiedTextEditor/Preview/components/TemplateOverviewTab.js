@@ -1,8 +1,116 @@
-import React from 'react';
-import { Card, Descriptions, Tag, Button, Form, Input, Select, Space } from 'antd';
-import { EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Card, Descriptions, Tag, Button, Form, Input, Select, Space, Spin } from 'antd';
+import {
+  EditOutlined,
+  SaveOutlined,
+  CloseOutlined,
+  FileTextOutlined
+} from '@ant-design/icons';
 import { getDisplayCategory, getReceivedAt } from '../../../../../pages/new/Hub/utils/dashboardUtils';
 import { useAuth } from '../../../../../utils/authService';
+import { getRelatedDocuments, setRelatedDocuments, getDocumentsForRelated } from '../../../../../api/documents';
+
+/**
+ * Returns a styled Ant Design Tag badge for a document workflow stage.
+ */
+export const getStageBadge = (status) => {
+  const s = String(status || '').toLowerCase().trim();
+  switch (s) {
+    case 'pending_review':
+    case 'in_review':
+    case 'review':
+      return (
+        <Tag color="purple" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          In Review Stage
+        </Tag>
+      );
+    case 'reviewed':
+      return (
+        <Tag color="cyan" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          Reviewed Stage
+        </Tag>
+      );
+    case 'pending_approval':
+    case 'in_approval':
+    case 'approval':
+      return (
+        <Tag color="orange" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          In Approval Stage
+        </Tag>
+      );
+    case 'approved':
+      return (
+        <Tag color="green" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          Approved Stage
+        </Tag>
+      );
+    case 'draft':
+      return (
+        <Tag color="default" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0, background: '#f1f5f9', color: '#475569', borderColor: '#cbd5e1' }}>
+          Draft Stage
+        </Tag>
+      );
+    case 'pending_revision':
+      return (
+        <Tag color="geekblue" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          Pending Revision Stage
+        </Tag>
+      );
+    case 'published':
+      return (
+        <Tag color="success" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          Published
+        </Tag>
+      );
+    case 'archived':
+      return (
+        <Tag color="default" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          Archived
+        </Tag>
+      );
+    case 'rejected':
+      return (
+        <Tag color="error" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          Rejected
+        </Tag>
+      );
+    default:
+      return (
+        <Tag color="default" style={{ fontWeight: 600, padding: '2px 8px', borderRadius: 4, margin: 0 }}>
+          {status ? `${status} Stage` : 'Unknown Stage'}
+        </Tag>
+      );
+  }
+};
+
+/**
+ * Returns plain text representation of the document stage for dropdown labels.
+ */
+export const getStageBadgeText = (status) => {
+  const s = String(status || '').toLowerCase().trim();
+  switch (s) {
+    case 'pending_review':
+    case 'in_review':
+    case 'review':
+      return 'In Review Stage';
+    case 'reviewed':
+      return 'Reviewed Stage';
+    case 'pending_approval':
+    case 'in_approval':
+    case 'approval':
+      return 'In Approval Stage';
+    case 'approved':
+      return 'Approved Stage';
+    case 'draft':
+      return 'Draft Stage';
+    case 'pending_revision':
+      return 'Pending Revision Stage';
+    case 'published':
+      return 'Published';
+    default:
+      return status || 'Draft Stage';
+  }
+};
 
 const TemplateOverviewTab = ({ 
   parsedTemplate = {}, 
@@ -14,8 +122,20 @@ const TemplateOverviewTab = ({
   users = [],
   entityLabel = 'Template' 
 }) => {
-  const [isEditing, setIsEditing] = React.useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [form] = Form.useForm();
+
+  // Related documents state
+  const [relatedDocs, setRelatedDocs] = useState(
+    parsedTemplate.related_documents || parsedTemplate.relatedDocuments || []
+  );
+  const [loadingRelated, setLoadingRelated] = useState(false);
+
+  // Eligible documents for related selection in Edit mode
+  const [eligibleDocuments, setEligibleDocuments] = useState([]);
+  const [loadingEligible, setLoadingEligible] = useState(false);
+
+  const docId = parsedTemplate?.document_id || parsedTemplate?.id;
 
   let authUser = null;
   try {
@@ -25,17 +145,83 @@ const TemplateOverviewTab = ({
 
   const activeUser = currentUser || authUser;
 
+  // Fetch related documents with current status and details
+  const fetchRelated = useCallback(async () => {
+    if (!docId || entityLabel !== 'Document') return;
+    try {
+      setLoadingRelated(true);
+      const res = await getRelatedDocuments(docId);
+      if (res && res.success && Array.isArray(res.relatedDocuments)) {
+        setRelatedDocs(res.relatedDocuments);
+      } else if (Array.isArray(res)) {
+        setRelatedDocs(res);
+      }
+    } catch (err) {
+      console.warn('[TemplateOverviewTab] Failed to fetch related documents:', err);
+    } finally {
+      setLoadingRelated(false);
+    }
+  }, [docId, entityLabel]);
+
+  useEffect(() => {
+    fetchRelated();
+  }, [fetchRelated]);
+
+  // Load eligible candidates for Related Documents when editing
+  useEffect(() => {
+    if (!isEditing || entityLabel !== 'Document') return;
+    let isMounted = true;
+    setLoadingEligible(true);
+    getDocumentsForRelated(docId)
+      .then((docs) => {
+        if (!isMounted) return;
+        const formatted = (Array.isArray(docs) ? docs : []).map((doc) => {
+          const docIdVal = String(doc.document_id || doc.id);
+          const stageText = getStageBadgeText(doc.status);
+          const num = doc.document_number ? ` [${doc.document_number}]` : '';
+          return {
+            value: docIdVal,
+            label: `${doc.title || 'Untitled'}${num} (${stageText})`,
+            rawDoc: doc,
+          };
+        });
+        setEligibleDocuments(formatted);
+      })
+      .catch((err) => {
+        console.warn('[TemplateOverviewTab] Failed to fetch eligible docs for related dropdown:', err);
+      })
+      .finally(() => {
+        if (isMounted) setLoadingEligible(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [isEditing, entityLabel, docId]);
+
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
       await updateMetadata(values);
+
+      // If related documents were updated, persist them via setRelatedDocuments
+      if (docId && entityLabel === 'Document' && values.related_document_ids !== undefined) {
+        try {
+          await setRelatedDocuments(docId, values.related_document_ids);
+        } catch (e) {
+          console.warn('[TemplateOverviewTab] setRelatedDocuments notice:', e);
+        }
+      }
+
       setIsEditing(false);
+      fetchRelated();
     } catch (error) {
       console.error('Validation failed:', error);
     }
   };
 
   if (isEditing) {
+    const initialRelatedIds = relatedDocs.map(d => String(d.document_id || d.related_document_id));
+
     return (
       <Card bordered={false}>
         <Form
@@ -44,7 +230,8 @@ const TemplateOverviewTab = ({
           initialValues={{
             name: parsedTemplate.name || parsedTemplate.title,
             description: parsedTemplate.description,
-            category_id: parsedTemplate.category_id || parsedTemplate.categoryId
+            category_id: parsedTemplate.category_id || parsedTemplate.categoryId,
+            related_document_ids: initialRelatedIds
           }}
         >
           <Form.Item name="name" label={`${entityLabel} Name`} rules={[{ required: true }]}>
@@ -62,6 +249,26 @@ const TemplateOverviewTab = ({
               ))}
             </Select>
           </Form.Item>
+
+          {entityLabel === 'Document' && (
+            <Form.Item
+              name="related_document_ids"
+              label="Related Documents"
+              extra="Only in-flight documents (draft, in review, in approval) can be linked as related."
+            >
+              <Select
+                mode="multiple"
+                placeholder="Select related documents..."
+                showSearch
+                loading={loadingEligible}
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+                options={eligibleDocuments}
+              />
+            </Form.Item>
+          )}
+
           <Space>
             <Button type="primary" icon={<SaveOutlined />} onClick={handleSave}>
               Save Changes
@@ -206,6 +413,48 @@ const TemplateOverviewTab = ({
         <Descriptions.Item label="Document Type">
           {parsedTemplate.document_type || entityLabel}
         </Descriptions.Item>
+
+        {entityLabel === 'Document' && (
+          <Descriptions.Item label="Related Documents">
+            {loadingRelated ? (
+              <Spin size="small" />
+            ) : relatedDocs && relatedDocs.length > 0 ? (
+              <Space wrap size={[8, 8]}>
+                {relatedDocs.map((doc) => {
+                  const targetId = doc.document_id || doc.related_document_id;
+                  return (
+                    <span
+                      key={targetId}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        background: '#f8fafc',
+                        padding: '4px 10px',
+                        borderRadius: 6,
+                        border: '1px solid #e2e8f0',
+                        fontSize: 13,
+                      }}
+                    >
+                      <FileTextOutlined style={{ color: '#3b82f6' }} />
+                      <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                        {doc.title || doc.document_number || 'Untitled'}
+                      </span>
+                      {doc.document_number && (
+                        <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#1d4ed8', fontSize: 11 }}>
+                          [{doc.document_number}]
+                        </span>
+                      )}
+                      {getStageBadge(doc.status)}
+                    </span>
+                  );
+                })}
+              </Space>
+            ) : (
+              <span style={{ color: '#94a3b8' }}>None</span>
+            )}
+          </Descriptions.Item>
+        )}
       </Descriptions>
     </Card>
   );

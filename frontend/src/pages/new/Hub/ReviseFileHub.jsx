@@ -23,6 +23,7 @@ import {
 } from '../../../api/templates';
 import { listOrgMembers, listDepartments, listSites } from '../../../api/users';
 import { successAlert, errorAlert } from '../../../utils/alerts';
+import apiClient from '../../../api/apiClient';
 import MainLayout from '../../../components/new/tailwind/MainLayout';
 import UnifiedApproversModal from '../../../components/new/tailwind/UnifiedApproversModal';
 import RevisionTimelineDrawer from '../../../components/new/tailwind/RevisionTimelineDrawer';
@@ -70,7 +71,7 @@ export default function ReviseFileHub({ isDocument = true }) {
 
   // File Record States
   const [item, setItem] = useState(null);
-  const [formValues, setFormValues] = useState({ title: '', name: '', template_id: '', category_id: '', department_id: '', due_date: '', site_id: '' });
+  const [formValues, setFormValues] = useState({ title: '', name: '', template_id: '', category_id: '', department_id: '', due_date: '', site_id: '', related_document_ids: [] });
   const [tasks, setTasks] = useState([]);
   const [participants, setParticipants] = useState([]);
   const [editorContent, setEditorContent] = useState('');
@@ -83,6 +84,13 @@ export default function ReviseFileHub({ isDocument = true }) {
   const [approverKey, setApproverKey] = useState(1);
   const [includeTableOfContents, setIncludeTableOfContents] = useState(false);
   const [allowAttachments, setAllowAttachments] = useState(false);
+
+  // Related Documents state
+  const [relatedDocumentIds, setRelatedDocumentIds] = useState([]);
+  // relatedCandidates = in-flight docs (draft/review/approval) available to link as related
+  const [relatedCandidates, setRelatedCandidates] = useState([]);
+  const [publishReadiness, setPublishReadiness] = useState(null); // null | { canPublish, blockedBy, groupSize, groupDetails }
+  const [publishReadinessLoading, setPublishReadinessLoading] = useState(false);
 
   const handleAddDeptApprover = () => {
     setDeptApprovers((prev) => [...prev, { key: approverKey, department: '', mandatory: false, stage: 1 }]);
@@ -186,6 +194,21 @@ export default function ReviseFileHub({ isDocument = true }) {
           isDocument ? getDocument(id) : getTemplate(id),
           getAttachments(isDocument ? 'document' : 'template', id).catch(() => []),
         ]);
+
+        // Load in-flight documents (draft, review, approval) for Related Docs dropdown (published docs cannot be selected)
+        if (isDocument) {
+          try {
+            const [pubDocsRes, relatedRes] = await Promise.all([
+              apiClient.get('/api/documents-for-related', { params: { excludeId: id } }),
+              apiClient.get(`/api/documents/${id}/related`),
+            ]);
+            setRelatedCandidates(pubDocsRes.data || []);
+            const relatedIds = (relatedRes.data?.relatedDocuments || []).map(r => String(r.related_document_id));
+            setRelatedDocumentIds(relatedIds);
+          } catch (_) {
+            // Non-fatal — related docs feature degrades gracefully
+          }
+        }
 
         setTemplates(tplList || []);
         setCategories(catList || []);
@@ -400,6 +423,10 @@ export default function ReviseFileHub({ isDocument = true }) {
   const handleFormChange = (key, val) => {
     if (readOnly) return;
     setFormValues((prev) => ({ ...prev, [key]: val }));
+    // Keep relatedDocumentIds state in sync with formValues for the Related Documents field
+    if (key === 'related_document_ids') {
+      setRelatedDocumentIds(Array.isArray(val) ? val : []);
+    }
   };
 
   const handleLockToggle = (key) => {
@@ -510,6 +537,7 @@ export default function ReviseFileHub({ isDocument = true }) {
         content: { html: editorContent },
         status: statusToSave,
         notes: formValues.notes,
+        related_document_ids: relatedDocumentIds,
         tasks: tasks.map(t => ({
           title: t.title,
           description: t.description,
@@ -667,14 +695,43 @@ export default function ReviseFileHub({ isDocument = true }) {
   const handlePublishAction = async () => {
     try {
       if (isDocument) {
-        await updateDocumentStatus(id, 'published');
+        // Check publish readiness for this document and its group
+        setPublishReadinessLoading(true);
+        let readiness = null;
+        try {
+          const res = await apiClient.get(`/api/documents/${id}/publish-readiness`);
+          readiness = res.data;
+        } catch (_) {
+          // Readiness check failed — fall back to single publish (backend gate still enforces)
+        } finally {
+          setPublishReadinessLoading(false);
+        }
+
+        if (readiness && !readiness.canPublish) {
+          errorAlert(
+            `Publishing blocked: ${readiness.blockedBy.map(b => `"${b.title}" is ${b.status.replace(/_/g, ' ')}`).join('; ')}. All documents in the publishing group must complete their approval workflow first.`
+          );
+          setPublishReadiness(readiness);
+          return;
+        }
+
+        // If there's a multi-doc group, use the group publish endpoint
+        if (readiness && readiness.groupSize > 1) {
+          const groupDocIds = readiness.groupDetails.map(d => d.document_id);
+          await apiClient.post('/api/documents/publish-group', { documentIds: groupDocIds });
+          successAlert(`Published ${readiness.groupSize} documents together successfully!`);
+        } else {
+          await updateDocumentStatus(id, 'published');
+          successAlert('Published successfully!');
+        }
       } else {
         await updateTemplateStatus(id, 'published');
+        successAlert('Published successfully!');
       }
-      successAlert('Published successfully!');
       goBack();
-    } catch (_) {
-      errorAlert('Failed to publish file.');
+    } catch (err) {
+      const msg = err?.response?.data?.message || err?.message || 'Failed to publish file.';
+      errorAlert(msg);
     }
   };
 
@@ -825,11 +882,27 @@ export default function ReviseFileHub({ isDocument = true }) {
                       <>
                         <button
                           onClick={() => { setDropdownOpen(false); handlePublishAction(); }}
-                          className="w-full text-left px-4 py-2.5 hover:bg-surface-container-low text-xs font-semibold text-on-surface flex items-center gap-2"
+                          disabled={publishReadinessLoading}
+                          className="w-full text-left px-4 py-2.5 hover:bg-surface-container-low text-xs font-semibold text-on-surface flex items-center gap-2 disabled:opacity-60"
                         >
-                          <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
-                          <span>Publish Version</span>
+                          <span className="material-symbols-outlined text-[16px] text-emerald-600">
+                            {publishReadinessLoading ? 'sync' : 'check_circle'}
+                          </span>
+                          <span>{publishReadinessLoading ? 'Checking readiness...' : 'Publish Version'}</span>
                         </button>
+                        {publishReadiness && !publishReadiness.canPublish && (
+                          <div className="mx-2 mb-1.5 px-2.5 py-2 bg-amber-50 border border-amber-300 rounded-lg">
+                            <p className="text-[10px] font-semibold text-amber-800 mb-1 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[12px]">warning</span>
+                              Publishing blocked
+                            </p>
+                            {publishReadiness.blockedBy.map(b => (
+                              <p key={b.document_id} className="text-[10px] text-amber-700 truncate">
+                                • "{b.title}" — {b.status.replace(/_/g, ' ')}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                         <button
                           onClick={() => { setDropdownOpen(false); handleRevertAction(); }}
                           className="w-full text-left px-4 py-2.5 hover:bg-surface-container-low text-xs font-semibold text-on-surface flex items-center gap-2"
@@ -896,7 +969,7 @@ export default function ReviseFileHub({ isDocument = true }) {
           {activeTab === 'basicInfo' && (
             <BasicInfoTab
               isDocument={isDocument}
-              values={formValues}
+              values={{ ...formValues, related_document_ids: relatedDocumentIds }}
               onChange={handleFormChange}
               templates={templates}
               categories={categories}
@@ -904,6 +977,8 @@ export default function ReviseFileHub({ isDocument = true }) {
               sites={sites}
               disabled={readOnly}
               fileId={id}
+              relatedDocumentCandidates={relatedCandidates}
+              publishedDocuments={relatedCandidates}
             />
           )}
 

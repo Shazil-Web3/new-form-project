@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../utils/authService';
 import apiClient from '../../../api/apiClient';
+import { getDocumentsForRelated } from '../../../api/documents';
 import MainLayout from '../../../components/new/tailwind/MainLayout';
 import CreateDocument from '../../../components/Home/components/Dashboard/Documents/CreateDocument';
 import { Spin } from 'antd';
@@ -21,6 +22,8 @@ export default function CreateDocumentHub() {
   const [templates, setTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  // relatedCandidates = in-flight docs (draft/review/approval) for the Related Documents dropdown
+  const [relatedCandidates, setRelatedCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const { obsoleteDocs } = useObsoleteReferences({
@@ -43,7 +46,8 @@ export default function CreateDocumentHub() {
         const requests = [
           apiClient.get('/api/users').catch(() => apiClient.get(`/api/org_members/${userId}`)),
           apiClient.get(`/api/departments/${orgId}`),
-          apiClient.get(`/api/templates/${userId}`)
+          apiClient.get(`/api/templates/${userId}`),
+          getDocumentsForRelated().catch(() => []),
         ];
 
         if (templateIdFromUrl) {
@@ -56,7 +60,7 @@ export default function CreateDocumentHub() {
 
         if (!isMounted) return;
 
-        const [usersRes, deptRes, tempRes, singleItemRes] = results;
+        const [usersRes, deptRes, tempRes, pubDocsRes, singleItemRes] = results;
 
         let loadedUsers = [];
         let loadedDepts = [];
@@ -76,6 +80,13 @@ export default function CreateDocumentHub() {
           const raw = tempRes.value?.data;
           loadedTemplates = Array.isArray(raw) ? raw : raw?.data || [];
           setTemplates(loadedTemplates);
+        }
+
+        // Store in-flight documents for the Related Documents dropdown (draft, review, approval)
+        if (pubDocsRes?.status === 'fulfilled') {
+          const val = pubDocsRes.value;
+          const raw = Array.isArray(val) ? val : val?.data || [];
+          setRelatedCandidates(Array.isArray(raw) ? raw : []);
         }
 
         // Resolve selected template if URL had templateId
@@ -133,6 +144,8 @@ export default function CreateDocumentHub() {
           template={selectedTemplate}
           document={selectedDocument}
           departments={departments}
+          relatedDocumentCandidates={relatedCandidates}
+          publishedDocuments={relatedCandidates}
           onSuccess={() => navigate('/dashboard')}
           onCancel={() => navigate('/dashboard')}
         />

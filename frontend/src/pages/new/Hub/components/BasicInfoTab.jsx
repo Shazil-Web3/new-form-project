@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import SearchableSelect from '../../../../components/new/tailwind/SearchableSelect';
+import MultiSearchableSelect from '../../../../components/new/tailwind/MultiSearchableSelect';
 import apiClient from '../../../../api/apiClient';
 
 /**
@@ -28,6 +29,8 @@ export default function BasicInfoTab({
   sites = [],
   disabled = false,
   fileId = null,
+  relatedDocumentCandidates = [],
+  publishedDocuments = [],
 }) {
   const [nameWarning, setNameWarning] = useState(null);
   const debounceTimerRef = useRef(null);
@@ -51,6 +54,28 @@ export default function BasicInfoTab({
     value: String(site.id || site.site_id || ''),
     label: String(site.name || site.site_name || ''),
   }));
+
+  // Related Documents dropdown:
+  // Published documents CANNOT be selected in the related documents.
+  // Documents in review, documents in approval, as well as in draft can be selected.
+  const candidateDocs = (relatedDocumentCandidates && relatedDocumentCandidates.length > 0)
+    ? relatedDocumentCandidates
+    : publishedDocuments;
+
+  const relatedDocOptions = candidateDocs
+    .filter(doc => doc.status !== 'published' && doc.status !== 'revised' && doc.status !== 'archived')
+    .map((doc) => ({
+      value: String(doc.document_id || ''),
+      label: String(doc.title || ''),
+      badge: doc.status
+        ? doc.status.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+        : undefined,
+    }));
+
+  // Currently selected related document IDs (always an array)
+  const selectedRelatedIds = Array.isArray(values.related_document_ids)
+    ? values.related_document_ids.map(String)
+    : [];
 
   const currentName = isDocument ? (values.title || '') : (values.name || '');
 
@@ -218,6 +243,40 @@ export default function BasicInfoTab({
           />
         </div>
       )}
+
+      {/* Related Documents — only shown for documents: published documents CANNOT be selected; draft, review, and approval can be selected */}
+      {isDocument && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-2">
+            <label className="text-label-sm font-semibold text-on-surface-variant">
+              Related Documents
+            </label>
+            <span className="text-[10px] text-on-surface-variant/50 font-medium bg-surface-container border border-outline-variant/40 px-1.5 py-0.5 rounded-full">
+              Optional
+            </span>
+          </div>
+          <p className="text-xs text-on-surface-variant/60 -mt-0.5">
+            Link in-progress documents (Draft, In Review, In Approval) so they can be coordinated and published together. Published documents cannot be selected.
+          </p>
+          <MultiSearchableSelect
+            values={selectedRelatedIds}
+            onChange={(ids) => onChange('related_document_ids', ids)}
+            options={relatedDocOptions}
+            placeholder={
+              relatedDocOptions.length === 0
+                ? 'No draft, review, or approval documents available...'
+                : 'Select related documents (draft, review, approval)...'
+            }
+            disabled={disabled || relatedDocOptions.length === 0}
+          />
+          {selectedRelatedIds.length > 0 && (
+            <p className="text-xs text-blue-700 font-medium mt-0.5 flex items-center gap-1">
+              <span className="material-symbols-outlined text-[13px]">sync</span>
+              Synchronized publishing active — this document cannot be published until all selected related documents are also approved and published.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -231,4 +290,6 @@ BasicInfoTab.propTypes = {
   departments: PropTypes.array,
   sites: PropTypes.array,
   disabled: PropTypes.bool,
+  relatedDocumentCandidates: PropTypes.array,
+  publishedDocuments: PropTypes.array,
 };
