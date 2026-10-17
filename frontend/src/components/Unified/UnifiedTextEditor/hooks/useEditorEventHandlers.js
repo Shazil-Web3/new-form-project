@@ -172,9 +172,7 @@ export const useEditorEventHandlers = ({
     containsLockedText,
     isLockedElement,
     findLockedElementBefore,
-    findLockedElementAfter,
     skipLockedTextBackward,
-    skipLockedTextForward,
     deleteSelectionPreservingLocked,
   } = useLockedTextNavigation({
     pagesContainerRef,

@@ -246,7 +246,15 @@ export const useHandleKeyDown = ({
               // Shift + Tab: Outdent
               let parentList = listItem.parentNode;
               if (parentList && (parentList.nodeName === "OL" || parentList.nodeName === "UL")) {
-                parentList.parentNode.insertBefore(listItem, parentList.nextSibling);
+                const grandparentLi = parentList.parentNode;
+                if (grandparentLi && grandparentLi.nodeName === "LI") {
+                  // Nested item: promote it to a sibling of the grandparent <li>
+                  // in the grandparent's parent list (the top-level <ol>/<ul>)
+                  grandparentLi.parentNode.insertBefore(listItem, grandparentLi.nextSibling);
+                } else {
+                  // Already at root level: just move out of the list altogether
+                  parentList.parentNode.insertBefore(listItem, parentList.nextSibling);
+                }
                 if (!parentList.hasChildNodes()) {
                   parentList.remove();
                 }
@@ -264,10 +272,21 @@ export const useHandleKeyDown = ({
                   parentList.remove();
                 }
               } else {
-                // At root level: indent
+                // At root level: indent — nest under the nearest preceding <li> sibling
+                // Walk backwards past any non-LI elements (e.g. nested <ol>/<ul> blocks)
                 let prevItem = listItem.previousElementSibling;
+                while (prevItem && prevItem.nodeName !== "LI") {
+                  prevItem = prevItem.previousElementSibling;
+                }
                 if (prevItem) {
-                  let sublist = prevItem.querySelector("ol, ul");
+                  // Find an existing direct-child sublist of prevItem, not a deeper descendant
+                  let sublist = null;
+                  for (const child of prevItem.children) {
+                    if (child.nodeName === "OL" || child.nodeName === "UL") {
+                      sublist = child;
+                      break;
+                    }
+                  }
                   if (!sublist) {
                     const parentTag = listItem.parentNode.tagName.toLowerCase();
                     sublist = document.createElement(parentTag);
@@ -278,6 +297,7 @@ export const useHandleKeyDown = ({
                   }
                   sublist.appendChild(listItem);
                 }
+                // If there is no previous <li>, Tab on the first item does nothing
               }
             }
 
@@ -392,7 +412,7 @@ export const useHandleKeyDown = ({
               : containerNode.parentElement?.closest("[data-block-id]");
 
             if (blockEl) {
-              if ((event.key === "Backspace" || event.key === "Delete") && offset === 0) {
+              if (event.key === "Backspace" && offset === 0) {
                 let prev = blockEl.previousElementSibling;
                 if (prev && (prev.classList.contains("video-block") || prev.classList.contains("img-block") || prev.tagName.toLowerCase() === "figure")) {
                   event.preventDefault();
@@ -517,24 +537,30 @@ export const useHandleKeyDown = ({
                 s.addRange(r);
               }
             } else {
+              // After deleteContents() the range is already collapsed at the
+              // deletion point — that is exactly where the caret should stay.
+              // We only need a visible <br> when the block becomes empty, then
+              // restore the caret to the deletion point instead of forcing it
+              // to the start of the block.
               const text = (startBlock.textContent || '').replace(/[\u200B\u200C\u200D\uFEFF]/g, '').trim();
               if (!text && !startBlock.querySelector('img, video, iframe, table, canvas, svg, br')) {
                 startBlock.appendChild(document.createElement('br'));
               }
-              const r = document.createRange();
-              const firstBr = startBlock.querySelector('br');
-              if (firstBr) {
-                r.setStartBefore(firstBr);
-              } else if (startBlock.firstChild) {
-                r.setStart(startBlock.firstChild, 0);
-              } else {
-                r.selectNodeContents(startBlock);
-              }
-              r.collapse(true);
               const s = window.getSelection();
               if (s) {
-                s.removeAllRanges();
-                s.addRange(r);
+                // range is collapsed at the correct position after
+                // deleteContents(). If the caret is still inside the block,
+                // keep it there; otherwise fall back to the block start.
+                if (startBlock.contains(range.startContainer) || range.startContainer === startBlock) {
+                  s.removeAllRanges();
+                  s.addRange(range);
+                } else {
+                  const r = document.createRange();
+                  r.selectNodeContents(startBlock);
+                  r.collapse(true);
+                  s.removeAllRanges();
+                  s.addRange(r);
+                }
               }
             }
           }
@@ -548,33 +574,44 @@ export const useHandleKeyDown = ({
         } else if (sel && sel.rangeCount && sel.isCollapsed) {
           // Handle single character deletion (collapsed cursor)
           const range = sel.getRangeAt(0);
-          
-          // LOCKED TEXT SKIP LOGIC:
-          // We always skip locked text for single character deletion (backspace/delete)
-          // irrespective of admin status. This prevents accidental deletion while typing.
-          // Admins can still delete locked text by selecting it first.
+          const isBackspaceKey = event.key === "Backspace";
+          const isForwardDeleteKey = event.key === "Delete";
 
-          // Both Backspace and Delete (when collapsed without selection) operate backward like Backspace:
-          // 1. Check block boundary backspace (e.g. merge with previous block or page)
-          const handledBlockBackspace = handleBlockBackspace(range);
-          if (handledBlockBackspace) {
+          // ── Delete key with no selection: do nothing ──
+          // The Delete key should only delete content when text is actually selected.
+          // With a collapsed cursor it must NOT behave like Backspace (deleting the char
+          // before the caret) nor perform a forward character delete — it simply does
+          // nothing until the user makes a selection.
+          if (isForwardDeleteKey) {
             event.preventDefault();
             event.stopPropagation();
             return;
           }
 
-          // 2. Check if we need to skip over locked text before cursor
-          const lockedBefore = findLockedElementBefore(range);
-          if (lockedBefore) {
-            event.preventDefault();
-            event.stopPropagation();
-            skipLockedTextBackward(lockedBefore, true);
-            return;
+          // 1. Block boundary merge — backward for Backspace only
+          if (isBackspaceKey) {
+            const handledBlockBackspace = handleBlockBackspace(range);
+            if (handledBlockBackspace) {
+              event.preventDefault();
+              event.stopPropagation();
+              return;
+            }
           }
 
-          // 3. Collapsed deletion in tracking/review mode becomes a single-char strike
-          // (direction follows the actual key pressed — Backspace strikes the char before
-          // the cursor, Delete strikes the char after it).
+          // 2. Skip over locked text before cursor (Backspace only)
+          if (isBackspaceKey) {
+            const lockedBefore = findLockedElementBefore(range);
+            if (lockedBefore) {
+              event.preventDefault();
+              event.stopPropagation();
+              skipLockedTextBackward(lockedBefore, true);
+              return;
+            }
+          }
+
+          // 3. Collapsed deletion in tracking/review mode becomes a single-char strike.
+          // (Only reached for Backspace — Delete already returned above. Backspace
+          // strikes the char before the cursor.)
           if (!disableStrikeOnDelete) {
             const converted = convertDeletionToStrike(event.key);
             if (converted) {
@@ -586,108 +623,8 @@ export const useHandleKeyDown = ({
             }
           }
 
-          // 4. For Delete key on collapsed selection: check if at end of block before PAGE_BREAK, or intercept native forward delete
-          if (event.key === "Delete") {
-            const curSel = window.getSelection();
-            if (curSel && curSel.rangeCount && curSel.isCollapsed) {
-              const curRange = curSel.getRangeAt(0);
-              let el = curRange.startContainer.nodeType === 1 ? curRange.startContainer : curRange.startContainer.parentElement;
-              const curBlockEl = el?.closest?.("[data-block-id]");
-              if (curBlockEl) {
-                const post = document.createRange();
-                post.selectNodeContents(curBlockEl);
-                post.setStart(curRange.startContainer, curRange.startOffset);
-                if (post.toString().length === 0) {
-                  const engine = documentEngineRef.current;
-                  const allB = engine?.getAllBlocks() || [];
-                  const curId = curBlockEl.getAttribute("data-block-id");
-                  const curIdx = allB.findIndex(b => b.id === curId);
-                  if (curIdx !== -1 && curIdx + 1 < allB.length && allB[curIdx + 1].type === BLOCK_TYPES.PAGE_BREAK) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    const pageBreakBlock = allB[curIdx + 1];
-                    const nextAfterBreak = curIdx + 2 < allB.length ? allB[curIdx + 2] : null;
-                    const pageBreakEl = pagesContainerRef.current?.querySelector(`[data-block-id="${pageBreakBlock.id}"]`);
-
-                    engine.removeBlock(pageBreakBlock.id);
-                    if (pageBreakEl) pageBreakEl.remove();
-
-                    if (nextAfterBreak) {
-                      const nextEl = pagesContainerRef.current?.querySelector(`[data-block-id="${nextAfterBreak.id}"]`);
-                      const textTypes = new Set(['paragraph', 'heading', 'quote', 'code']);
-                      const isCurrentText = textTypes.has(allB[curIdx].type) || !allB[curIdx].type;
-                      const isNextText = textTypes.has(nextAfterBreak.type) || !nextAfterBreak.type;
-                      const isSameType = allB[curIdx].type === nextAfterBreak.type;
-
-                      if (isCurrentText && isNextText && isSameType && nextEl) {
-                        const nextHtml = nextEl.innerHTML;
-                        const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = nextHtml;
-                        const isNextEmpty = tempDiv.textContent.trim() === '' && !tempDiv.querySelector('img, table, iframe');
-
-                        if (isNextEmpty) {
-                          engine.removeBlock(nextAfterBreak.id);
-                          nextEl.remove();
-                        } else {
-                          const currentHtml = curBlockEl.innerHTML.replace(/<br\s*\/?>$/i, '');
-                          const merged = currentHtml + nextHtml;
-                          engine.updateBlock(curId, { content: merged });
-                          engine.removeBlock(nextAfterBreak.id);
-                          curBlockEl.innerHTML = merged;
-                          nextEl.remove();
-                        }
-                      }
-                    }
-
-                    if (contentChangeHandlerRef.current && pagesContainerRef.current) {
-                      contentChangeHandlerRef.current.syncDOMToBlocks(pagesContainerRef.current);
-                    }
-                    syncAndNotify();
-                    schedulePaginateRef.current?.();
-                    return;
-                  }
-                }
-              }
-            }
-
-            event.preventDefault();
-            event.stopPropagation();
-            const isForwardDelete = event.key === "Delete";
-            const executed = document.execCommand(isForwardDelete ? 'forwardDelete' : 'delete');
-            if (!executed) {
-              const curSel = window.getSelection();
-              if (curSel && curSel.rangeCount && curSel.isCollapsed) {
-                const curRange = curSel.getRangeAt(0);
-                const node = curRange.startContainer;
-                const offset = curRange.startOffset;
-                if (node.nodeType === Node.TEXT_NODE) {
-                  if (isForwardDelete) {
-                    if (offset < node.textContent.length) {
-                      node.deleteData(offset, 1);
-                      const newR = document.createRange();
-                      newR.setStart(node, offset);
-                      newR.collapse(true);
-                      curSel.removeAllRanges();
-                      curSel.addRange(newR);
-                    }
-                  } else if (offset > 0) {
-                    node.deleteData(offset - 1, 1);
-                    const newR = document.createRange();
-                    newR.setStart(node, offset - 1);
-                    newR.collapse(true);
-                    curSel.removeAllRanges();
-                    curSel.addRange(newR);
-                  }
-                }
-              }
-            }
-            if (contentChangeHandlerRef.current && pagesContainerRef.current) {
-              contentChangeHandlerRef.current.syncDOMToBlocks(pagesContainerRef.current);
-            }
-            syncAndNotify();
-            schedulePaginateRef.current?.();
-            return;
-          }
+          // Backspace with collapsed cursor falls through to the browser's native
+          // backspace behaviour (deletes the character before the caret).
         }
       }
 

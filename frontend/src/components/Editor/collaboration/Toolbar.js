@@ -112,16 +112,33 @@ const handleKeyDown = (event) => {
               // Shift + Tab: Outdent
               let parentList = listItem.parentNode;
               if (parentList.nodeName === "OL" && parentList.classList.contains("custom-numbered-list")) {
-                  parentList.parentNode.insertBefore(listItem, parentList.nextSibling);
+                  const grandparentLi = parentList.parentNode;
+                  if (grandparentLi && grandparentLi.nodeName === "LI") {
+                      // Nested item: promote it to a sibling of the grandparent <li>
+                      grandparentLi.parentNode.insertBefore(listItem, grandparentLi.nextSibling);
+                  } else {
+                      // Already at root level: move out of the list
+                      parentList.parentNode.insertBefore(listItem, parentList.nextSibling);
+                  }
                   if (!parentList.hasChildNodes()) {
                       parentList.remove();
                   }
               }
           } else {
-              // Tab: Indent
+              // Tab: Indent — nest under the nearest preceding <li> sibling
               let prevItem = listItem.previousElementSibling;
+              while (prevItem && prevItem.nodeName !== "LI") {
+                  prevItem = prevItem.previousElementSibling;
+              }
               if (prevItem) {
-                  let sublist = prevItem.querySelector("ol");
+                  // Find an existing direct-child sublist of prevItem only
+                  let sublist = null;
+                  for (const child of prevItem.children) {
+                      if (child.nodeName === "OL" || child.nodeName === "UL") {
+                          sublist = child;
+                          break;
+                      }
+                  }
                   if (!sublist) {
                       sublist = document.createElement("ol");
                       sublist.classList.add("custom-numbered-list");
@@ -129,6 +146,7 @@ const handleKeyDown = (event) => {
                   }
                   sublist.appendChild(listItem);
               }
+              // If there is no previous <li>, Tab on the first item does nothing
           }
       }
   } else {

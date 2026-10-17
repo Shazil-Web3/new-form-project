@@ -22,18 +22,22 @@ code {
 }
 
 
-.custom-numbered-list {
+/* Scoped to editor surfaces only to avoid conflicts with EditorCore.css */
+.document-renderer .custom-numbered-list,
+.text-editor .custom-numbered-list {
     counter-reset: list-counter;
     list-style: none;
     padding-left: 20px;
 }
 
-.custom-numbered-list li {
+.document-renderer .custom-numbered-list li,
+.text-editor .custom-numbered-list li {
     counter-increment: list-counter;
     display: block;
 }
 
-.custom-numbered-list li::before {
+.document-renderer .custom-numbered-list li::before,
+.text-editor .custom-numbered-list li::before {
     content: counters(list-counter, ".") ". ";
     font-weight: normal;
 }
