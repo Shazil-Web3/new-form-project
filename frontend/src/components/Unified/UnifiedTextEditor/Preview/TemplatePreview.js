@@ -36,7 +36,8 @@ import ReviewPendingModal from './components/ReviewPendingModal';
 // Documents in 'pending_review' remain editable so reviewers can add comments/suggestions.
 // A rejected template goes back to 'pending_review' too, so an unresolved rejection on it keeps
 // the content editable for the author to address it.
-const LOCKED_TEMPLATE_STATUSES = ['pending_approval', 'reviewed', 'approved', 'published', 'active', 'revised'];
+// NOTE: 'reviewed' is NOT locked - reviewers can continue editing and will auto-revert to 'pending_review' on typing
+const LOCKED_TEMPLATE_STATUSES = ['pending_approval', 'approved', 'published', 'active', 'revised'];
 
 const parseWorkflowParticipants = (raw) => {
   if (!raw) return { reviewers: [], approvers: [] };

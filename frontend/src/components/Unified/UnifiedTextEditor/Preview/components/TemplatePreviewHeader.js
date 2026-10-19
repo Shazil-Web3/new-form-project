@@ -39,6 +39,7 @@ const TemplatePreviewHeader = ({
   const isAuthor = currentUser && parsedTemplate ? String(currentUser.id) === String(parsedTemplate.created_by) || String(currentUser.id) === String(parsedTemplate.user_id) : false;
   const isAdmin = currentUser?.role === 'admin';
   const isReadMode = readOnly || isReferenceView;
+  // Admin can always see the "Circulate Template" dropdown unless in read-only/reference mode
   const canUpdate = !isReadMode && (isAuthor || isAdmin);
   const canPublish = !isReadMode && isAdmin && safeTemplate.status === 'approved';
 
