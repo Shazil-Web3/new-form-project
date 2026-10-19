@@ -1634,7 +1634,9 @@ app.put('/api/update_document_content/:documentId', authenticateToken, async (re
     const incomingContentStr = typeof incomingContent === 'string' ? incomingContent : JSON.stringify(incomingContent);
     const isContentModified = stripHtml(incomingContentStr) !== stripHtml(dbContent);
 
-    if (dbApprovers && isContentModified) {
+    // Auto-revert reviewers: Only revert if content is actually being saved (isContentModified)
+    // AND status is already "reviewed". Don't revert just because status is reviewed.
+    if (dbApprovers && isContentModified && dbStatus === 'reviewed') {
       try {
         let parsedApprovers = typeof dbApprovers === 'string' ? JSON.parse(dbApprovers) : dbApprovers;
         let modified = false;
@@ -1648,15 +1650,11 @@ app.put('/api/update_document_content/:documentId', authenticateToken, async (re
 
         if (parsedApprovers.reviewers && Array.isArray(parsedApprovers.reviewers)) {
           parsedApprovers.reviewers = parsedApprovers.reviewers.map((reviewer) => {
-            const isMatchingId =
-              String(reviewer.userId) === String(userId) || String(reviewer.id) === String(userId);
-            const isMatchingEmail =
-              userEmail && reviewer.email && reviewer.email.toLowerCase() === userEmail.toLowerCase();
-            const isMatchingUser = isMatchingId || isMatchingEmail;
             const isReviewed = reviewer.status && reviewer.status.toLowerCase() === 'reviewed';
 
-            if (isMatchingUser && isReviewed) {
-              console.log(`[DocumentSave] REVERTING status for reviewer ${reviewer.email || reviewer.name} to pending`);
+            // Revert ANY reviewed reviewer back to pending (regardless of who is editing)
+            if (isReviewed) {
+              console.log(`[DocumentSave] REVERTING status for reviewer ${reviewer.email || reviewer.name} from 'reviewed' to 'pending' due to content modification`);
               modified = true;
               return { ...reviewer, status: 'pending' };
             }
@@ -1670,7 +1668,7 @@ app.put('/api/update_document_content/:documentId', authenticateToken, async (re
           // Revert document status to pending_review if it was reviewed
           // (matches template behavior — only revert review status, never approval)
           if (dbStatus === 'reviewed') {
-            console.log(`[DocumentSave] REVERTING overall status to pending_review`);
+            console.log(`[DocumentSave] REVERTING overall status from 'reviewed' to 'pending_review' due to content modification`);
             dbStatus = 'pending_review';
           }
         }

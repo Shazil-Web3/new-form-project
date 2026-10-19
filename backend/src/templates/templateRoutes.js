@@ -1190,30 +1190,23 @@ app.put('/api/update_template_content/:templateId', authenticateToken, async (re
     }
     const isContentModified = stripHtml(typeof resolvedContent === 'string' ? resolvedContent : JSON.stringify(resolvedContent || '')) !== stripHtml(typeof dbContent === 'string' ? dbContent : JSON.stringify(dbContent || ''));
 
-    if (dbTemplateApprovers && isContentModified) {
+    // Auto-revert reviewers: Only revert if content is actually being saved (isContentModified)
+    // AND status is already "reviewed". Don't revert just because status is reviewed.
+    if (dbTemplateApprovers && isContentModified && dbStatus === 'reviewed') {
       try {
         let parsedApprovers = typeof dbTemplateApprovers === 'string' ? JSON.parse(dbTemplateApprovers) : dbTemplateApprovers;
         let modified = false;
 
-        // Fetch user email since reviewer objects often only contain email
-        let userEmail = null;
-        try {
-          const [userRows] = await pool.execute('SELECT email FROM users WHERE id = ?', [userId]);
-          if (userRows && userRows.length > 0) userEmail = userRows[0].email;
-        } catch (err) {
-          console.error("Error fetching user email for reviewer reset:", err);
-        }
-
+        // When ANY user (admin/author/reviewer) saves during 'reviewed' status,
+        // ALL reviewers who marked as reviewed should revert back to 'pending'
+        // This ensures the document goes back to pending review state for re-review
         if (parsedApprovers.reviewers && Array.isArray(parsedApprovers.reviewers)) {
           parsedApprovers.reviewers = parsedApprovers.reviewers.map(reviewer => {
-            // If the current user is typing and their status was 'reviewed', revert to 'pending'
-            const isMatchingId = String(reviewer.userId) === String(userId) || String(reviewer.id) === String(userId);
-            const isMatchingEmail = userEmail && reviewer.email && reviewer.email.toLowerCase() === userEmail.toLowerCase();
-            const isMatchingUser = isMatchingId || isMatchingEmail;
-
             const isReviewed = reviewer.status && reviewer.status.toLowerCase() === 'reviewed';
 
-            if (isMatchingUser && isReviewed) {
+            // Revert ANY reviewed reviewer back to pending (regardless of who is editing)
+            if (isReviewed) {
+              console.log(`[TemplateAutosave] Reverting reviewer ${reviewer.email || reviewer.name} from 'reviewed' to 'pending' due to save action`);
               modified = true;
               return { ...reviewer, status: 'pending' };
             }
@@ -1227,6 +1220,7 @@ app.put('/api/update_template_content/:templateId', authenticateToken, async (re
           // Revert template status to pending_review if it was reviewed
           if (dbStatus === 'reviewed') {
             dbStatus = 'pending_review';
+            console.log(`[TemplateAutosave] Reverting template status from 'reviewed' to 'pending_review' due to save action`);
           }
         }
       } catch (e) {
@@ -1302,7 +1296,9 @@ app.put('/api/update_template_content/:templateId', authenticateToken, async (re
       templateId: templateId,
       contentLength: (content || '').length,
       savedAt: new Date().toISOString(),
-      persisted: true
+      persisted: true,
+      status: dbStatus,
+      template_approvers: typeof dbTemplateApprovers === 'string' ? JSON.parse(dbTemplateApprovers) : dbTemplateApprovers
     };
 
     if (logAuditEvent) {

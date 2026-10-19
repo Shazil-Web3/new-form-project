@@ -175,6 +175,44 @@ export const useDocumentWorkflowActions = (parsedTemplate, setParsedTemplate, cu
     }
   };
 
+  const handleRevertReviewersStatus = async (emails = null) => {
+    if (!documentId) return;
+    try {
+      const response = await apiClient.put(`/api/document_revert_reviewers/${documentId}`, { emails });
+      if (response.data.success) {
+        setParsedTemplate(prev => {
+          const shouldRevertAll = !emails || !Array.isArray(emails) || emails.length === 0;
+          const updatedReviewers = (prev.template_approvers?.reviewers || []).map(reviewer => {
+            const matchesTarget = shouldRevertAll || emails.includes(reviewer.email);
+            if (matchesTarget && reviewer.status === 'Reviewed') {
+              const { reviewedAt, ...rest } = reviewer;
+              return { ...rest, status: 'pending' };
+            }
+            return reviewer;
+          });
+
+          let newStatus = prev.status;
+          const hasAnyPendingReviewer = updatedReviewers.some(r => r.status === 'pending');
+          if (hasAnyPendingReviewer && newStatus === 'reviewed') {
+            newStatus = 'pending_review';
+          }
+
+          return {
+            ...prev,
+            status: newStatus,
+            template_approvers: { ...prev.template_approvers, reviewers: updatedReviewers }
+          };
+        });
+        successAlert('Success', "Reviewers' status reverted successfully.");
+        return true;
+      }
+    } catch (error) {
+      console.error('Error reverting reviewers status:', error);
+      errorAlert('Error', 'Failed to revert reviewers status.');
+      return false;
+    }
+  };
+
   return {
     isReviewing,
     isApproving,
@@ -187,6 +225,7 @@ export const useDocumentWorkflowActions = (parsedTemplate, setParsedTemplate, cu
     handleApprove,
     handleReject,
     updateMetadata,
-    handleReassign
+    handleReassign,
+    handleRevertReviewersStatus
   };
 };

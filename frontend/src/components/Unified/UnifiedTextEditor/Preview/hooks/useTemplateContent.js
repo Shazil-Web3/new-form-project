@@ -347,14 +347,6 @@ export const useTemplateContent = (parsedTemplate, initialData, currentUser, pag
         return;
       }
 
-      // AUTO-REVERT: If status is "reviewed" and content changed, revert to "pending_review"
-      const currentStatus = String(tpl?.status || '').toLowerCase();
-      let shouldRevertStatus = false;
-      if (currentStatus === 'reviewed' && content !== lastSavedContentRef.current) {
-        console.log('🔄 Auto-reverting status from "reviewed" to "pending_review" due to content change');
-        shouldRevertStatus = true;
-      }
-
       console.log('📤 Sending save request to backend for template:', templateId);
 
       try {
@@ -365,20 +357,6 @@ export const useTemplateContent = (parsedTemplate, initialData, currentUser, pag
           lastModified: new Date().toISOString(),
           lastModifiedBy: user?.id
         };
-        
-        // If we need to revert status, call the revert API first
-        if (shouldRevertStatus) {
-          try {
-            await apiClient.put(`/api/template_revert_reviewers/${templateId}`, { emails: null });
-            console.log('✅ Status reverted to pending_review');
-            // Update local state
-            if (setParsedTemplate) {
-              setParsedTemplate(prev => ({ ...prev, status: 'pending_review' }));
-            }
-          } catch (revertError) {
-            console.error('❌ Failed to revert status:', revertError);
-          }
-        }
         
         const response = await apiClient.put(
           `/api/update_template_content/${templateId}`,
@@ -392,6 +370,15 @@ export const useTemplateContent = (parsedTemplate, initialData, currentUser, pag
            lastSavedPayloadRef.current = currentPayloadStr;
            if (!isSkeletonEditorContent(content)) {
              knownGoodHtmlRef.current = content;
+           }
+           
+           // Sync status and approvers if they were returned by backend (e.g., auto-reverted to pending_review)
+           if (response.data?.status && setParsedTemplate) {
+             setParsedTemplate(prev => ({
+               ...prev,
+               status: response.data.status,
+               template_approvers: response.data.template_approvers
+             }));
            }
         } else {
            console.warn('⚠️ Save API returned non-success:', response.status, response.data);

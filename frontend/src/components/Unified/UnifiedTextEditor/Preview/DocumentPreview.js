@@ -41,6 +41,10 @@ import TemplateImpactTab from './components/TemplateImpactTab';
 
 const { TabPane } = Tabs;
 
+// Document statuses that prevent editing. Note: 'reviewed' is NOT locked - reviewers can continue editing
+// and will auto-revert to 'pending_review' on typing (same as templates)
+const LOCKED_DOCUMENT_STATUSES = ['pending_approval', 'approved', 'published', 'active', 'revised'];
+
 /**
  * Same UI as TemplatePreview; loads/saves document workflow via /api/get_document and /api/update_document_content.
  */
@@ -77,7 +81,8 @@ const DocumentPreview = ({
     handleApprove,
     handleReject,
     updateMetadata,
-    handleReassign
+    handleReassign,
+    handleRevertReviewersStatus
   } = useDocumentWorkflowActions(parsedTemplate, setParsedTemplate, currentUser);
 
   const {
@@ -561,6 +566,7 @@ const DocumentPreview = ({
                         setDocumentApproversModalVisible(true);
                       }
                     }}
+                    handleRevertReviewersStatus={handleRevertReviewersStatus}
                     cleanView={cleanView}
                     setCleanView={setCleanView}
                   />
@@ -669,7 +675,7 @@ const DocumentPreview = ({
                       isReviewing={isReviewing}
                       isApproving={isApproving}
                       isRejecting={isRejecting}
-                      readOnly={readOnly || isReferenceView || ['published', 'active'].includes(String(parsedTemplate?.status || document?.status || '').toLowerCase())}
+                      readOnly={readOnly || isReferenceView || LOCKED_DOCUMENT_STATUSES.includes(String(parsedTemplate?.status || document?.status || '').toLowerCase())}
                       isReferenceView={isReferenceView}
                     />
                   )}

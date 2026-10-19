@@ -2561,7 +2561,9 @@ app.put('/api/update_template_content/:templateId', authenticateToken, async (re
     }
     const isContentModified = stripHtml(content) !== stripHtml(dbContent);
 
-    if (dbTemplateApprovers && isContentModified) {
+    // Auto-revert reviewers: Only revert if content is actually being saved (isContentModified)
+    // AND status is already "reviewed". Don't revert just because status is reviewed.
+    if (dbTemplateApprovers && isContentModified && dbStatus === 'reviewed') {
       try {
         let parsedApprovers = typeof dbTemplateApprovers === 'string' ? JSON.parse(dbTemplateApprovers) : dbTemplateApprovers;
         let modified = false;
@@ -2577,14 +2579,11 @@ app.put('/api/update_template_content/:templateId', authenticateToken, async (re
 
         if (parsedApprovers.reviewers && Array.isArray(parsedApprovers.reviewers)) {
           parsedApprovers.reviewers = parsedApprovers.reviewers.map(reviewer => {
-            // If the current user is typing and their status was 'reviewed', revert to 'pending'
-            const isMatchingId = String(reviewer.userId) === String(userId) || String(reviewer.id) === String(userId);
-            const isMatchingEmail = userEmail && reviewer.email && reviewer.email.toLowerCase() === userEmail.toLowerCase();
-            const isMatchingUser = isMatchingId || isMatchingEmail;
-
             const isReviewed = reviewer.status && reviewer.status.toLowerCase() === 'reviewed';
 
-            if (isMatchingUser && isReviewed) {
+            // Revert ANY reviewed reviewer back to pending (regardless of who is editing)
+            if (isReviewed) {
+              console.log(`[TemplateAutosave] Reverting reviewer ${reviewer.email || reviewer.name} from 'reviewed' to 'pending' due to content modification`);
               modified = true;
               return { ...reviewer, status: 'pending' };
             }
@@ -2598,6 +2597,7 @@ app.put('/api/update_template_content/:templateId', authenticateToken, async (re
           // Revert template status to pending_review if it was reviewed
           if (dbStatus === 'reviewed') {
             dbStatus = 'pending_review';
+            console.log(`[TemplateAutosave] Reverting template status from 'reviewed' to 'pending_review' due to content modification`);
           }
         }
       } catch (e) {
@@ -2665,7 +2665,9 @@ app.put('/api/update_template_content/:templateId', authenticateToken, async (re
       templateId: templateId,
       contentLength: (content || '').length,
       savedAt: new Date().toISOString(),
-      persisted: true
+      persisted: true,
+      status: dbStatus,
+      template_approvers: typeof dbTemplateApprovers === 'string' ? JSON.parse(dbTemplateApprovers) : dbTemplateApprovers
     };
 
     console.log('✅ Sending success response:', responseData);
