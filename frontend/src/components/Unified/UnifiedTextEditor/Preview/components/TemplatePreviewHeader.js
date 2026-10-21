@@ -39,9 +39,17 @@ const TemplatePreviewHeader = ({
   const isAuthor = currentUser && parsedTemplate ? String(currentUser.id) === String(parsedTemplate.created_by) || String(currentUser.id) === String(parsedTemplate.user_id) : false;
   const isAdmin = currentUser?.role === 'admin';
   const isReadMode = readOnly || isReferenceView;
-  // Admin can always see the "Circulate Template" dropdown unless in read-only/reference mode
+  
+  // Can circulate (workflow) - should be available for admin/author ALWAYS (except reference view)
+  // This is NOT tied to read-only mode, which only locks content editing
+  const canCirculate = !isReferenceView && (isAuthor || isAdmin);
+  
+  // Can edit content - only in non-read-only mode
   const canUpdate = !isReadMode && (isAuthor || isAdmin);
-  const canPublish = !isReadMode && isAdmin && safeTemplate.status === 'approved';
+  
+  // Allow Publish button even in read-only mode if template is approved
+  // (read-only is used to lock content editing, but admin actions should still be available)
+  const canPublish = isAdmin && safeTemplate.status === 'approved' && !isReferenceView;
 
   const cleanViewMenuItems = [
     {
@@ -52,7 +60,10 @@ const TemplatePreviewHeader = ({
           Show with Accepted Suggestions
         </span>
       ),
-      onClick: () => setCleanView && setCleanView('accepted'),
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        setCleanView && setCleanView('accepted');
+      },
     },
     {
       key: 'rejected',
@@ -62,7 +73,10 @@ const TemplatePreviewHeader = ({
           Show without Accepted Suggestions
         </span>
       ),
-      onClick: () => setCleanView && setCleanView('rejected'),
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        setCleanView && setCleanView('rejected');
+      },
     },
   ];
 
@@ -74,7 +88,10 @@ const TemplatePreviewHeader = ({
       key: 'markup',
       icon: <EyeOutlined style={{ color: '#4f46e5' }} />,
       label: 'Show Markup (Exit Clean View)',
-      onClick: () => setCleanView && setCleanView(false),
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        setCleanView && setCleanView(false);
+      },
     });
   }
 
@@ -85,38 +102,59 @@ const TemplatePreviewHeader = ({
       key: 'published',
       label: isDocument || parsedTemplate?.document_id ? 'Publish Document' : 'Publish Template',
       icon: <CheckCircleOutlined style={{ color: '#10b981' }} />,
-      onClick: () => handleSubmit('published')
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmit('published');
+      }
     }] : []),
     ...(safeTemplate.status === 'published' ? [{
       key: 'revise',
       label: isDocument || parsedTemplate?.document_id ? 'Revise Document' : 'Revise Template',
       icon: <EditOutlined />,
-      onClick: () => onRevise ? onRevise() : handleSubmit('pending_revision')
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        onRevise ? onRevise() : handleSubmit('pending_revision');
+      }
     }] : []),
     ...(safeTemplate.status === 'published' && onArchive ? [{
       key: 'archive',
       label: isDocument || parsedTemplate?.document_id ? 'Archive Document' : 'Archive Template',
       icon: <span className="anticon"><span className="material-symbols-outlined" style={{ fontSize: '14px', verticalAlign: '-2px' }}>archive</span></span>,
-      onClick: () => onArchive()
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        onArchive();
+      }
     }] : []),
-    {
+    // Always show: Save as Draft
+    ...([{
       key: 'draft',
       label: 'Save as Draft',
       icon: <FileTextOutlined />,
-      onClick: () => handleSubmit('draft')
-    },
-    {
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmit('draft');
+      }
+    }]),
+    // Always show: Submit for Review
+    ...([{
       key: 'pending_review',
       label: 'Submit for Review',
       icon: <FileSearchOutlined />,
-      onClick: () => handleSubmit('pending_review')
-    },
-    {
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmit('pending_review');
+      }
+    }]),
+    // Always show: Submit for Approval
+    ...([{
       key: 'pending_approval',
       label: 'Submit for Approval',
       icon: <CheckOutlined />,
-      onClick: () => handleSubmit('pending_approval')
-    }
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmit('pending_approval');
+      }
+    }])
   ];
 
   const getTemplateIcon = (template) => {
@@ -345,6 +383,9 @@ const TemplatePreviewHeader = ({
         <Button 
           type={cleanView ? "primary" : "default"} 
           size="small"
+          onMouseDown={(e) => {
+            e.stopPropagation();
+          }}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -427,9 +468,15 @@ const TemplatePreviewHeader = ({
       )}
 
       {/* Circulate Template / Circulate Document Dropdown */}
-      {canUpdate && (
+      {canCirculate && (
         <Dropdown menu={{ items: authorMenuItems }} placement="bottomRight">
-          <Button type="primary" size="small">
+          <Button 
+            type="primary" 
+            size="small"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+            }}
+          >
             {isDocument || parsedTemplate?.document_id ? 'Circulate Document' : 'Circulate Template'} <DownOutlined style={{ fontSize: '10px' }} />
           </Button>
         </Dropdown>
@@ -454,7 +501,7 @@ const TemplatePreviewHeader = ({
       )}
 
       {/* Manual Save Button (Auto-save 1.5s badge REMOVED) */}
-      {!isReadMode && (safeTemplate.status === 'draft' || safeTemplate.status === 'pending_review' || safeTemplate.status === 'reviewed' || !safeTemplate.status) && (
+      {!isReadMode && (safeTemplate.status === 'draft' || safeTemplate.status === 'pending_review' || safeTemplate.status === 'reviewed' || safeTemplate.status === 'pending_approval' || !safeTemplate.status) && (
         <Tooltip title="Manual save (Ctrl+S)">
           <Button 
             icon={<CheckOutlined />}

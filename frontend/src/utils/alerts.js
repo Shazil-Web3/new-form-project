@@ -16,6 +16,18 @@ export const successAlert = (title = 'Success!', text = 'Operation completed suc
     text,
     icon: 'success',
     confirmButtonColor: '#3085d6',
+    zIndex: 999999,
+    didOpen: (modal) => {
+      const backdrop = document.querySelector('.swal2-container');
+      if (backdrop) {
+        backdrop.style.zIndex = '999999';
+        backdrop.style.position = 'fixed';
+      }
+      const swalPopup = document.querySelector('.swal2-popup');
+      if (swalPopup) {
+        swalPopup.style.zIndex = '999999';
+      }
+    },
     ...options
   });
 };
@@ -32,6 +44,18 @@ export const errorAlert = (title = 'Error!', text = 'Something went wrong', opti
     text,
     icon: 'error',
     confirmButtonColor: '#d33',
+    zIndex: 999999,
+    didOpen: (modal) => {
+      const backdrop = document.querySelector('.swal2-container');
+      if (backdrop) {
+        backdrop.style.zIndex = '999999';
+        backdrop.style.position = 'fixed';
+      }
+      const swalPopup = document.querySelector('.swal2-popup');
+      if (swalPopup) {
+        swalPopup.style.zIndex = '999999';
+      }
+    },
     ...options
   });
 };
@@ -48,6 +72,18 @@ export const warningAlert = (title = 'Warning!', text = 'Are you sure you want t
     text,
     icon: 'warning',
     confirmButtonColor: '#ffc107',
+    zIndex: 999999,
+    didOpen: (modal) => {
+      const backdrop = document.querySelector('.swal2-container');
+      if (backdrop) {
+        backdrop.style.zIndex = '999999';
+        backdrop.style.position = 'fixed';
+      }
+      const swalPopup = document.querySelector('.swal2-popup');
+      if (swalPopup) {
+        swalPopup.style.zIndex = '999999';
+      }
+    },
     ...options
   });
 };
@@ -76,6 +112,19 @@ export const confirmAlert = (
     cancelButtonColor: '#d33',
     confirmButtonText: confirmText,
     cancelButtonText: cancelText,
+    zIndex: 999999,
+    didOpen: (modal) => {
+      // Ensure the modal backdrop and swal2-container have extremely high z-index to appear above Ant Design modals
+      const backdrop = document.querySelector('.swal2-container');
+      if (backdrop) {
+        backdrop.style.zIndex = '999999';
+        backdrop.style.position = 'fixed';
+      }
+      const swalPopup = document.querySelector('.swal2-popup');
+      if (swalPopup) {
+        swalPopup.style.zIndex = '999999';
+      }
+    },
     ...options
   });
 };

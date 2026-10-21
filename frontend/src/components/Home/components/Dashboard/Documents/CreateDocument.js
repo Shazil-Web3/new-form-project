@@ -931,13 +931,17 @@ const CreateDocument = ({ navigate: propNavigate, user, users, templates, templa
         key: 'draft',
         label: 'Save as Draft',
         icon: <FileTextOutlined />,
-        onClick: () => handleSubmit('draft')
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
+          handleSubmit('draft');
+        }
       },
       {
         key: 'review',
         label: 'Submit for Review',
         icon: <FileSearchOutlined />,
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           setApproverType('review');
           setDocumentApproversModalVisible(true);
         }
@@ -946,7 +950,8 @@ const CreateDocument = ({ navigate: propNavigate, user, users, templates, templa
         key: 'approval',
         label: 'Submit for Approval',
         icon: <SaveOutlined />,
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           setApproverType('approval');
           setDocumentApproversModalVisible(true);
         }

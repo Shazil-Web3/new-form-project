@@ -465,7 +465,10 @@ const DocumentSubmit = ({
           Submit for Review
         </Space>
       ),
-      onClick: () => handleSubmit('review')
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmit('review');
+      }
     },
     {
       key: 'approval',
@@ -475,7 +478,10 @@ const DocumentSubmit = ({
           Submit for Approval
         </Space>
       ),
-      onClick: () => handleSubmit('approval')
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmit('approval');
+      }
     }
   ];
 

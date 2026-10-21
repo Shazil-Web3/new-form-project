@@ -1138,13 +1138,17 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
         key: 'draft',
         label: 'Save as Draft',
         icon: <FileTextOutlined />,
-        onClick: () => handleSubmit('draft')
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
+          handleSubmit('draft');
+        }
       },
       {
         key: 'review',
         label: 'Submit for Review',
         icon: <FileSearchOutlined />,
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           setApproverType('review');
           setDocumentApproversModalVisible(true);
         }
@@ -1153,7 +1157,8 @@ const ReviseDocument = ({ fetchUserData, document, user, users, templates, depar
         key: 'approval',
         label: 'Submit for Approval',
         icon: <SaveOutlined />,
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           setApproverType('approval');
           setDocumentApproversModalVisible(true);
         }

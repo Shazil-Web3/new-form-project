@@ -357,7 +357,8 @@ const TemplatePreview = ({
       handleApprove={async () => {
         await manualSaveContent();
         const result = await handleApprove();
-        if (result) onCancel();
+        // Do NOT auto-close on approval — let the UI update with new status
+        // so admin can see the Publish button
       }}
       setShowRejectionModal={setShowRejectionModal}
       isReviewing={isReviewing}
@@ -399,7 +400,8 @@ const TemplatePreview = ({
                     handleApprove={async () => {
                       await manualSaveContent();
                       const result = await handleApprove();
-                      if (result) onCancel();
+                      // Do NOT auto-close on approval — let the UI update with new status
+                      // so admin can see the Publish button
                     }}
                     handleReject={async () => {
                       await manualSaveContent();

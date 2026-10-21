@@ -377,13 +377,17 @@ const ArchiveDocument = ({
       key: 'archive_draft',
       label: 'Save as Archive Draft',
       icon: <FileTextOutlined />,
-      onClick: () => handleSubmit('archive_draft')
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmit('archive_draft');
+      }
     },
     {
       key: 'archive_review',
       label: 'Submit for Archive Review',
       icon: <FileSearchOutlined />,
-      onClick: () => {
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
         setApproverType('review');
         setApproversModalVisible(true);
       }
@@ -392,7 +396,8 @@ const ArchiveDocument = ({
       key: 'archive_approval',
       label: 'Submit for Archive Approval',
       icon: <SaveOutlined />,
-      onClick: () => {
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
         setApproverType('approval');
         setApproversModalVisible(true);
       }

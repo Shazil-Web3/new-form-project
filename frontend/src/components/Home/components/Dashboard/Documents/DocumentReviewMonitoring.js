@@ -538,7 +538,8 @@ const DocumentReviewMonitoring = ({ documents, users, user, handlePreviewDocumen
           icon: <CheckCircleOutlined />,
           label: 'Publish',
           disabled: status !== 'approved',
-          onClick: () => {
+          onClick: (info) => {
+            // Ant Design v5 passes { item, key, keyPath } as first param, not event
             if (status === 'approved') {
               confirmAlert(
                 'Publish Document',
@@ -560,7 +561,8 @@ const DocumentReviewMonitoring = ({ documents, users, user, handlePreviewDocumen
         icon: <RollbackOutlined />,
         label: 'Revert',
         disabled: ['pending_review', 'reviewed'].includes(status),
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           confirmAlert(
             'Revert Document',
             'Are you sure you want to revert this document to Reviewed status?',
@@ -579,7 +581,8 @@ const DocumentReviewMonitoring = ({ documents, users, user, handlePreviewDocumen
         icon: <RollbackOutlined />,
         label: 'Unsubmit',
         danger: true,
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           confirmAlert(
             'Unsubmit Document',
             'Are you sure you want to revert this document to draft status?',

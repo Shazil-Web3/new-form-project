@@ -527,7 +527,8 @@ const ReviewMonitoring = ({ templates, users, user, handlePreviewTemplate, onRef
         icon: <CheckCircleOutlined />,
         label: 'Publish',
         disabled: status !== 'approved',
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           if (status === 'approved') {
             confirmAlert(
               'Publish Template',
@@ -549,7 +550,8 @@ const ReviewMonitoring = ({ templates, users, user, handlePreviewTemplate, onRef
         icon: <RollbackOutlined />,
         label: 'Revert',
         disabled: [ 'pending_review', 'reviewed'].includes(status),
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           confirmAlert(
             'Revert Template',
             'Are you sure you want to revert this template to Reviewed status?',
@@ -569,7 +571,8 @@ const ReviewMonitoring = ({ templates, users, user, handlePreviewTemplate, onRef
         icon: <RollbackOutlined />,
         label: 'Unsubmit',
         danger: true,
-        onClick: () => {
+        onClick: (info) => {
+          // Ant Design v5 passes { item, key, keyPath } as first param, not event
           confirmAlert(
             'Unsubmit Template',
             'Are you sure you want to revert this template to draft status?',

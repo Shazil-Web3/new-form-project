@@ -95,10 +95,11 @@ export const useTemplateActions = (parsedTemplate, setParsedTemplate, currentUse
         };
       });
       
-      return successAlert('Template Approved', 'The template has been successfully approved.');
+      return true; // Return true to indicate success and allow onCancel
     } catch (error) {
       console.error('Error approving template:', error);
       errorAlert('Error', 'Failed to approve template. Please try again.');
+      return false;
     } finally {
       setIsApproving(false);
     }

@@ -651,13 +651,17 @@ const EditTemplate = ({ fetchUserData, template, user, users, categories, depart
       key: 'draft',
       label: 'Save as Draft',
       icon: <FileTextOutlined />,
-      onClick: () => handleSubmit('draft')
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmit('draft');
+      }
     },
     {
       key: 'review',
       label: 'Submit for Review',
       icon: <FileSearchOutlined />,
-      onClick: () => {
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
         setApproverType('review');
         showTemplateApproversModal();
       }
@@ -666,7 +670,8 @@ const EditTemplate = ({ fetchUserData, template, user, users, categories, depart
       key: 'approval',
       label: 'Submit for Approval',
       icon: <SaveOutlined />,
-      onClick: () => {
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
         setApproverType('approval');
         showTemplateApproversModal();
       }

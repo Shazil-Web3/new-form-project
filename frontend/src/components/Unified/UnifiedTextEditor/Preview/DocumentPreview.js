@@ -395,14 +395,18 @@ const DocumentPreview = ({
       key: 'draft',
       label: 'Save as Draft',
       icon: <FileTextOutlined />,
-      onClick: () => handleSubmitWorkflow('draft')
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
+        handleSubmitWorkflow('draft');
+      }
     });
 
     items.push({
       key: 'review',
       label: 'Submit for Review',
       icon: <FileSearchOutlined />,
-      onClick: () => {
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
         setApproverType('review');
         setDocumentApproversModalVisible(true);
       }
@@ -412,7 +416,8 @@ const DocumentPreview = ({
       key: 'approval',
       label: 'Submit for Approval',
       icon: <SaveOutlined />,
-      onClick: () => {
+      onClick: (info) => {
+        // Ant Design v5 passes { item, key, keyPath } as first param, not event
         const openModal = () => {
           setApproverType('approval');
           if (!sharedDueDate) {
