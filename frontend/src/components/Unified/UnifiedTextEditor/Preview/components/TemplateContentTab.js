@@ -133,15 +133,26 @@ const TemplateContentTab = ({
                     />
                   }
                   onContentChange={(changeData) => {
+                    console.log('📨 [PARENT_CALLBACK] onContentChange received');
+                    console.log('📨 [PARENT_CALLBACK] htmlContent length:', changeData?.htmlContent?.length);
+                    console.log('📨 [PARENT_CALLBACK] htmlContent (first 100 chars):', changeData?.htmlContent?.substring(0, 100));
+                    
                     const htmlContent = typeof changeData?.htmlContent === 'string'
                       ? changeData.htmlContent
                       : '';
-                    const acceptedBody = Boolean(htmlContent && !isSkeletonEditorContent(htmlContent));
+                    // Accept empty content (e.g., from Ctrl+A + Backspace deletion) OR non-skeleton content
+                    const acceptedBody = (htmlContent === '' || !isSkeletonEditorContent(htmlContent));
+                    console.log('📨 [PARENT_CALLBACK] htmlContent === "" ?', htmlContent === '');
+                    console.log('📨 [PARENT_CALLBACK] acceptedBody?', acceptedBody);
+                    
                     if (acceptedBody) {
                       if (lastTypingTimeRef) {
                         lastTypingTimeRef.current = Date.now();
                       }
+                      console.log('📨 [PARENT_CALLBACK] Updating setContentHtml to new content');
                       setContentHtml(htmlContent);
+                    } else {
+                      console.log('📨 [PARENT_CALLBACK] Rejecting content update (skeleton or other reason)');
                     }
                     if (changeData?.headerHTML !== undefined) {
                       setHeaderHTML(changeData.headerHTML || '');

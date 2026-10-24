@@ -35,6 +35,7 @@ export const useHandleKeyDown = ({
   handleEnter,
   handlePageBreak,
   handleTableCellNavigation,
+  isDeletionInFlightRef,
 }) => {
   function handleKeyDown(event) {
       if (readOnly) {
@@ -451,9 +452,40 @@ export const useHandleKeyDown = ({
         
         // ═══ SELECT-ALL + DELETE: if Ctrl+A was just used, preserve locked text ═══
         if (selectAllActiveRef.current) {
+          console.log('🗑️ [CTRL+A+DELETE] Starting full document deletion');
           event.preventDefault();
           event.stopPropagation();
+          
+          // Mark that a deletion is in flight to prevent LIVE SOURCE UPDATES from reverting content
+          if (isDeletionInFlightRef) {
+            isDeletionInFlightRef.current = true;
+            console.log('🗑️ [CTRL+A+DELETE] Set isDeletionInFlightRef = true');
+          }
+          
+          console.log('🗑️ [CTRL+A+DELETE] DOM before deletion:', pagesContainerRef?.current?.innerHTML?.substring(0, 100));
           deleteSelectionPreservingLocked(sel?.rangeCount ? sel.getRangeAt(0) : null);
+          console.log('🗑️ [CTRL+A+DELETE] DOM after deleteSelectionPreservingLocked:', pagesContainerRef?.current?.innerHTML?.substring(0, 100));
+          
+          // Sync the DOM changes back to the document engine
+          if (pagesContainerRef?.current) {
+            contentChangeHandlerRef.current?.syncDOMToBlocks(pagesContainerRef.current);
+            console.log('🗑️ [CTRL+A+DELETE] Called syncDOMToBlocks');
+          }
+          schedulePaginateRef.current?.();
+          console.log('🗑️ [CTRL+A+DELETE] Called schedulePaginate');
+          
+          syncAndNotify?.();
+          console.log('🗑️ [CTRL+A+DELETE] Called syncAndNotify');
+          
+          // Clear the flag after a short delay to allow the deletion to settle
+          setTimeout(() => {
+            if (isDeletionInFlightRef) {
+              isDeletionInFlightRef.current = false;
+              console.log('🗑️ [CTRL+A+DELETE] Cleared isDeletionInFlightRef after 500ms');
+            }
+          }, 500);
+          
+          selectAllActiveRef.current = false;
           return;
         }
         

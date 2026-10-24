@@ -450,17 +450,29 @@ export const useLockedTextNavigation = ({
 
   // -------- Delete Selection Preserving Locked Content --------
   const deleteSelectionPreservingLocked = useCallback((explicitRange = null) => {
+    console.log('🗑️ [DELETE_LOCKED] Entering deleteSelectionPreservingLocked');
     pushToUndo?.(true);
     const root = pagesContainerRef.current;
-    if (!root) return;
+    if (!root) {
+      console.log('🗑️ [DELETE_LOCKED] No root container, returning');
+      return;
+    }
 
     const sel = window.getSelection();
     const range = explicitRange || (sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null);
-    if (!range) return;
+    if (!range) {
+      console.log('🗑️ [DELETE_LOCKED] No range, returning');
+      return;
+    }
 
     const allBlocks = Array.from(root.querySelectorAll('.page-content [data-block-id]'));
+    console.log('🗑️ [DELETE_LOCKED] Found', allBlocks.length, 'blocks');
+    
     const isFullDoc = () => {
-      if (selectAllActiveRef.current) return true;
+      if (selectAllActiveRef.current) {
+        console.log('🗑️ [DELETE_LOCKED] selectAllActiveRef is true, treating as full doc');
+        return true;
+      }
       if (allBlocks.length <= 1) {
         const first = allBlocks[0];
         if (!first) return false;
@@ -504,7 +516,8 @@ export const useLockedTextNavigation = ({
           const emptyBlock = engine.createBlock('paragraph', '');
           engine.document.pages = [{ id: 'page1', blocks: [emptyBlock] }];
           engine.currentPageIndex = 0;
-          renderFreshFromEngineRef?.current?.();
+          // Don't call renderFreshFromEngineRef here - let syncAndNotify handle the render
+          // renderFreshFromEngineRef?.current?.();
           syncAndNotify();
           schedulePaginateRef.current?.();
         }
@@ -654,7 +667,27 @@ export const useLockedTextNavigation = ({
       let anchorNode = range.startContainer;
       let anchorOffset = range.startOffset;
 
-      if (anchorNode.parentElement?.closest?.('[data-locked="true"], .locked-text')) {
+      // FIX: Verify that anchorNode is still in the DOM after deletion.
+      // After deleteContents() and node removal, range.startContainer may reference
+      // a deleted text node, especially if it was inside an attribution span.
+      const isNodeStillInDOM = root.contains(anchorNode);
+      
+      if (!isNodeStillInDOM) {
+        // Node was deleted or orphaned — fall back to a valid position
+        const firstBlock = root.querySelector('.page-content [data-block-id]');
+        if (firstBlock) {
+          // Find first text node in the block
+          const walker = document.createTreeWalker(firstBlock, NodeFilter.SHOW_TEXT, null);
+          const firstTextNode = walker.nextNode();
+          if (firstTextNode) {
+            const newR = document.createRange();
+            newR.setStart(firstTextNode, 0);
+            newR.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newR);
+          }
+        }
+      } else if (anchorNode.parentElement?.closest?.('[data-locked="true"], .locked-text')) {
         const lockedEl = anchorNode.parentElement.closest('[data-locked="true"], .locked-text');
         skipLockedTextBackward(lockedEl, false);
       } else if (anchorNode.parentNode) {
@@ -667,10 +700,15 @@ export const useLockedTextNavigation = ({
     }
 
     if (contentChangeHandlerRef.current && root) {
+      console.log('🗑️ [DELETE_LOCKED] Calling syncDOMToBlocks at end of function');
       contentChangeHandlerRef.current.syncDOMToBlocks(root);
+      console.log('🗑️ [DELETE_LOCKED] Engine state after sync:', documentEngineRef.current?.toHTML?.()?.substring(0, 150));
     }
     schedulePaginateRef.current?.();
+    console.log('🗑️ [DELETE_LOCKED] About to call syncAndNotify from deleteSelectionPreservingLocked');
+    console.log('🗑️ [DELETE_LOCKED] DOM state before syncAndNotify:', root?.innerHTML?.substring(0, 150));
     syncAndNotify();
+    console.log('🗑️ [DELETE_LOCKED] syncAndNotify completed');
   }, [skipLockedTextBackward, syncAndNotify, pushToUndo]);
 
   // -------- Comprehensive Lock/Unlock Selection (Single-line, Multi-line, Tables) --------

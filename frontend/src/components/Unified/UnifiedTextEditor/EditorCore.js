@@ -193,6 +193,8 @@ const TemplateEditor = ({
   // --- 2. REF DECLARATIONS ---
   const internalPagesRef = useRef(null);
   const pagesContainerRef = externalRef || internalPagesRef;
+  // Flag to tell React not to touch this container's children
+  const shouldSkipReactReconciliationRef = useRef(false);
   const documentEngineRef = useRef(new DocumentEngine());
   const pasteHandlerRef = useRef(null);
   const contentChangeHandlerRef = useRef(null);
@@ -206,6 +208,7 @@ const TemplateEditor = ({
   const lastBroadcastHtmlRef = useRef("");
   const lastBroadcastBlocksJsonRef = useRef("");
   const hasLocalUserEditsRef = useRef(false);
+  const isDeletionInFlightRef = useRef(false);
 
   useEffect(() => {
     const nextId = documentId || templateId || null;
@@ -827,23 +830,40 @@ const TemplateEditor = ({
     };
   }, [pagesContainerRef, schedulePaginateRef]);
 
-  // Monkey patch removeChild to prevent React crashes from manual DOM manipulation
-  // This is a safety net for when React tries to unmount components from pages we've already manually moved or removed
+  // Reconciliation Guard: Tracks deleted elements to prevent React from re-adding them
+  const deletedElementIdsRef = useRef(new Set());
+
+  // Monkey patch removeChild to track deletions and prevent React from re-adding deleted nodes
   useEffect(() => {
+    // Store deleted elements tracking on the container for access by other hooks
+    if (pagesContainerRef.current) {
+      (pagesContainerRef.current).__editorDeletedBlocksSet = deletedElementIdsRef.current;
+    }
+
     const originalRemoveChild = Node.prototype.removeChild;
     Node.prototype.removeChild = function (child) {
+      // Track deleted block elements by their data-block-id
+      if (child?.nodeType === 1 && child?.hasAttribute?.('data-block-id')) {
+        const blockId = child.getAttribute('data-block-id');
+        if (blockId) {
+          // Add to global tracking set
+          deletedElementIdsRef.current.add(blockId);
+          // Also store on container for access by child hooks
+          const container = pagesContainerRef.current;
+          if (container && !container.__editorDeletedBlocksSet) {
+            container.__editorDeletedBlocksSet = new Set();
+          }
+          if (container?.__editorDeletedBlocksSet) {
+            container.__editorDeletedBlocksSet.add(blockId);
+          }
+        }
+      }
+
       if (child && child.parentNode === this) {
         return originalRemoveChild.call(this, child);
       }
       // If the node is not a direct child, React would normally crash with NotFoundError.
       // We ignore it and pretend it was removed to keep the application stable.
-      if (child && child.nodeType === 1) {
-        console.warn("[EditorCore] Ignored removeChild error: node is not a direct child of this parent", {
-          parent: this,
-          child: child,
-          actualParent: child.parentNode
-        });
-      }
       return child;
     };
 
@@ -855,7 +875,47 @@ const TemplateEditor = ({
   useEffect(() => {
     // Ensure at least one page exists so headers/footers are visible for auto-fill
     ensureOnePage();
-  }, [ensureOnePage]);
+    
+    // Prevent React from re-adding deleted block elements
+    const container = pagesContainerRef.current;
+    if (!container) return;
+
+    const originalAppendChild = Element.prototype.appendChild;
+    const originalInsertBefore = Element.prototype.insertBefore;
+
+    // Override appendChild to filter out deleted block elements
+    Element.prototype.appendChild = function (child) {
+      if (child?.nodeType === 1 && child?.hasAttribute?.('data-block-id')) {
+        const blockId = child.getAttribute('data-block-id');
+        // Check both the ref-based tracking and the container-based tracking
+        const isDeleted = deletedElementIdsRef.current?.has(blockId) || 
+                         container.__editorDeletedBlocksSet?.has(blockId);
+        if (blockId && isDeleted) {
+          return child; // Return the child without actually adding it
+        }
+      }
+      return originalAppendChild.call(this, child);
+    };
+
+    // Override insertBefore to filter out deleted block elements  
+    Element.prototype.insertBefore = function (newChild, refChild) {
+      if (newChild?.nodeType === 1 && newChild?.hasAttribute?.('data-block-id')) {
+        const blockId = newChild.getAttribute('data-block-id');
+        // Check both the ref-based tracking and the container-based tracking
+        const isDeleted = deletedElementIdsRef.current?.has(blockId) ||
+                         container.__editorDeletedBlocksSet?.has(blockId);
+        if (blockId && isDeleted) {
+          return newChild; // Return the child without actually inserting it
+        }
+      }
+      return originalInsertBefore.call(this, newChild, refChild);
+    };
+
+    return () => {
+      Element.prototype.appendChild = originalAppendChild;
+      Element.prototype.insertBefore = originalInsertBefore;
+    };
+  }, [pagesContainerRef]);
 
   // When activeTab transitions to Content, instantly re-measure and paginate visible pages
   useEffect(() => {
@@ -1283,8 +1343,13 @@ const TemplateEditor = ({
     // This permanently prevents the editor from resetting nested lists (e.g. 1.1, 1.2) after
     // any period of inactivity or tab switching.
     // Also skip while paste/pagination is rebuilding pages — parent may still hold pre-paste HTML.
+    // Also skip if a mass deletion (Ctrl+A + Backspace) is in flight to prevent content restoration.
     if (typeof window !== "undefined" && (window.isPasteInProgress || window.isPaginatingEditor)) {
       return;
+    }
+    
+    if (isDeletionInFlightRef?.current) {
+      return; // Skip LIVE SOURCE UPDATES while deletion is in flight
     }
 
     const engine = documentEngineRef.current;
@@ -1314,6 +1379,10 @@ const TemplateEditor = ({
     }
 
     if (nextNormalized !== currentNormalized) {
+      console.log('🔄 [LIVE_SOURCE] Content mismatch detected! Parsing and re-rendering...');
+      console.log('🔄 [LIVE_SOURCE] nextNormalized:', nextNormalized.substring(0, 100));
+      console.log('🔄 [LIVE_SOURCE] currentNormalized:', currentNormalized.substring(0, 100));
+      
       // Clean HTML BEFORE parsing to remove yellow CSS classes and background artifacts
       let cleanedHtml = nextHtml
         .replace(/\s*temp-comment-highlight\s*/g, ' ')
@@ -1335,9 +1404,11 @@ const TemplateEditor = ({
 
       const parser = new HTMLToBlocksParser(engine);
       const blocks = parser.parseHTML(cleanedHtml);
+      console.log('🔄 [LIVE_SOURCE] Parsed', blocks.length, 'blocks from incoming HTML');
 
       if (blocks.length > 0) {
         // Update engine document
+        console.log('🔄 [LIVE_SOURCE] Calling renderFreshFromEngineRef to re-render with new content!');
         engine.document.pages = [{ id: uuidv4(), blocks }];
 
         // Re-render from engine state
@@ -1470,12 +1541,15 @@ const TemplateEditor = ({
     overrideLogo = null,
     options = {}
   ) => {
+    console.log('📢 [SYNC_NOTIFY] syncAndNotify called, flush=', flush);
     const { skipPaginate = options.skipPaginate ?? false, skipContentSync = options.skipContentSync ?? false } = syncOptionsRef.current;
     syncOptionsRef.current = {};
 
     // Track local typing time to suppress self-triggered DOM re-renders in LIVE SOURCE UPDATES
     lastLocalTypingTimeRef.current = Date.now();
     hasLocalUserEditsRef.current = true;
+    console.log('📢 [SYNC_NOTIFY] Set hasLocalUserEditsRef=true to prevent echo-back');
+    
     // Alert parent that user is typing
     onTyping?.();
 
@@ -1958,6 +2032,7 @@ const TemplateEditor = ({
     endTypingSession,
     ignoreNextTypingActionRef,
     caretManagerRef,
+    isDeletionInFlightRef,
   });
 
   const { selectionInfo: tableMergeSelectionInfo, executeMerge: executeTableMerge } = useTableMerge({

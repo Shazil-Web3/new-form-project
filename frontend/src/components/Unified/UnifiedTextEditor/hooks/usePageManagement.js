@@ -788,6 +788,11 @@ export const usePageManagement = ({
       if (logoMount) unmountRoot(logoMount);
     });
     container.innerHTML = "";
+    
+    // When we clear pages, also clear the deleted blocks tracking since we're rebuilding everything
+    if (container.__editorDeletedBlocksSet) {
+      container.__editorDeletedBlocksSet.clear();
+    }
   }, [pagesContainerRef]);
 
   const ensureOnePage = useCallback(() => {

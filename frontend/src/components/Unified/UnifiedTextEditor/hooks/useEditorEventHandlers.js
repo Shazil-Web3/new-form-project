@@ -51,6 +51,7 @@ export const useEditorEventHandlers = ({
   endTypingSession,
   ignoreNextTypingActionRef,
   caretManagerRef,
+  isDeletionInFlightRef,
 }) => {
   const paginationTimeoutRef = useRef(null);
   const selectAllActiveRef = useRef(false);
@@ -341,6 +342,7 @@ export const useEditorEventHandlers = ({
     handleEnter,
     handlePageBreak,
     handleTableCellNavigation,
+    isDeletionInFlightRef,
   });
 
   // 17. KeyUp handler
