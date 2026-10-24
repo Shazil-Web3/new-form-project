@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, [tokens]);
 
-  // Check auth status on initial load using apiClient
+  // Check auth status on initial load and after explicit login only
   useEffect(() => {
     const validateSession = async () => {
       if (tokens?.accessToken) {
@@ -74,8 +74,15 @@ export const AuthProvider = ({ children }) => {
       }
     };
 
-    validateSession();
-  }, [tokens]);
+    // Only validate session on initial app load when user data is not yet set
+    // Silent token refresh (handled by apiClient interceptor) will NOT trigger this
+    // This prevents unnecessary component re-initialization and preserves editor state
+    if (!user && tokens?.accessToken) {
+      validateSession();
+    } else if (!tokens?.accessToken) {
+      setLoading(false);
+    }
+  }, [user]);
 
   // Save tokens to localStorage whenever they change
   useEffect(() => {
@@ -86,22 +93,15 @@ export const AuthProvider = ({ children }) => {
     }
   }, [tokens]);
 
-  // Sync state with events from central apiClient singleton
+  // Handle explicit logout events from apiClient when token refresh fails
   useEffect(() => {
-    const handleTokensChanged = (event) => {
-      if (event.detail) {
-        setTokens(event.detail);
-      }
-    };
     const handleLogout = () => {
       clearAuth();
     };
 
-    window.addEventListener('auth_tokens_changed', handleTokensChanged);
     window.addEventListener('auth_logout', handleLogout);
 
     return () => {
-      window.removeEventListener('auth_tokens_changed', handleTokensChanged);
       window.removeEventListener('auth_logout', handleLogout);
     };
   }, []);

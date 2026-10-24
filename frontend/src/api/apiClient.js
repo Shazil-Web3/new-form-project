@@ -113,9 +113,8 @@ const createAuthResponseInterceptor = (executor) => {
 
               localStorage.setItem('auth_tokens', JSON.stringify(newTokens));
               
-              // Dispatch events to notify AuthProvider or other components of token updates
-              window.dispatchEvent(new CustomEvent('auth_tokens_changed', { detail: newTokens }));
-
+              // Silent refresh: Update headers without dispatching state-changing events
+              // This prevents unnecessary component re-initialization and preserves editor state
               apiClient.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
               axios.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
               originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
