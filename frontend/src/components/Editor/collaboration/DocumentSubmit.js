@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { 
   Card, Form, Input, Button, Select, Row, Col, 
   Tag, Typography, Alert, Divider, Table, Space, Tabs, 
@@ -939,7 +939,7 @@ const DocumentSubmit = ({
       onCancel={onCancel}
       width={1000}
       footer={null}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginBottom: 16 }}>
         <Text type="secondary">

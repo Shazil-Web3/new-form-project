@@ -232,6 +232,7 @@ const TemplateEditor = ({
   const isUserScrollingRef = useRef(false);
   const userScrollTimerRef = useRef(null);
   const prevLayoutConfigRef = useRef({ orientation: null, paperSize: null, pageOrientations: "" });
+  const isUserEmptyDocRef = useRef(false);
 
   // Caret Visibility / Auto-Scroll Manager instance
   const caretManagerRef = useRef(null);
@@ -987,6 +988,10 @@ const TemplateEditor = ({
 
   // --- INITIAL CONTENT LOADING ---
   useEffect(() => {
+    // If the user has emptied the document or made edits, never re-load initial content
+    if (isUserEmptyDocRef.current) return;
+    if (hasLoadedInitialContentRef.current && (hasLocalUserEditsRef.current || isUserEmptyDocRef.current)) return;
+
     let contentValue = "";
     if (initialContent) {
       if (typeof initialContent === "string") {
@@ -1039,6 +1044,7 @@ const TemplateEditor = ({
 
     if (
       hasLocalUserEditsRef.current ||
+      isUserEmptyDocRef.current ||
       (typeof window !== "undefined" && (window.isPasteInProgress || window.isPaginatingEditor))
     ) {
       const incomingHasBody = typeof contentValue === "string"
@@ -1049,6 +1055,9 @@ const TemplateEditor = ({
       }
     }
     if (hasLoadedInitialContentRef.current) {
+      if (isUserEmptyDocRef.current || hasLocalUserEditsRef.current) {
+        return;
+      }
       if (!engineHtmlIsEmpty()) {
         return;
       }
@@ -1287,6 +1296,17 @@ const TemplateEditor = ({
       return;
     }
 
+    const _dbgEC = '[DEBUG:EC_INIT]';
+    if (isUserEmptyDocRef.current) {
+      console.log(`${_dbgEC} EARLY RETURN: isUserEmptyDocRef is true, preserving user's emptied document`);
+      return;
+    }
+
+    if (hasLoadedInitialContentRef.current && hasLocalUserEditsRef.current) {
+      console.log(`${_dbgEC} EARLY RETURN: local edits present, blocking live source updates`);
+      return;
+    }
+
     const engine = documentEngineRef.current;
     if (!engine) return;
 
@@ -1297,12 +1317,26 @@ const TemplateEditor = ({
       (lastBroadcastBlocksJsonRef.current && (nextHtml === lastBroadcastBlocksJsonRef.current || normalize(nextHtml) === normalize(lastBroadcastBlocksJsonRef.current)));
 
     if (isEchoOfLocalBroadcast || hasLocalUserEditsRef.current) {
-      if (!(isSkeletonEditorContent(currentHtml) && !isSkeletonEditorContent(nextHtml))) {
+      if (isUserEmptyDocRef.current) {
+        console.log(`${_dbgEC} EARLY RETURN: isUserEmptyDocRef is true, preserving user's emptied document`);
         return;
       }
+      const isCurSkel = isSkeletonEditorContent(currentHtml);
+      const isNextSkel = isSkeletonEditorContent(nextHtml);
+      console.log(`${_dbgEC} echo/local edits check: isEcho=${isEchoOfLocalBroadcast} hasLocalUserEdits=${hasLocalUserEditsRef.current} isCurSkel=${isCurSkel} isNextSkel=${isNextSkel}`);
+      if (!(isCurSkel && !isNextSkel)) {
+        console.log(`${_dbgEC} EARLY RETURN: blocked initialContent from overwriting editor state`);
+        return;
+      }
+      if (isUserEmptyDocRef.current || hasLocalUserEditsRef.current) {
+        console.log(`${_dbgEC} EARLY RETURN: preserving user edits/empty state despite skeleton`);
+        return;
+      }
+      console.log(`${_dbgEC} ⚠️ RE-HYDRATION OVERRIDE TRIGGERED: current is skeleton but incoming is not skeleton! Will re-parse nextHtml!`);
     }
 
     if (isSkeletonEditorContent(nextHtml) && !isSkeletonEditorContent(currentHtml)) {
+      console.log(`${_dbgEC} EARLY RETURN: nextHtml is skeleton but currentHtml is not`);
       return;
     }
 
@@ -1313,7 +1347,10 @@ const TemplateEditor = ({
       return;
     }
 
+    console.log(`${_dbgEC} comparing normalized: nextNormalized="${nextNormalized.slice(0,60)}" vs currentNormalized="${currentNormalized.slice(0,60)}"`);
+
     if (nextNormalized !== currentNormalized) {
+      console.log(`${_dbgEC} 💥 MISMATCH DETECTED -> RE-PARSING HTML TO BLOCKS AND CALLING renderFreshFromEngine!`);
       // Clean HTML BEFORE parsing to remove yellow CSS classes and background artifacts
       let cleanedHtml = nextHtml
         .replace(/\s*temp-comment-highlight\s*/g, ' ')
@@ -1335,6 +1372,7 @@ const TemplateEditor = ({
 
       const parser = new HTMLToBlocksParser(engine);
       const blocks = parser.parseHTML(cleanedHtml);
+      console.log(`${_dbgEC} Parsed blocks count =`, blocks.length);
 
       if (blocks.length > 0) {
         // Update engine document
@@ -1342,6 +1380,7 @@ const TemplateEditor = ({
 
         // Re-render from engine state
         if (renderFreshFromEngineRef.current) {
+          console.log(`${_dbgEC} Calling renderFreshFromEngineRef.current() from initialContent effect!`);
           renderFreshFromEngineRef.current();
           // Schedule pagination to ensure correct layout after remote update
           setTimeout(() => {
@@ -1373,7 +1412,8 @@ const TemplateEditor = ({
     overrideFooterHTML = null,
     flush = false,
     overrideOrientation = null,
-    overridePagesState = null
+    overridePagesState = null,
+    options = {}
   ) => {
     const normalizeElement = (el, fallbackType = 'comment') => ({
       id: el.id,
@@ -1406,7 +1446,14 @@ const TemplateEditor = ({
       .replace(/class="\s*"/g, '')
       .replace(/class=""/g, '');
 
-    if (isSkeletonEditorContent(cleanHtml) && !isSkeletonEditorContent(lastBroadcastHtmlRef.current)) {
+    const _dbgSAN = '[DEBUG:SAN]';
+    const isCleanSkel = isSkeletonEditorContent(cleanHtml);
+    const isLastSkel = isSkeletonEditorContent(lastBroadcastHtmlRef.current);
+    const allowEmpty = Boolean(options?.allowEmptyDoc || isUserEmptyDocRef.current);
+    console.log(`${_dbgSAN} ▶ syncAndNotify called: isCleanSkel=${isCleanSkel} isLastSkel=${isLastSkel} allowEmpty=${allowEmpty} cleanHtml="${cleanHtml.slice(0,100)}"`);
+
+    if (isCleanSkel && !isLastSkel && !allowEmpty) {
+      console.log(`${_dbgSAN} ⚠️ SKELETON GUARD HIT! Overriding cleanHtml with lastBroadcastHtmlRef: "${lastBroadcastHtmlRef.current.slice(0,100)}"`);
       cleanHtml = lastBroadcastHtmlRef.current;
     }
 
@@ -1416,7 +1463,10 @@ const TemplateEditor = ({
     lastBroadcastHtmlRef.current = cleanHtml;
     lastBroadcastBlocksJsonRef.current = blocksJson;
 
-    const currentPagesState = overridePagesState || pagesStateRef.current || pagesState || [];
+    const rawPagesState = overridePagesState || pagesStateRef.current || pagesState || [];
+    const currentPagesState = (isUserEmptyDocRef.current && rawPagesState.length > 0)
+      ? [rawPagesState[0]]
+      : rawPagesState;
     const currentParentLogo = parentLogoRef?.current !== undefined ? parentLogoRef.current : propLogo;
     const pageLogo = currentPagesState[0]?.header?.logo || null;
     const mergedLogo = mergeLogoForDisplay(pageLogo, currentParentLogo);
@@ -1479,7 +1529,7 @@ const TemplateEditor = ({
     // Alert parent that user is typing
     onTyping?.();
 
-    if (!flush && isProgrammaticChangeRef.current) {
+    if (!flush && !options?.allowEmptyDoc && isProgrammaticChangeRef.current) {
       return;
     }
 
@@ -1488,7 +1538,8 @@ const TemplateEditor = ({
     if (flush) {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       contentChangeHandlerRef.current.syncDOMToBlocks(pagesContainerRef.current);
-      documentEngineRef.current.repaginate(pagesContainerRef.current);
+      const targetRepaginateEl = pagesContainerRef.current?.querySelector?.('.page-content') || pagesContainerRef.current;
+      documentEngineRef.current.repaginate(targetRepaginateEl);
       notifyParentFromEngine(
         overrideComments,
         overrideSuggestions,
@@ -1497,7 +1548,8 @@ const TemplateEditor = ({
         overrideFooterHTML,
         true,
         overrideOrientation,
-        overridePagesState
+        overridePagesState,
+        options
       );
       return;
     }
@@ -1509,7 +1561,10 @@ const TemplateEditor = ({
         overrideReferences,
         overrideHeaderHTML,
         overrideFooterHTML,
-        flush
+        flush,
+        overrideOrientation,
+        overridePagesState,
+        options
       );
       return;
     }
@@ -1958,6 +2013,7 @@ const TemplateEditor = ({
     endTypingSession,
     ignoreNextTypingActionRef,
     caretManagerRef,
+    isUserEmptyDocRef,
   });
 
   const { selectionInfo: tableMergeSelectionInfo, executeMerge: executeTableMerge } = useTableMerge({
@@ -3156,6 +3212,10 @@ const TemplateEditor = ({
   }, [handleKeyUp, checkMentionTrigger]);
 
   const handleEditorInput = useCallback((e) => {
+    const textContent = pagesContainerRef.current?.textContent?.trim?.() || "";
+    if (textContent.length > 0) {
+      isUserEmptyDocRef.current = false;
+    }
     caretManagerRef.current?.onEditingAction("input");
     syncAndNotify();
     checkMentionTrigger();

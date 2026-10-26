@@ -1815,6 +1815,12 @@ export const usePageManagement = ({
   }, [createPage, createOverflowPage, normalizePageContentStructure, pagesState, sizePageContent, sizeAllPages, updateAllLogoImgs, getBlockAndOffset, pagesContainerRef, documentEngineRef, setPageCount, setCurrentPage, ensureOnePage, mountLogoForPage, caretManagerRef, readOnly, syncEditableAttributes]);
 
   const renderFreshFromEngine = useCallback((customCaret = null) => {
+    const _dbg = '[DEBUG:RFE]';
+    console.log(`${_dbg} ▶ renderFreshFromEngine CALLED`, {
+      isResizingTable: !!window.isResizingTable,
+      containerExists: !!pagesContainerRef.current,
+      engineHTML: documentEngineRef.current?.toHTML()?.slice(0, 120),
+    });
     if (window.isResizingTable) return;
     const container = pagesContainerRef.current;
     if (!container) return;
@@ -1845,6 +1851,7 @@ export const usePageManagement = ({
     clearPages();
     const firstPage = ensureOnePage();
     if (!firstPage) {
+      console.log(`${_dbg} ensureOnePage returned NULL!`);
       if (container) container.style.minHeight = "";
       isProgrammaticChangeRef.current = false;
       window.isProgrammaticScroll = false;
@@ -1853,13 +1860,16 @@ export const usePageManagement = ({
     }
     const firstContent = firstPage.querySelector(".page-content");
     if (!firstContent) {
+      console.log(`${_dbg} firstPage .page-content NOT FOUND!`);
       if (container) container.style.minHeight = "";
       isProgrammaticChangeRef.current = false;
       window.isProgrammaticScroll = false;
       window.isPaginatingEditor = false;
       return;
     }
-    firstContent.innerHTML = documentEngineRef.current.toHTML();
+    const htmlToInject = documentEngineRef.current.toHTML();
+    firstContent.innerHTML = htmlToInject;
+    console.log(`${_dbg} firstContent.innerHTML injected:`, htmlToInject.slice(0, 120), `(DOM blocks in container = ${container.querySelectorAll('.page-content [data-block-id]').length})`);
     syncEditableAttributes(firstContent);
     firstContent.querySelectorAll("[data-block-id]").forEach((el) => {
       const id = el.getAttribute("data-block-id");

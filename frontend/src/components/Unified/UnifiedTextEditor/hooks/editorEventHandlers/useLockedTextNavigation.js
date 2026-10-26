@@ -10,6 +10,7 @@ export const useLockedTextNavigation = ({
   savedSelectionRef,
   pushToUndo,
   selectAllActiveRef,
+  isUserEmptyDocRef,
 }) => {
   const containsLockedText = useCallback((range) => {
     if (!range) return false;
@@ -456,11 +457,11 @@ export const useLockedTextNavigation = ({
 
     const sel = window.getSelection();
     const range = explicitRange || (sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null);
-    if (!range) return;
 
     const allBlocks = Array.from(root.querySelectorAll('.page-content [data-block-id]'));
     const isFullDoc = () => {
-      if (selectAllActiveRef.current) return true;
+      if (selectAllActiveRef?.current) return true;
+      if (!range) return false;
       if (allBlocks.length <= 1) {
         const first = allBlocks[0];
         if (!first) return false;
@@ -470,13 +471,28 @@ export const useLockedTextNavigation = ({
       const first = allBlocks[0];
       const last = allBlocks[allBlocks.length - 1];
       const pageContentText = Array.from(root.querySelectorAll('.page-content')).map(el => el.textContent || '').join('');
-      return (first.contains(range.startContainer) || range.startContainer === root || root.contains(range.startContainer)) &&
-             (last.contains(range.endContainer) || range.endContainer === root || root.contains(range.endContainer)) &&
-             (pageContentText.length === 0 || range.toString().length >= pageContentText.length * 0.85);
+      const firstSelected = first.contains(range.startContainer) || range.startContainer === root || root.contains(range.startContainer) || range.intersectsNode(first);
+      const lastSelected = last.contains(range.endContainer) || range.endContainer === root || root.contains(range.endContainer) || range.intersectsNode(last);
+      const coveredRatio = pageContentText.length === 0 || range.toString().length >= pageContentText.length * 0.8;
+      return (firstSelected && lastSelected) || coveredRatio;
     };
 
-    const isAll = isFullDoc();
-    selectAllActiveRef.current = false;
+    const _dbg = '[DEBUG:DSPL]';
+    const isAll = Boolean(selectAllActiveRef?.current) || isFullDoc();
+    if (selectAllActiveRef) {
+      selectAllActiveRef.current = false;
+    }
+
+    console.log(`${_dbg} ▶ deleteSelectionPreservingLocked CALLED`, {
+      explicitRange: !!explicitRange,
+      root: !!root,
+      selRangeCount: sel?.rangeCount,
+      isAll,
+      rangeText: range?.toString().slice(0, 100),
+      allBlocksCount: allBlocks.length,
+    });
+
+    if (!range && !isAll) return;
 
     // Helper to recursively purge unlocked nodes inside an element
     const purgeUnlockedFromElement = (el, lockedList) => {
@@ -498,18 +514,58 @@ export const useLockedTextNavigation = ({
 
     if (isAll) {
       const lockedSpansInDoc = Array.from(root.querySelectorAll('[data-locked="true"], .locked-text'));
+      console.log(`${_dbg} isAll=TRUE → lockedSpansInDoc.length =`, lockedSpansInDoc.length);
       if (lockedSpansInDoc.length === 0) {
+        console.log(`${_dbg} CLEAN DOC BRANCH (0 locked spans) → in-place reset`);
         const engine = documentEngineRef.current;
-        if (engine) {
+        if (engine && root) {
+          if (isUserEmptyDocRef) {
+            isUserEmptyDocRef.current = true;
+          }
           const emptyBlock = engine.createBlock('paragraph', '');
-          engine.document.pages = [{ id: 'page1', blocks: [emptyBlock] }];
+          engine.document.pages = [{ id: 'page-1', blocks: [emptyBlock] }];
           engine.currentPageIndex = 0;
-          renderFreshFromEngineRef?.current?.();
-          syncAndNotify();
+
+          // 1. In-place DOM update: update first page-content to contain only the empty block
+          const pages = Array.from(root.querySelectorAll('.page'));
+          const firstPage = pages[0];
+          const firstContent = firstPage?.querySelector('.page-content');
+          if (firstContent) {
+            firstContent.innerHTML = `<p data-block-id="${emptyBlock.id}"><br></p>`;
+          }
+
+          // 2. Remove any extra pages directly (pages 2, 3...)
+          for (let i = 1; i < pages.length; i++) {
+            pages[i].remove();
+          }
+
+          // 3. Place caret inside the empty block and focus
+          if (firstContent) {
+            const emptyEl = firstContent.querySelector(`[data-block-id="${emptyBlock.id}"]`);
+            if (emptyEl) {
+              const r = document.createRange();
+              r.selectNodeContents(emptyEl);
+              r.collapse(true);
+              const sel = window.getSelection();
+              sel?.removeAllRanges();
+              sel?.addRange(r);
+            }
+            try { firstContent.focus({ preventScroll: true }); } catch (_) {}
+          }
+
+          // 4. Sync engine and notify
+          if (contentChangeHandlerRef.current) {
+            contentChangeHandlerRef.current.syncDOMToBlocks(root);
+          }
           schedulePaginateRef.current?.();
+          syncAndNotify?.(null, null, null, null, null, true, null, null, null, { allowEmptyDoc: true });
+        } else {
+          console.log(`${_dbg} engine is NULL or root is NULL!`);
         }
         return;
       }
+
+      console.log(`${_dbg} PRESERVE LOCKED BRANCH (${lockedSpansInDoc.length} locked spans)`);
 
       let remainingBlocks = 0;
       let firstPreservedLocked = null;
@@ -577,6 +633,9 @@ export const useLockedTextNavigation = ({
         if (engine) {
           const emptyBlock = engine.createBlock('paragraph', '');
           engine.document.pages = [{ id: 'page1', blocks: [emptyBlock] }];
+          if (isUserEmptyDocRef) {
+            isUserEmptyDocRef.current = true;
+          }
         }
       }
 
@@ -588,7 +647,7 @@ export const useLockedTextNavigation = ({
         contentChangeHandlerRef.current.syncDOMToBlocks(root);
       }
       schedulePaginateRef.current?.();
-      syncAndNotify();
+      syncAndNotify?.(null, null, null, null, null, true, null, null, null, { allowEmptyDoc: remainingBlocks === 0 });
       return;
     }
 

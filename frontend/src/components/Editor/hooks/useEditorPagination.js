@@ -496,14 +496,26 @@ export default function useEditorPagination({
 
   // Select all across all pages
   const selectAllAcrossPages = useCallback(() => {
+    const _dbg = '[DEBUG:selectAllAcrossPages]';
+    console.log(`${_dbg} called`);
+
     const root = pagesContainerRef.current;
-    if (!root) return;
+    if (!root) {
+      console.log(`${_dbg} EARLY RETURN: pagesContainerRef.current is null`);
+      return;
+    }
 
     const blocks = root.querySelectorAll('.page-content [data-block-id]');
-    if (blocks.length === 0) return;
+    console.log(`${_dbg} blocks found: ${blocks.length}`);
+    if (blocks.length === 0) {
+      console.log(`${_dbg} EARLY RETURN: no blocks found`);
+      return;
+    }
 
     const first = blocks[0];
     const last = blocks[blocks.length - 1];
+    console.log(`${_dbg} first block:`, first, `text="${first.textContent.slice(0, 80)}"`);
+    console.log(`${_dbg} last block:`, last, `text="${last.textContent.slice(0, 80)}"`);
 
     const firstTextNode = (n) => {
       let node = n;
@@ -519,6 +531,9 @@ export default function useEditorPagination({
     const startNode = firstTextNode(first) || first;
     const endNode = lastTextNode(last) || last;
 
+    console.log(`${_dbg} startNode (deepest first child):`, startNode, `nodeType=${startNode.nodeType} text="${startNode.textContent?.slice(0, 80)}"`);
+    console.log(`${_dbg} endNode (deepest last child):`, endNode, `nodeType=${endNode.nodeType} text="${endNode.textContent?.slice(0, 80)}"`);
+
     const range = document.createRange();
     range.setStart(startNode, 0);
     const endOffset = endNode.nodeType === Node.TEXT_NODE
@@ -526,9 +541,22 @@ export default function useEditorPagination({
       : (endNode.childNodes?.length || 0);
     range.setEnd(endNode, endOffset);
 
+    console.log(`${_dbg} range built: startOffset=0 endOffset=${endOffset} collapsed=${range.collapsed}`);
+    console.log(`${_dbg} range.toString() (first 200): "${range.toString().slice(0, 200)}"`);
+
     const sel = window.getSelection();
     sel.removeAllRanges();
     sel.addRange(range);
+
+    // Verify selection was applied
+    const verSel = window.getSelection();
+    console.log(`${_dbg} AFTER addRange: sel.isCollapsed=${verSel.isCollapsed} rangeCount=${verSel.rangeCount}`);
+    if (verSel.rangeCount) {
+      const vr = verSel.getRangeAt(0);
+      console.log(`${_dbg}   verified range: startContainer=`, vr.startContainer, `startOffset=${vr.startOffset}`);
+      console.log(`${_dbg}   verified range: endContainer=`, vr.endContainer, `endOffset=${vr.endOffset}`);
+      console.log(`${_dbg}   verified text (first 200): "${verSel.toString().slice(0, 200)}"`);
+    }
   }, [pagesContainerRef]);
 
   const placeCaretAtStart = useCallback((el) => {

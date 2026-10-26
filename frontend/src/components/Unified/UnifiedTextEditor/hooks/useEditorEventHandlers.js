@@ -51,6 +51,7 @@ export const useEditorEventHandlers = ({
   endTypingSession,
   ignoreNextTypingActionRef,
   caretManagerRef,
+  isUserEmptyDocRef,
 }) => {
   const paginationTimeoutRef = useRef(null);
   const selectAllActiveRef = useRef(false);
@@ -184,6 +185,7 @@ export const useEditorEventHandlers = ({
     savedSelectionRef,
     pushToUndo,
     selectAllActiveRef,
+    isUserEmptyDocRef,
   });
 
   // 8. Lock/Unlock selection toggle
@@ -299,6 +301,7 @@ export const useEditorEventHandlers = ({
     handleBlockBackspace,
     handleEnter,
     handlePaste,
+    isUserEmptyDocRef,
   });
 
   // 15. Table cell navigation (Tab/Shift-Tab)
@@ -341,6 +344,7 @@ export const useEditorEventHandlers = ({
     handleEnter,
     handlePageBreak,
     handleTableCellNavigation,
+    isUserEmptyDocRef,
   });
 
   // 17. KeyUp handler

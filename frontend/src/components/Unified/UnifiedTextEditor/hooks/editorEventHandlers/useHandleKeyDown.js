@@ -35,8 +35,42 @@ export const useHandleKeyDown = ({
   handleEnter,
   handlePageBreak,
   handleTableCellNavigation,
+  isUserEmptyDocRef,
 }) => {
+  if (typeof window !== "undefined") {
+    if (!window.__EDITOR_LOGS__) window.__EDITOR_LOGS__ = [];
+    window.copyEditorLogs = () => {
+      const txt = (window.__EDITOR_LOGS__ || []).join('\n');
+      navigator.clipboard?.writeText?.(txt);
+      console.log(`[COPIED ${window.__EDITOR_LOGS__.length} LOGS TO CLIPBOARD]`);
+      return txt;
+    };
+  }
+
   function handleKeyDown(event) {
+      if (isUserEmptyDocRef && event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        isUserEmptyDocRef.current = false;
+      }
+      const _dbg = '[DEBUG:KD]';
+      const logMsg = (msg, ...args) => {
+        const line = `${msg} ${args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' ')}`;
+        if (typeof window !== "undefined" && window.__EDITOR_LOGS__) {
+          window.__EDITOR_LOGS__.push(line);
+          if (window.__EDITOR_LOGS__.length > 500) window.__EDITOR_LOGS__.shift();
+        }
+      };
+      // ─── ENTRY LOG ────────────────────────────────────────────────────────
+      console.log(`${_dbg} ▶ key="${event.key}" ctrl=${event.ctrlKey} meta=${event.metaKey} shift=${event.shiftKey}`);
+      console.log(`${_dbg}   selectAllActiveRef.current=${selectAllActiveRef?.current}`);
+      const _selEntry = window.getSelection();
+      if (_selEntry && _selEntry.rangeCount) {
+        const _rE = _selEntry.getRangeAt(0);
+        console.log(`${_dbg}   SELECTION: collapsed=${_selEntry.isCollapsed} text="${_selEntry.toString().slice(0,200)}"`);
+        console.log(`${_dbg}   startContainer=`, _rE.startContainer, `offset=${_rE.startOffset}`);
+        console.log(`${_dbg}   endContainer=`, _rE.endContainer, `offset=${_rE.endOffset}`);
+      } else {
+        console.log(`${_dbg}   SELECTION: NONE`);
+      }
       if (readOnly) {
         const isModifier = event.key === 'Control' || event.key === 'Meta' || event.key === 'Shift' || event.key === 'Alt';
         const isNavigation = event.key.startsWith('Arrow') || event.key === 'PageUp' || event.key === 'PageDown' || event.key === 'Home' || event.key === 'End';
@@ -354,6 +388,7 @@ export const useHandleKeyDown = ({
 
       // For Backspace/Delete, make sure a snapshot is taken before deletion to preserve highlights/elements
       if (event.key === "Backspace" || event.key === "Delete") {
+        console.log(`${_dbg} SNAPSHOT: calling endTypingSession + pushToUndo`);
         endTypingSession?.();
         pushToUndo?.(true);
         if (ignoreNextTypingActionRef) {
@@ -372,7 +407,11 @@ export const useHandleKeyDown = ({
       // Handle image deletion first
       if (imagePasteHandlerRef.current) {
         const imageDeleted = imagePasteHandlerRef.current.handleImageDeletion(event);
-        if (imageDeleted) return;
+        console.log(`${_dbg} imagePasteHandlerRef.handleImageDeletion: returned=${imageDeleted}`);
+        if (imageDeleted) {
+          console.log(`${_dbg} EARLY RETURN: image deletion handled`);
+          return;
+        }
       }
 
       // Smart Media Block (Video/Image) Deletion handler
@@ -443,33 +482,69 @@ export const useHandleKeyDown = ({
       // Reset select-all flag for any key that isn't Delete/Backspace/modifier
       if (event.key !== "Backspace" && event.key !== "Delete" && 
           event.key !== "Control" && event.key !== "Shift" && event.key !== "Alt" && event.key !== "Meta") {
+        console.log(`${_dbg} RESETTING selectAllActiveRef.current → false (key="${event.key}" is not Backspace/Delete/modifier)`);
         selectAllActiveRef.current = false;
       }
 
       if ((event.key === "Backspace" || event.key === "Delete")) {
         const sel = window.getSelection();
+        console.log(`${_dbg} ── BACKSPACE/DELETE BRANCH ──────────────────────────────────────`);
+        console.log(`${_dbg}   selectAllActiveRef.current=${selectAllActiveRef?.current}`);
+        console.log(`${_dbg}   sel exists=${!!sel} rangeCount=${sel?.rangeCount} isCollapsed=${sel?.isCollapsed}`);
+        if (sel && sel.rangeCount) {
+          const _rBS = sel.getRangeAt(0);
+          console.log(`${_dbg}   selection text: "${sel.toString().slice(0,200)}"`);
+          console.log(`${_dbg}   startContainer=`, _rBS.startContainer, `offset=${_rBS.startOffset}`);
+          console.log(`${_dbg}   endContainer=`, _rBS.endContainer, `offset=${_rBS.endOffset}`);
+        }
         
         // ═══ SELECT-ALL + DELETE: if Ctrl+A was just used, preserve locked text ═══
         if (selectAllActiveRef.current) {
+          console.log(`${_dbg}   selectAllActiveRef=TRUE → calling deleteSelectionPreservingLocked`);
           event.preventDefault();
           event.stopPropagation();
           deleteSelectionPreservingLocked(sel?.rangeCount ? sel.getRangeAt(0) : null);
+          // Post-deletion async check
+          [50, 250].forEach(delay => {
+            setTimeout(() => {
+              const _selAfter = window.getSelection();
+              const _blocksAfter = pagesContainerRef.current?.querySelectorAll('.page-content [data-block-id]') || [];
+              console.log(`${_dbg} POST-deleteSelectionPreservingLocked (${delay}ms): DOM blocks=${_blocksAfter.length}`);
+              _blocksAfter.forEach((b,i) => console.log(`${_dbg}   block[${i}]: id="${b.dataset.blockId}" text="${b.textContent.slice(0,80)}"`));
+              console.log(`${_dbg}   cursor collapsed=${_selAfter?.isCollapsed}`);
+            }, delay);
+          });
           return;
         }
         
         if (sel && sel.rangeCount && !sel.isCollapsed) {
+          console.log(`${_dbg}   NON-COLLAPSED selection detected (selectAllActiveRef was FALSE) → multi-block check`);
           pushToUndo?.(true);
           const range = sel.getRangeAt(0);
           
-          // LOCKED TEXT PROTECTION: If selection contains locked text, delete unlocked text while preserving locked text!
+          const root = pagesContainerRef.current;
+          const allBlocks = Array.from(root?.querySelectorAll('.page-content [data-block-id]') || []);
+          const firstBlock = allBlocks[0];
+          const lastBlock = allBlocks[allBlocks.length - 1];
+          const isEntireDocSelected = allBlocks.length > 0 && firstBlock && lastBlock && (
+            (firstBlock.contains(range.startContainer) || range.intersectsNode(firstBlock)) &&
+            (lastBlock.contains(range.endContainer) || range.intersectsNode(lastBlock))
+          );
+          const intersectedBlocks = allBlocks.filter(b => range.intersectsNode(b));
           const hasLockedText = containsLockedText(range);
-          if (hasLockedText) {
+
+          console.log(`${_dbg}   isEntireDocSelected=${isEntireDocSelected} intersectedBlocks=${intersectedBlocks.length} hasLockedText=${hasLockedText}`);
+
+          // If entire document is selected, or multiple blocks are selected, or selection contains locked text:
+          // ALWAYS route through deleteSelectionPreservingLocked to ensure clean multi-block removal!
+          if (isEntireDocSelected || intersectedBlocks.length > 1 || hasLockedText) {
+            console.log(`${_dbg}   ROUTING to deleteSelectionPreservingLocked`);
             event.preventDefault();
             event.stopPropagation();
             deleteSelectionPreservingLocked(range);
             return;
           }
-          
+
           const startHost = (range.startContainer.nodeType === Node.ELEMENT_NODE
             ? range.startContainer
             : range.startContainer.parentElement
@@ -480,19 +555,37 @@ export const useHandleKeyDown = ({
           )?.closest(".page-content");
 
           if (startHost && endHost && startHost !== endHost) {
+            console.log(`${_dbg}   CROSS-PAGE deletion → calling deleteAcrossHosts()`);
             event.preventDefault();
             const handled = deleteAcrossHosts();
+            console.log(`${_dbg}   deleteAcrossHosts returned: handled=${handled}`);
             if (handled) return;
 
             // FALLBACK: deleteAcrossHosts couldn't handle it — clear the entire document
+            console.log(`${_dbg}   FALLBACK: deleteAcrossHosts failed → clearing entire document`);
             const engine = documentEngineRef.current;
             if (engine) {
               const emptyBlock = engine.createBlock('paragraph', '');
               engine.document.pages = [{ id: 'page1', blocks: [emptyBlock] }];
               engine.currentPageIndex = 0;
-              renderFreshFromEngineRef?.current?.();
-              syncAndNotify();
-              schedulePaginateRef.current();
+              if (isUserEmptyDocRef) {
+                isUserEmptyDocRef.current = true;
+              }
+              renderFreshFromEngineRef?.current?.({ blockId: emptyBlock.id, offset: 0 });
+              const container = pagesContainerRef?.current;
+              if (container) {
+                const emptyEl = container.querySelector(`[data-block-id="${emptyBlock.id}"]`);
+                if (emptyEl) {
+                  const r = document.createRange();
+                  r.selectNodeContents(emptyEl);
+                  r.collapse(true);
+                  const sel = window.getSelection();
+                  sel?.removeAllRanges();
+                  sel?.addRange(r);
+                }
+              }
+              syncAndNotify?.(null, null, null, null, null, true, null, null, null, { allowEmptyDoc: true });
+              schedulePaginateRef.current?.();
             }
             return;
           }
@@ -672,9 +765,13 @@ export const useHandleKeyDown = ({
         (event.ctrlKey || event.metaKey) &&
         (event.key === "a" || event.key === "A")
       ) {
+        console.log(`${_dbg} CTRL+A: starting selectAllAcrossPages`);
         event.preventDefault();
         const root = pagesContainerRef.current;
-        if (!root) return;
+        if (!root) {
+          console.log(`${_dbg} CTRL+A: EARLY RETURN — pagesContainerRef.current is null`);
+          return;
+        }
 
         // Save scroll position of scroll container and window before selecting
         const scrollParent = root.closest('.editor-scroll-container, .document-scroll-container, .editor-container') || root.parentElement || document.documentElement;
@@ -682,9 +779,15 @@ export const useHandleKeyDown = ({
         const savedScrollLeft = scrollParent.scrollLeft !== undefined ? scrollParent.scrollLeft : window.scrollX;
 
         const blocks = root.querySelectorAll(".page-content [data-block-id]");
-        if (blocks.length === 0) return;
+        console.log(`${_dbg} CTRL+A: found ${blocks.length} blocks`);
+        if (blocks.length === 0) {
+          console.log(`${_dbg} CTRL+A: EARLY RETURN — no blocks found`);
+          return;
+        }
         const first = blocks[0];
         const last = blocks[blocks.length - 1];
+        console.log(`${_dbg} CTRL+A: first block id="${first.dataset?.blockId}" text="${first.textContent.slice(0,80)}"`);
+        console.log(`${_dbg} CTRL+A: last block id="${last.dataset?.blockId}" text="${last.textContent.slice(0,80)}"`);
 
         const firstTextNode = (n) => {
           let node = n;
@@ -699,6 +802,8 @@ export const useHandleKeyDown = ({
 
         const startNode = firstTextNode(first);
         const endNode = lastTextNode(last);
+        console.log(`${_dbg} CTRL+A: startNode (deepest):`, startNode, `nodeType=${startNode.nodeType}`);
+        console.log(`${_dbg} CTRL+A: endNode (deepest):`, endNode, `nodeType=${endNode.nodeType}`);
 
         const range = document.createRange();
         range.setStart(startNode, 0);
@@ -707,16 +812,29 @@ export const useHandleKeyDown = ({
             ? endNode.textContent.length
             : endNode.childNodes?.length || 0;
         range.setEnd(endNode, endOffset);
+        console.log(`${_dbg} CTRL+A: range built — collapsed=${range.collapsed} text="${range.toString().slice(0,200)}"`);
 
         const sel = window.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
 
+        // Verify selection was applied
+        const _verSel = window.getSelection();
+        console.log(`${_dbg} CTRL+A: AFTER addRange — isCollapsed=${_verSel?.isCollapsed} rangeCount=${_verSel?.rangeCount} text="${_verSel?.toString().slice(0,200)}"`);
+
         const startHost = first.closest(".page-content");
         if (startHost && startHost.focus) {
           try {
+            console.log(`${_dbg} CTRL+A: focusing startHost (page-content)`);
             startHost.focus({ preventScroll: true });
           } catch (_) {}
+        }
+
+        // Check selection AFTER focus (focus can collapse selection in some browsers)
+        const _selAfterFocus = window.getSelection();
+        console.log(`${_dbg} CTRL+A: AFTER focus — isCollapsed=${_selAfterFocus?.isCollapsed} text="${_selAfterFocus?.toString().slice(0,200)}"`);
+        if (_selAfterFocus?.isCollapsed) {
+          console.warn(`${_dbg} ⚠️  FOCUS COLLAPSED THE SELECTION! This is likely the root cause.`);
         }
 
         // Restore scroll position immediately to prevent auto-scrolling
@@ -726,7 +844,15 @@ export const useHandleKeyDown = ({
         }
 
         // Flag that select-all is active — next Delete/Backspace should clear everything
+        console.log(`${_dbg} CTRL+A: setting selectAllActiveRef.current = true`);
         selectAllActiveRef.current = true;
+
+        // Async post-log: what does the selection look like on next tick?
+        setTimeout(() => {
+          const _selNext = window.getSelection();
+          console.log(`${_dbg} CTRL+A POST (async 0ms): isCollapsed=${_selNext?.isCollapsed} text="${_selNext?.toString().slice(0,200)}"`);
+          console.log(`${_dbg} CTRL+A POST (async 0ms): selectAllActiveRef.current=${selectAllActiveRef?.current}`);
+        }, 0);
       }
 
       // Escape to exit full screen

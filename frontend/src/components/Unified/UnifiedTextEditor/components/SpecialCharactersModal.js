@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Modal, Tabs, Input, Button, Tooltip } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 
@@ -234,7 +234,7 @@ const SpecialCharactersModal = ({ visible, onCancel, onInsert }) => {
       onCancel={onCancel}
       footer={null}
       width={600}
-      destroyOnClose
+      destroyOnHidden
     >
       <Input
         prefix={<SearchOutlined />}

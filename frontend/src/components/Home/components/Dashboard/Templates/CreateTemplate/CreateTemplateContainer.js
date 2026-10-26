@@ -242,7 +242,7 @@ const CreateTemplateContainer = ({ onSuccess, user, users, categories, departmen
       setTabStatus(prev => ({ ...prev, [tab]: "complete" }));
       return true;
     } catch (error) {
-      console.log("Validation error:", error);
+      console.debug("Validation error (expected when required fields not yet filled):", error);
       setTabStatus(prev => ({ ...prev, [tab]: "incomplete" }));
       return false;
     }

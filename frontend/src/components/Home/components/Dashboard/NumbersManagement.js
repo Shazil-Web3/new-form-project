@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -630,7 +630,7 @@ const NumbersManagement = ({ orgId, departments = [], requirePasswordConfirmatio
         onCancel={() => setRuleModalVisible(false)}
         onOk={handleRuleSubmit}
         okText={editingRule ? 'Save Changes' : 'Create Rule'}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={ruleForm} layout="vertical">
           <Form.Item
@@ -730,7 +730,7 @@ const NumbersManagement = ({ orgId, departments = [], requirePasswordConfirmatio
         onCancel={() => setProjectModalVisible(false)}
         onOk={handleProjectSubmit}
         okText="Generate Project"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={projectForm} layout="vertical">
           <div style={{
@@ -778,7 +778,7 @@ const NumbersManagement = ({ orgId, departments = [], requirePasswordConfirmatio
         onCancel={() => setCostCenterModalVisible(false)}
         onOk={handleCostCenterSubmit}
         okText="Generate Cost Center"
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={costCenterForm} layout="vertical">
           <div style={{

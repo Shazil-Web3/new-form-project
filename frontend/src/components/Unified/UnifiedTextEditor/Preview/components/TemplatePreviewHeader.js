@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button, Typography, Avatar, Tooltip, Badge, Tag, Space, notification, Modal, Select } from 'antd';
 import { 
@@ -537,7 +537,7 @@ const TemplatePreviewHeader = ({
           setSelectedAssignee(null);
         }}
         confirmLoading={assignLoading}
-        destroyOnClose
+        destroyOnHidden
       >
         <div style={{ marginBottom: 16 }}>
           <Typography.Paragraph>

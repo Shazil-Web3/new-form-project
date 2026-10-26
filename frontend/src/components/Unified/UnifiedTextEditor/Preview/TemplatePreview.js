@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+﻿import React, { useRef } from 'react';
 import { Tabs, Spin, message, Modal, Radio, Checkbox, Space, Tag } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import moment from 'moment';
@@ -645,7 +645,7 @@ const TemplatePreview = ({
               }
             }}
             okText="Apply"
-            destroyOnClose
+            destroyOnHidden
           >
             <div style={{ marginBottom: 16 }}>
               Select how you want to update the reviewers' status back to reviewing state:

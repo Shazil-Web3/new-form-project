@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import axios from 'axios';
 import { 
   Table, 
@@ -371,7 +371,7 @@ const TemplateApproversConfig = ({ templates = [], users = [], departments = [],
         onOk={handleSave}
         onCancel={() => setIsModalOpen(false)}
         width={700}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical">
           {!editingTemplate && (

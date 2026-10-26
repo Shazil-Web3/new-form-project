@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file InboundReferencesModal.jsx
  * @description Modal dialog shown when an author/admin attempts to archive a document that is actively referenced by other documents or templates.
  * Displays referencing items with their status and author details, and prevents archiving until references are removed.
@@ -61,7 +61,7 @@ export default function InboundReferencesModal({
       ]}
       width={640}
       centered
-      destroyOnClose
+      destroyOnHidden
     >
       <div className="py-2 flex flex-col gap-4">
         <div>

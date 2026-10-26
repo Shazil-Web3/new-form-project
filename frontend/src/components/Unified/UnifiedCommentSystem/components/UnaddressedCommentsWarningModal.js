@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Modal, Button, Alert } from 'antd';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 
@@ -33,7 +33,7 @@ const UnaddressedCommentsWarningModal = ({ open, onGoBack, onProceed, entityLabe
     ]}
     width={480}
     centered
-    destroyOnClose
+    destroyOnHidden
   >
     <Alert
       type="warning"

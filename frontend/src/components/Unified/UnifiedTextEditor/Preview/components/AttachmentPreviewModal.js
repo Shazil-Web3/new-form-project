@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Modal, Button, Spin, Space, Tag, Typography, Tooltip, Alert, Card, Empty 
 } from 'antd';
@@ -291,7 +291,7 @@ const AttachmentPreviewModal = ({
       footer={null}
       width={category === 'video' || category === 'pdf' ? 920 : 800}
       centered
-      destroyOnClose
+      destroyOnHidden
       className={`attachment-preview-modal ${isFullscreen ? 'fullscreen-preview' : ''}`}
       title={
         <div className="preview-modal-header">

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { Modal, Form, Input, Button } from 'antd';
 import { LockOutlined } from '@ant-design/icons';
 
@@ -53,7 +53,7 @@ const PasswordConfirmModal = ({ visible, onCancel, onConfirm }) => {
         </Button>,
       ]}
       maskClosable={false}
-      destroyOnClose={true}
+      destroyOnHidden={true}
       ref={modalRef}
     >
       <p style={{ marginBottom: 16 }}>

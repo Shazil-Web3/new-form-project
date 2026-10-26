@@ -22,12 +22,17 @@ export const useHandleBeforeInput = ({
   handleBlockBackspace,
   handleEnter,
   handlePaste,
+  isUserEmptyDocRef,
 }) => {
   function handleBeforeInput(e) {
       if (readOnly) {
         e.preventDefault();
         e.stopPropagation();
         return;
+      }
+
+      if (isUserEmptyDocRef) {
+        isUserEmptyDocRef.current = false;
       }
 
       caretManagerRef?.current?.onEditingAction('beforeinput');
