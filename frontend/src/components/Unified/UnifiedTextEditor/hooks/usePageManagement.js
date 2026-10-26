@@ -182,14 +182,30 @@ export const usePageManagement = ({
     if (!page) return 0;
     const pageRect = page.getBoundingClientRect();
 
+    const pageOrient = page.classList.contains("landscape")
+      ? "landscape"
+      : page.classList.contains("portrait")
+      ? "portrait"
+      : (orientation || "portrait");
+    const isLandscape = pageOrient === "landscape";
+    const pSize = (paperSize || "").toLowerCase();
+    const isLetterOrLegal = pSize === "letter" || pSize === "legal";
+
     let pageHeight = pageRect.height;
     if (!pageHeight || pageHeight <= 0) {
-      if ((paperSize || "").toLowerCase() === "letter") {
-        pageHeight = 1056;
-      } else if ((paperSize || "").toLowerCase() === "legal") {
-        pageHeight = 1344;
+      if (pSize === "letter") {
+        pageHeight = isLandscape ? 816 : 1056;
+      } else if (pSize === "legal") {
+        pageHeight = isLandscape ? 816 : 1344;
       } else {
-        pageHeight = 1123;
+        pageHeight = isLandscape ? 794 : 1123;
+      }
+    } else {
+      // Sanity clamp: Ensure landscape page height never bleeds into portrait (>850px) and vice-versa
+      if (isLandscape && pageHeight > 850) {
+        pageHeight = isLetterOrLegal ? 816 : 794;
+      } else if (!isLandscape && pageHeight < 850) {
+        pageHeight = pSize === "letter" ? 1056 : pSize === "legal" ? 1344 : 1123;
       }
     }
 
@@ -208,11 +224,11 @@ export const usePageManagement = ({
 
     const budget = Math.floor(pageHeight - logoH - headerH - footerH - vpad - 4);
     if (budget <= 0) {
-      const fallbackTotal = 1123;
+      const fallbackTotal = isLandscape ? (isLetterOrLegal ? 816 : 794) : (pSize === "letter" ? 1056 : pSize === "legal" ? 1344 : 1123);
       return Math.floor(fallbackTotal - logoH - headerH - footerH - vpad - 4);
     }
     return budget;
-  }, [paperSize]);
+  }, [paperSize, orientation]);
 
   useEffect(() => {
     getContentHeightRef.current = getContentHeight;
@@ -462,8 +478,14 @@ export const usePageManagement = ({
   const createPage = useCallback(
     (index, snapshot) => {
       const page = document.createElement("div");
-      const pageOrientation = snapshot?.orientation || pagesState[index - 1]?.orientation || orientation;
-      page.className = `page ${paperSize.toLowerCase()} ${pageOrientation}`;
+      const ps = pagesStateRef.current || pagesState || [];
+      const pageOrientation =
+        snapshot?.orientation ||
+        ps[index - 1]?.orientation ||
+        ps[0]?.orientation ||
+        orientation ||
+        "portrait";
+      page.className = `page ${(paperSize || "a4").toLowerCase()} ${pageOrientation}`;
       page.dataset.pageIndex = `Page ${index} of ${index}`;
 
       const logoStrip = document.createElement("div");
@@ -485,7 +507,6 @@ export const usePageManagement = ({
       logoImg.style.maxHeight = "60px";
       logoImg.style.objectFit = "contain";
       logoImg.style.display = "none";
-      const ps = pagesStateRef.current || pagesState || [];
       const currentParentLogo = parentLogoRef?.current;
       const snapLogo = snapshot?.header?.logo || ps[index - 1]?.header?.logo || ps[0]?.header?.logo || currentParentLogo || null;
       if (snapLogo && snapLogo.preview) {
@@ -1274,7 +1295,15 @@ export const usePageManagement = ({
         if (contentChangeHandlerRef && contentChangeHandlerRef.current) {
           contentChangeHandlerRef.current.syncDOMToBlocks(container);
         }
-        engine.repaginate(firstContent, { isCreateMode: !isPreviewMode });
+        const ps = pagesStateRef.current || pagesState || [];
+        const activeOrient = firstPage.classList.contains("landscape")
+          ? "landscape"
+          : (ps[0]?.orientation || orientation || "portrait");
+        engine.repaginate(firstContent, {
+          isCreateMode: !isPreviewMode,
+          orientation: activeOrient,
+          paperSize: paperSize || "a4"
+        });
         const enginePages = engine.document.pages;
         if (enginePages.length > 0) {
           // Collect all existing block DOM elements across all pages once so they can be reused in-place
@@ -1367,7 +1396,13 @@ export const usePageManagement = ({
             if (!page) {
               const ps = pagesStateRef.current || pagesState || [];
               const base0 = ps[0] || {};
-              const inherit = { id: uuidv4(), header: { content: base0.header?.content || "", logo: base0.header?.logo || parentLogoRef?.current || null, logoText: base0.header?.logoText || "" }, footer: { content: base0.footer?.content || "" } };
+              const pageOrientToInherit = base0.orientation || (firstPage.classList.contains("landscape") ? "landscape" : (orientation || "portrait"));
+              const inherit = {
+                id: uuidv4(),
+                orientation: pageOrientToInherit,
+                header: { content: base0.header?.content || "", logo: base0.header?.logo || parentLogoRef?.current || null, logoText: base0.header?.logoText || "" },
+                footer: { content: base0.footer?.content || "" }
+              };
               const snapshot = ps[i] || inherit;
               page = createPage(i + 1, snapshot);
               container.appendChild(page);
@@ -1436,7 +1471,7 @@ export const usePageManagement = ({
       const finalPagesForSizing = Array.from(container.querySelectorAll(".page"));
       finalPagesForSizing.forEach((page, idx) => {
         const ps = pagesStateRef.current || pagesState || [];
-        const pageOrient = ps[idx]?.orientation || orientation || "portrait";
+        const pageOrient = ps[idx]?.orientation || ps[0]?.orientation || (firstPage.classList.contains("landscape") ? "landscape" : (orientation || "portrait"));
         page.classList.remove("portrait", "landscape");
         page.classList.add(pageOrient);
         if (paperSize) {

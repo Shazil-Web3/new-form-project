@@ -35,37 +35,41 @@ export class DocumentEngine {
   // NEW: configure paginator from a real content area (your .page-content element)
   configureLayoutFromElement(contentEl, options = {}) {
     if (!contentEl) return;
+    const pageEl = contentEl.closest('.page');
     const rendererEl = contentEl.closest('.document-renderer') || contentEl;
     let paperSize = options.paperSize;
     let orientation = options.orientation;
 
     if (!paperSize) {
-      if (rendererEl.classList.contains('letter')) paperSize = 'letter';
-      else if (rendererEl.classList.contains('legal')) paperSize = 'legal';
+      if (pageEl?.classList.contains('letter') || rendererEl.classList.contains('letter')) paperSize = 'letter';
+      else if (pageEl?.classList.contains('legal') || rendererEl.classList.contains('legal')) paperSize = 'legal';
       else paperSize = 'a4';
     }
     if (!orientation) {
-      if (rendererEl.classList.contains('landscape')) orientation = 'landscape';
+      if (pageEl?.classList.contains('landscape') || rendererEl.classList.contains('landscape')) orientation = 'landscape';
+      else if (pageEl?.classList.contains('portrait') || rendererEl.classList.contains('portrait')) orientation = 'portrait';
+      else if (typeof document !== 'undefined' && (document.querySelector('.page.landscape') || document.querySelector('.document-renderer.landscape'))) orientation = 'landscape';
       else orientation = 'portrait';
     }
     this._layout.paperSize = paperSize;
     this._layout.orientation = orientation;
 
+    const isLandscape = orientation === 'landscape';
     // Compute robust usable height based on paper size minus header, footer, logo strip, padding
-    let totalPaperHeight = 1123;
-    if (paperSize === 'letter') totalPaperHeight = 1056;
-    else if (paperSize === 'legal') totalPaperHeight = 1344;
+    let totalPaperHeight = isLandscape ? 794 : 1123;
+    if (paperSize === 'letter') totalPaperHeight = isLandscape ? 816 : 1056;
+    else if (paperSize === 'legal') totalPaperHeight = isLandscape ? 816 : 1344;
 
-    const pageEl = contentEl.closest('.page');
+    const activePage = pageEl || (typeof document !== 'undefined' ? document.querySelector('.page') : null);
     let logoH = 64;
     let headerH = 35;
     let footerH = 50;
-    if (pageEl) {
-      const logoStrip = pageEl.querySelector('.page-logo-strip');
+    if (activePage) {
+      const logoStrip = activePage.querySelector('.page-logo-strip');
       if (logoStrip) logoH = logoStrip.getBoundingClientRect().height || 64;
-      const header = pageEl.querySelector('.page-header');
+      const header = activePage.querySelector('.page-header');
       if (header) headerH = header.getBoundingClientRect().height || 35;
-      const footer = pageEl.querySelector('.page-footer');
+      const footer = activePage.querySelector('.page-footer');
       if (footer) footerH = footer.getBoundingClientRect().height || 50;
     }
     const rect = contentEl.getBoundingClientRect();
@@ -107,14 +111,14 @@ export class DocumentEngine {
       this._layout.sandbox = s;
     }
 
-    // keep sandbox synced with content area width & typography
+    // Keep sandbox flexible so inner page element naturally takes 210mm or 297mm width
     const s = this._layout.sandbox;
-    s.style.width = this._layout.baseStyle.width || '800px';
+    s.style.width = 'max-content';
     s.style.font = this._layout.baseStyle.font || 'Arial, sans-serif';
     s.style.lineHeight = this._layout.baseStyle.lineHeight || '1.15';
     s.style.whiteSpace = 'normal';
     s.style.boxSizing = this._layout.baseStyle.boxSizing || 'border-box';
-    s.style.padding = this._layout.baseStyle.padding || '0';
+    s.style.padding = '0';
   }
 
   // Get current page
@@ -669,16 +673,36 @@ export class DocumentEngine {
     return merged;
   }
 
-  getUsableHeightForPage(pageIndex = 1) {
+  getPageOrientationForPage(pageIndex = 1) {
     if (typeof document !== 'undefined') {
       const pages = document.querySelectorAll('.page');
-      const pageEl = pages[pageIndex - 1];
-      if (pageEl) {
-        const paperSize = (this._layout.paperSize || 'a4').toLowerCase();
-        let totalPaperHeight = 1123;
-        if (paperSize === 'letter') totalPaperHeight = 1056;
-        else if (paperSize === 'legal') totalPaperHeight = 1344;
+      const page = pages[pageIndex - 1];
+      if (page) {
+        if (page.classList.contains('landscape')) return 'landscape';
+        if (page.classList.contains('portrait')) return 'portrait';
+      }
+      // If page doesn't exist yet in DOM (e.g. Page 2 during newPage() layout), inherit from previous page
+      if (pageIndex > 1 && pages.length > 0) {
+        const lastPage = pages[pages.length - 1];
+        if (lastPage.classList.contains('landscape')) return 'landscape';
+        if (lastPage.classList.contains('portrait')) return 'portrait';
+      }
+    }
+    return this._layout.orientation || 'portrait';
+  }
 
+  getUsableHeightForPage(pageIndex = 1) {
+    const pageOrient = this.getPageOrientationForPage(pageIndex);
+    const isLandscape = pageOrient === 'landscape';
+    const paperSize = (this._layout.paperSize || 'a4').toLowerCase();
+    let totalPaperHeight = isLandscape ? 794 : 1123;
+    if (paperSize === 'letter') totalPaperHeight = isLandscape ? 816 : 1056;
+    else if (paperSize === 'legal') totalPaperHeight = isLandscape ? 816 : 1344;
+
+    if (typeof document !== 'undefined') {
+      const pages = document.querySelectorAll('.page');
+      const pageEl = pages[pageIndex - 1] || pages[pages.length - 1];
+      if (pageEl) {
         const logoStrip = pageEl.querySelector('.page-logo-strip');
         const logoH = logoStrip ? (logoStrip.getBoundingClientRect().height || 64) : 64;
 
@@ -696,19 +720,10 @@ export class DocumentEngine {
         if (budget > 0) return budget;
       }
     }
-    return this._layout.usableHeightPx || 934;
-  }
-
-  getPageOrientationForPage(pageIndex = 1) {
-    if (typeof document !== 'undefined') {
-      const pages = document.querySelectorAll('.page');
-      const page = pages[pageIndex - 1];
-      if (page) {
-        if (page.classList.contains('landscape')) return 'landscape';
-        if (page.classList.contains('portrait')) return 'portrait';
-      }
-    }
-    return this._layout.orientation || 'portrait';
+    const defaultBudget = isLandscape ? 520 : 934;
+    return (isLandscape === ((this._layout.orientation || 'portrait') === 'landscape') && this._layout.usableHeightPx)
+      ? this._layout.usableHeightPx
+      : defaultBudget;
   }
 
   // --- core layout: split/fill page then continue with strict height enforcement ---
@@ -730,7 +745,16 @@ export class DocumentEngine {
       prevBottomMargin = 0;
     };
 
+    const maxIterations = Math.max(1000, blocks.length * 20);
+    let iterationCount = 0;
+
     for (let i = 0; i < blocks.length; i++) {
+      iterationCount++;
+      if (iterationCount > maxIterations) {
+        console.warn('Pagination iteration limit reached, forcing remaining blocks');
+        cur.blocks.push(...blocks.slice(i));
+        break;
+      }
       const b = blocks[i];
       if (b.type === BLOCK_TYPES.PAGE_BREAK) {
         if (cur.blocks.length === 0) {
@@ -778,7 +802,7 @@ export class DocumentEngine {
 
       if (this._isSplittable(b)) {
         const spaceForBox = Math.max(0, cutline - headCost);
-        const parts = this._splitToFit(b, spaceForBox);
+        const parts = this._splitToFit(b, spaceForBox, pageOrient);
 
         if (parts.first) {
           if (keepWithNext) {
@@ -809,7 +833,7 @@ export class DocumentEngine {
               rest = null;
             } else {
               const boxBudget = Math.max(0, remaining - rrHeadCost);
-              const more = this._splitToFit(rest, boxBudget);
+              const more = this._splitToFit(rest, boxBudget, nextOrient);
               
               if (!more.first) { 
                 if (remaining < currentCapacity) {
@@ -1224,11 +1248,11 @@ export class DocumentEngine {
   // --- sandbox mirror helper ---
   // Creates the correct .document-renderer > .page > .page-content wrapper
   // so CSS selectors match identically to the live DOM during split calculations.
-  _createSandboxMirror() {
+  _createSandboxMirror(targetOrientation = null) {
     const s = this._layout.sandbox;
     s.innerHTML = '';
     const paperSizeClass = (this._layout.paperSize || 'a4').toLowerCase();
-    const orientationClass = (this._layout.orientation || 'portrait').toLowerCase();
+    const orientationClass = (targetOrientation || this._layout.orientation || 'portrait').toLowerCase();
 
     const rendererMirror = document.createElement('div');
     rendererMirror.className = `document-renderer ${orientationClass} ${paperSizeClass}`;
@@ -1247,17 +1271,17 @@ export class DocumentEngine {
   }
 
   // --- splitters ---
-  _splitToFit(block, boxBudget /* pixels available for the element's box only */) {
+  _splitToFit(block, boxBudget /* pixels available for the element's box only */, targetOrientation = null) {
     switch (block.type) {
       case BLOCK_TYPES.PARAGRAPH:
       case BLOCK_TYPES.QUOTE:
-        return this._splitParagraph(block, boxBudget);
+        return this._splitParagraph(block, boxBudget, targetOrientation);
       case BLOCK_TYPES.CODE:
-        return this._splitCode(block, boxBudget);
+        return this._splitCode(block, boxBudget, targetOrientation);
       case BLOCK_TYPES.LIST:
-        return this._splitList(block, boxBudget);
+        return this._splitList(block, boxBudget, targetOrientation);
       case BLOCK_TYPES.TABLE:
-        return this._splitTable(block, boxBudget);
+        return this._splitTable(block, boxBudget, targetOrientation);
       default:
         return { first: null, rest: block };
     }
@@ -1270,8 +1294,8 @@ export class DocumentEngine {
     return !isNaN(lh) ? lh : Math.max(12, 1.2 * parseFloat(cs.fontSize || '12'));
   }
 
-  _splitParagraph(block, boxBudget) {
-    const contentMirror = this._createSandboxMirror();
+  _splitParagraph(block, boxBudget, targetOrientation = null) {
+    const contentMirror = this._createSandboxMirror(targetOrientation);
     const full = this._renderBlockForMeasure(block);
     full.setAttribute('data-block-id', 'split-mirror');
     const first = full.cloneNode(true);
@@ -1366,10 +1390,10 @@ export class DocumentEngine {
     return { first: firstBlock, rest: restBlock };
   }
 
-  _splitCode(block, boxBudget) {
+  _splitCode(block, boxBudget, targetOrientation = null) {
     const html = block.content || '';
     const lines = html.split(/<br\s*\/?>|\n/);
-    const contentMirror = this._createSandboxMirror();
+    const contentMirror = this._createSandboxMirror(targetOrientation);
     const probe = this._renderBlockForMeasure({ ...block, content: '' });
     probe.setAttribute('data-block-id', 'split-mirror');
     contentMirror.appendChild(probe);
@@ -1392,11 +1416,11 @@ export class DocumentEngine {
     return { first: firstBlock, rest: restBlock };
   }
 
-  _splitList(block, boxBudget) {
+  _splitList(block, boxBudget, targetOrientation = null) {
     const items = Array.isArray(block.content) ? block.content : [];
     if (!items.length) return { first: null, rest: null };
 
-    const contentMirror = this._createSandboxMirror();
+    const contentMirror = this._createSandboxMirror(targetOrientation);
     const probe = this._renderBlockForMeasure({ ...block, content: [] });
     probe.setAttribute('data-block-id', 'split-mirror');
     contentMirror.appendChild(probe);
@@ -1439,12 +1463,12 @@ export class DocumentEngine {
     return { first: firstBlock, rest: restBlock };
   }
 
-  _splitTable(block, boxBudget) {
+  _splitTable(block, boxBudget, targetOrientation = null) {
     const { headers = [], rows = [], meta = {} } = block.content || { headers: [], rows: [], meta: {} };
     const cellMeta = Array.isArray(meta.cell) ? meta.cell : [];
     const rowHeights = Array.isArray(meta.rowHeights) ? meta.rowHeights : [];
     
-    const contentMirror = this._createSandboxMirror();
+    const contentMirror = this._createSandboxMirror(targetOrientation);
     const probe = this._renderBlockForMeasure({ ...block, content: { headers, rows: [] } });
     probe.setAttribute('data-block-id', 'split-mirror');
     contentMirror.appendChild(probe);

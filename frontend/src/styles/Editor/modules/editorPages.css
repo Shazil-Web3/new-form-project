@@ -49,8 +49,8 @@
 .document-renderer[data-paper="a4"][data-orientation="landscape"] .page.landscape,
 .document-renderer[data-paper="a4"][data-orientation="portrait"] .page.landscape {
   width: 297mm !important;
-  min-height: 297mm !important;
-  max-height: 297mm !important;
+  min-height: 210mm !important;
+  max-height: 210mm !important;
 }
 
 /* Paper size specific rules */
@@ -66,8 +66,8 @@
 .document-renderer .page.landscape.letter,
 .document-renderer[data-paper="letter"] .page.landscape {
   width: 279mm !important;
-  min-height: 279mm !important;
-  max-height: 279mm !important;
+  min-height: 216mm !important;
+  max-height: 216mm !important;
 }
 
 .page.portrait.legal,
@@ -82,8 +82,8 @@
 .document-renderer .page.landscape.legal,
 .document-renderer[data-paper="legal"] .page.landscape {
   width: 356mm !important;
-  min-height: 356mm !important;
-  max-height: 356mm !important;
+  min-height: 216mm !important;
+  max-height: 216mm !important;
 }
 
 .page.letter {

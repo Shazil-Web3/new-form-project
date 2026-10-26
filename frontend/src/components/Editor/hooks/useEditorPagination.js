@@ -32,9 +32,17 @@ export default function useEditorPagination({
 
   // Layout metrics utility function
   const getLayoutMetrics = useCallback(() => {
-    // A4 page dimensions in mm and px (96 DPI)
-    const baseWidthMm = 210;
-    const baseHeightMm = 297;
+    let baseWidthMm = 210;
+    let baseHeightMm = 297;
+    const pSize = (paperSize || 'a4').toLowerCase();
+    if (pSize === 'letter') {
+      baseWidthMm = 215.9;
+      baseHeightMm = 279.4;
+    } else if (pSize === 'legal') {
+      baseWidthMm = 215.9;
+      baseHeightMm = 355.6;
+    }
+
     const isLandscape = orientation === 'landscape';
     const pageWidthMm = isLandscape ? baseHeightMm : baseWidthMm;
     const pageHeightMm = isLandscape ? baseWidthMm : baseHeightMm;
@@ -75,7 +83,7 @@ export default function useEditorPagination({
       lineHeightPx,
       preBreakMarginPx
     };
-  }, [orientation, hasVisibleLogo]);
+  }, [orientation, hasVisibleLogo, paperSize]);
 
   // Early break detection for text content
   const checkEarlyBreak = useCallback((contentEl) => {
@@ -358,8 +366,8 @@ export default function useEditorPagination({
 
       // 3) Run the block-aware paginator
       const engine = documentEngineRef.current;
-      engine.configureLayoutFromElement(firstContent);
-      engine.repaginate(firstContent);
+      engine.configureLayoutFromElement(firstContent, { orientation, paperSize });
+      engine.repaginate(firstContent, { orientation, paperSize });
 
       // 3) Render the paginated blocks back into fixed-height pages
       clearPages();

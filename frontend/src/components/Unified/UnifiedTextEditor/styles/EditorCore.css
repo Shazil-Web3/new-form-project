@@ -73,22 +73,22 @@
 .page.landscape.a4,
 .document-renderer .page.landscape.a4 {
   width: 297mm;
-  min-height: 297mm;
-  max-height: 297mm;
+  min-height: 210mm;
+  max-height: 210mm;
 }
 
 .page.landscape.letter,
 .document-renderer .page.landscape.letter {
   width: 11in;
-  min-height: 11in;
-  max-height: 11in;
+  min-height: 8.5in;
+  max-height: 8.5in;
 }
 
 .page.landscape.legal,
 .document-renderer .page.landscape.legal {
   width: 14in;
-  min-height: 14in;
-  max-height: 14in;
+  min-height: 8.5in;
+  max-height: 8.5in;
 }
 
 /* Page content area */

@@ -1539,7 +1539,12 @@ const TemplateEditor = ({
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       contentChangeHandlerRef.current.syncDOMToBlocks(pagesContainerRef.current);
       const targetRepaginateEl = pagesContainerRef.current?.querySelector?.('.page-content') || pagesContainerRef.current;
-      documentEngineRef.current.repaginate(targetRepaginateEl);
+      const ps = pagesStateRef.current || pagesState || [];
+      const activeOrient = overrideOrientation || ps[0]?.orientation || orientation || "portrait";
+      documentEngineRef.current.repaginate(targetRepaginateEl, {
+        orientation: activeOrient,
+        paperSize: paperSize || "a4"
+      });
       notifyParentFromEngine(
         overrideComments,
         overrideSuggestions,
@@ -2378,6 +2383,7 @@ const TemplateEditor = ({
       orientation: pendingOrientation,
     };
 
+    pagesStateRef.current = next;
     setPagesState(next);
 
     const root = pagesContainerRef.current;
@@ -2409,10 +2415,13 @@ const TemplateEditor = ({
       orientation: pendingOrientation,
     }));
 
+    pagesStateRef.current = next;
     setPagesState(next);
 
     const root = pagesContainerRef.current;
     if (root) {
+      root.classList.remove("portrait", "landscape");
+      root.classList.add(pendingOrientation);
       const pages = root.querySelectorAll(".page");
       pages.forEach((p) => {
         p.classList.remove("portrait", "landscape");
