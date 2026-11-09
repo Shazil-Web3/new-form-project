@@ -55,6 +55,12 @@ export default function Sidebar({ activeRoute }) {
       allowedRoles: ['admin', 'project_manager'],
     },
     {
+      name: 'RBAC Dashboard',
+      path: '/workspace/rbac',
+      icon: 'shield',
+      allowedRoles: ['admin', 'super_admin'],
+    },
+    {
       name: 'Trending',
       path: '/workspace/trending',
       icon: 'trending_up',
@@ -69,6 +75,7 @@ export default function Sidebar({ activeRoute }) {
 
   const menuItems = allMenuItems.filter((item) => {
     if (!item.allowedRoles) return true;
+    if (user?.isSuperAdmin && item.allowedRoles.includes('admin')) return true;
     return item.allowedRoles.includes(userRole);
   });
 

@@ -1,0 +1,23 @@
+/* Design tokens of the Base44 SkillStream app (shadcn defaults), namespaced with --b44-* so they
+   cannot clash with this app's own Tailwind colours (primary, secondary, background ...). */
+:root {
+  --b44-background: 0 0% 100%;
+  --b44-foreground: 0 0% 3.9%;
+  --b44-card: 0 0% 100%;
+  --b44-card-foreground: 0 0% 3.9%;
+  --b44-popover: 0 0% 100%;
+  --b44-popover-foreground: 0 0% 3.9%;
+  --b44-primary: 0 0% 9%;
+  --b44-primary-foreground: 0 0% 98%;
+  --b44-secondary: 0 0% 96.1%;
+  --b44-secondary-foreground: 0 0% 9%;
+  --b44-muted: 0 0% 96.1%;
+  --b44-muted-foreground: 0 0% 45.1%;
+  --b44-accent: 0 0% 96.1%;
+  --b44-accent-foreground: 0 0% 9%;
+  --b44-destructive: 0 84.2% 60.2%;
+  --b44-destructive-foreground: 0 0% 98%;
+  --b44-border: 0 0% 89.8%;
+  --b44-input: 0 0% 89.8%;
+  --b44-ring: 0 0% 3.9%;
+}

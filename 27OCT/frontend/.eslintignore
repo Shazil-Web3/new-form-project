@@ -1,0 +1,17 @@
+# ------------------------------------------------------------
+# editor_functions.js — DO NOT LINT
+# ------------------------------------------------------------
+# This is a third-party compiled/minified bundle (CKEditor or
+# similar rich-text editor runtime) that was placed directly
+# into src/ as a build artifact instead of being installed as
+# an npm package. It is not imported or used anywhere in the
+# application. Linting it produces 2,000+ false-positive errors
+# from minified patterns (single-letter vars, !0/!1, implicit
+# globals) that are valid compiled output but violate source
+# code lint rules.
+#
+# Long-term action: if this editor is still needed, replace
+# this file with the proper npm package install. If it is not
+# needed, delete it entirely.
+# ------------------------------------------------------------
+src/editor_functions.js

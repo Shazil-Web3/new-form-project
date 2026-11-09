@@ -53,6 +53,7 @@ import {
 import moment from 'moment';
 import TemplateApproversConfig from './TemplateApproversConfig';
 import NumbersManagement from './NumbersManagement';
+import { RbacDashboardContent } from '../../../../pages/new/Workspace/RbacDashboardPage';
 
 const { Text, Title, Paragraph } = Typography;
 const { Search } = Input;
@@ -62,6 +63,7 @@ const { TextArea } = Input;
 
 const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetchUserData, departments, sites, templates = [], getConsistentColor }) => {
   const currentOrgId = user?.orgId || user?.organization_id || user?.organizationId || user?.org_id;
+  const canManageUsers = user?.role === 'admin' || user?.isSuperAdmin;
   const parseSites = (siteValue) => {
     if (!siteValue) return [];
     try {
@@ -1845,6 +1847,23 @@ const renderUserListView = () => {
               departments={departments}
               requirePasswordConfirmation={requirePasswordConfirmation}
             />
+          </TabPane>
+        )}
+
+        {canManageUsers && (
+          <TabPane 
+            tab={
+              <>
+              <span>
+                <TeamOutlined />
+                {"  "}
+                RBAC
+              </span>
+              </>
+            } 
+            key="9"
+          >
+            <RbacDashboardContent />
           </TabPane>
         )}
       </Tabs>

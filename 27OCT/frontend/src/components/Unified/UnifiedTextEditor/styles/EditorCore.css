@@ -1,0 +1,853 @@
+/* EditorCore.css
+ * Shared base styles used by all editor modes
+ * This contains the core styling that is consistent across create, preview, and review modes
+ */
+
+@import './superscriptSubscript.css';
+
+/* Page container */
+.pages-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background: #f5f5f5;
+  min-height: 500px;
+}
+
+.document-renderer,
+.document-renderer[contenteditable] {
+  outline: none !important;
+}
+
+/* Individual page */
+.page {
+  background: white;
+  margin: 0 0 20px 0 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Page sizes - Portrait (Default) */
+.page.a4 {
+  width: 210mm;
+  min-height: 297mm;
+  max-height: 297mm;
+}
+
+.page.letter {
+  width: 8.5in;
+  min-height: 11in;
+  max-height: 11in;
+}
+
+.page.legal {
+  width: 8.5in;
+  min-height: 14in;
+  max-height: 14in;
+}
+
+/* Page orientations - Portrait & Landscape overrides */
+.page.portrait.a4,
+.document-renderer .page.portrait.a4 {
+  width: 210mm;
+  min-height: 297mm;
+  max-height: 297mm;
+}
+
+.page.portrait.letter,
+.document-renderer .page.portrait.letter {
+  width: 8.5in;
+  min-height: 11in;
+  max-height: 11in;
+}
+
+.page.portrait.legal,
+.document-renderer .page.portrait.legal {
+  width: 8.5in;
+  min-height: 14in;
+  max-height: 14in;
+}
+
+.page.landscape.a4,
+.document-renderer .page.landscape.a4 {
+  width: 297mm;
+  min-height: 297mm;
+  max-height: 297mm;
+}
+
+.page.landscape.letter,
+.document-renderer .page.landscape.letter {
+  width: 11in;
+  min-height: 11in;
+  max-height: 11in;
+}
+
+.page.landscape.legal,
+.document-renderer .page.landscape.legal {
+  width: 14in;
+  min-height: 14in;
+  max-height: 14in;
+}
+
+/* Page content area */
+.page-content {
+  padding: 24px 24px 12px 24px;
+  min-height: 200px;
+  overflow: hidden;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  /* Do NOT use display:flex here — block layout is required for accurate scrollHeight during pagination */
+}
+
+
+/* Page header and footer */
+.page-header,
+.page-footer {
+  padding: 12px 24px;
+  background: transparent;
+  max-width: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.page-header {
+  max-height: 2.5em;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.page-footer {
+  border-top: 2px solid #a0a0a0;
+  border-bottom: none;
+  padding: 20px 24px;
+  white-space: nowrap;
+}
+
+.page-footer [data-page-num] {
+  font-weight: bold;
+}
+
+/* Blocks base styling */
+[data-block-id] {
+  outline: none !important;
+  border: none !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+[data-block-id]:focus,
+[data-block-id]:hover,
+[data-block-id]:active {
+  outline: none !important;
+  border: none !important;
+  border-color: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   Selection handling for empty lines and line breaks:
+   - Empty lines BETWEEN lines of text show visual selection so users know
+     the space/line is selected and copied.
+   - Empty lines BELOW the last line (trailing lines at end of content/page)
+     cannot be selected.
+   ========================================================================== */
+
+/* Trailing empty lines below the last line of text: prevent selection */
+.document-renderer [data-block-id]:not(:has(~ [data-block-id]:not(:has(> br:only-child)):not(:empty))):has(> br:only-child),
+.document-renderer [data-block-id]:not(:has(~ [data-block-id]:not(:has(> br:only-child)):not(:empty))):empty,
+.document-renderer [data-block-id]:last-child:has(> br:only-child),
+.document-renderer [data-block-id]:last-child:empty {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.document-renderer [data-block-id]:not(:has(~ [data-block-id]:not(:has(> br:only-child)):not(:empty))) br::selection,
+.document-renderer [data-block-id]:not(:has(~ [data-block-id]:not(:has(> br:only-child)):not(:empty))):empty::selection,
+.document-renderer [data-block-id]:last-child br::selection,
+.document-renderer [data-block-id]:last-child:empty::selection,
+.page-content:not(:has([data-block-id])) br::selection {
+  background: transparent !important;
+  color: transparent !important;
+}
+
+/* Empty lines BETWEEN lines of text: allow selection and show selection highlight */
+.document-renderer [data-block-id]:has(~ [data-block-id]:not(:has(> br:only-child)):not(:empty)) {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+.document-renderer [data-block-id]:has(~ [data-block-id]:not(:has(> br:only-child)):not(:empty)) br::selection,
+.document-renderer p[data-block-id]:has(~ [data-block-id]:not(:has(> br:only-child)):not(:empty)):empty::selection,
+.document-renderer li[data-block-id]:has(~ [data-block-id]:not(:has(> br:only-child)):not(:empty)):empty::selection {
+  background: Highlight !important;
+  background: rgba(180, 215, 255, 0.7) !important;
+  color: transparent !important;
+}
+
+
+/* Paragraph styling */
+.document-renderer .page p[data-block-id] {
+  margin: 0.4em 0 !important;
+  min-height: 1.15em !important;
+  line-height: 1.15 !important;
+  text-align: justify;
+}
+
+.document-renderer .page [data-block-id][data-text-align="left"],
+.document-renderer .page li[data-text-align="left"],
+.document-renderer .page td[data-text-align="left"],
+.document-renderer .page th[data-text-align="left"] {
+  text-align: left !important;
+}
+
+.document-renderer .page [data-block-id][data-text-align="center"],
+.document-renderer .page li[data-text-align="center"],
+.document-renderer .page td[data-text-align="center"],
+.document-renderer .page th[data-text-align="center"] {
+  text-align: center !important;
+}
+
+.document-renderer .page [data-block-id][data-text-align="right"],
+.document-renderer .page li[data-text-align="right"],
+.document-renderer .page td[data-text-align="right"],
+.document-renderer .page th[data-text-align="right"] {
+  text-align: right !important;
+}
+
+.document-renderer .page [data-block-id][data-text-align="justify"],
+.document-renderer .page li[data-text-align="justify"],
+.document-renderer .page td[data-text-align="justify"],
+.document-renderer .page th[data-text-align="justify"] {
+  text-align: justify !important;
+}
+
+.document-renderer .page p[data-block-id]:empty:first-child:last-child::before {
+  content: "Type here..." !important;
+  color: #aaa !important;
+  font-style: italic !important;
+  pointer-events: none !important;
+  position: absolute !important;
+}
+
+/* Headings with scroll margin to account for sticky toolbar */
+h1[id^="heading-"],
+h2[id^="heading-"],
+h3[id^="heading-"],
+h4[id^="heading-"],
+h5[id^="heading-"],
+h6[id^="heading-"],
+.document-renderer .page h1,
+.document-renderer .page h2,
+.document-renderer .page h3,
+.document-renderer .page h4,
+.document-renderer .page h5,
+.document-renderer .page h6 {
+  scroll-margin-top: 180px !important;
+}
+
+/* Display relative TOC heading number in front of heading text */
+h1[data-toc-number]::before,
+h2[data-toc-number]::before,
+h3[data-toc-number]::before,
+h4[data-toc-number]::before,
+h5[data-toc-number]::before,
+h6[data-toc-number]::before,
+.document-renderer .page h1[data-toc-number]::before,
+.document-renderer .page h2[data-toc-number]::before,
+.document-renderer .page h3[data-toc-number]::before,
+.document-renderer .page h4[data-toc-number]::before,
+.document-renderer .page h5[data-toc-number]::before,
+.document-renderer .page h6[data-toc-number]::before {
+  content: attr(data-toc-number) " ";
+  font-weight: bold;
+  margin-right: 0.35em;
+  display: inline-block;
+}
+
+.document-renderer .page h1[data-block-id] {
+  font-size: 2.2em !important;
+  font-weight: bold !important;
+  margin: 1.5em 0 1em 0 !important;
+  color: #222 !important;
+  border-bottom: 3px solid #007bff !important;
+  padding-bottom: 0.3em !important;
+}
+
+.document-renderer .page h2[data-block-id] {
+  font-size: 1.8em !important;
+  font-weight: bold !important;
+  margin: 1.3em 0 0.8em 0 !important;
+  color: #333 !important;
+  border-bottom: 2px solid #6c757d !important;
+  padding-bottom: 0.2em !important;
+}
+
+.document-renderer .page h3[data-block-id] {
+  font-size: 1.4em !important;
+  font-weight: bold !important;
+  margin: 1.1em 0 0.6em 0 !important;
+  color: #444 !important;
+}
+
+.document-renderer .page h4[data-block-id] {
+  font-size: 1.2em !important;
+  font-weight: bold !important;
+  margin: 1em 0 0.5em 0 !important;
+  color: #555 !important;
+}
+
+.document-renderer .page h5[data-block-id] {
+  font-size: 1.1em !important;
+  font-weight: bold !important;
+  margin: 0.9em 0 0.4em 0 !important;
+  color: #666 !important;
+}
+
+.document-renderer .page h6[data-block-id] {
+  font-size: 1em !important;
+  font-weight: bold !important;
+  margin: 0.8em 0 0.3em 0 !important;
+  color: #777 !important;
+}
+
+/* Editor Container scrolling behavior */
+.editor-container {
+  overflow: auto !important;
+  scroll-behavior: auto !important;
+  scroll-padding-top: 110px !important;
+  scrollbar-gutter: stable;
+}
+
+/* Lists and custom lists styling */
+.document-renderer .page ul[data-block-id],
+.document-renderer .page ol[data-block-id] {
+  margin: 0.5em 0 !important;
+  padding-left: 1.5em !important;
+  break-inside: avoid !important;
+}
+
+.document-renderer .page ul[data-block-id] li {
+  list-style-type: disc !important;
+  margin: 0.4em 0 !important;
+  line-height: 1.4 !important;
+}
+
+.document-renderer .page ul[data-block-id] li::marker {
+  color: #007bff !important;
+}
+
+.document-renderer .page ol {
+  list-style: none !important;
+  padding-left: 0 !important;
+  counter-reset: list-counter;
+}
+
+.document-renderer .page ol[data-block-id] {
+  padding-left: 1.5em !important;
+}
+
+.document-renderer .page ol li {
+  counter-increment: list-counter !important;
+  margin: 0.4em 0 !important;
+  padding-left: 1.5em !important;
+  position: relative !important;
+}
+
+.document-renderer .page ol li::before {
+  content: counters(list-counter, ".") "." !important;
+  position: absolute !important;
+  left: 0 !important;
+  font-weight: bold !important;
+  color: #007bff !important;
+}
+
+/* Nested lists: indent them and reset the counter at their level */
+.document-renderer .page ol ol,
+.document-renderer .page ol ul,
+.document-renderer .page ul ol,
+.document-renderer .page ul ul {
+  padding-left: 1.5em !important;
+  margin: 0.2em 0 !important;
+}
+
+.document-renderer .page ol ol {
+  counter-reset: list-counter !important;
+}
+
+/* Sub-numbering (1.1, 1.2, etc.): add extra padding-left so there is a clean space between the points and the text */
+.document-renderer .page ol ol li,
+.document-renderer .page ol.custom-numbered-list ol li,
+.page-content ol ol li,
+ol.custom-numbered-list ol li {
+  padding-left: 2.4em !important;
+}
+
+.document-renderer .page ol ol ol li,
+.document-renderer .page ol.custom-numbered-list ol ol li,
+.page-content ol ol ol li,
+ol.custom-numbered-list ol ol li {
+  padding-left: 3.2em !important;
+}
+
+/* Quote blocks */
+.document-renderer .page blockquote[data-block-id] {
+  margin: 1.5em 0 !important;
+  padding: 1.2em 1.5em !important;
+  border-left: 4px solid #007bff !important;
+  background: linear-gradient(90deg, #f8f9fa 0%, #ffffff 100%) !important;
+  font-style: italic !important;
+  color: #495057 !important;
+  position: relative !important;
+}
+
+.document-renderer .page blockquote[data-block-id]::before {
+  content: "\201C" !important;
+  position: absolute !important;
+  top: -10px !important;
+  left: 10px !important;
+  font-size: 3em !important;
+  color: #007bff !important;
+  opacity: 0.3 !important;
+}
+
+.document-renderer .page blockquote[data-block-id]::after {
+  content: "\201D" !important;
+  position: absolute !important;
+  bottom: -10px !important;
+  right: 10px !important;
+  font-size: 3em !important;
+  color: #007bff !important;
+  opacity: 0.3 !important;
+}
+
+/* Code blocks */
+.document-renderer .page pre[data-block-id] {
+  margin: 1.5em 0 !important;
+  padding: 1.2em !important;
+  background-color: #f8f9fa !important;
+  border: 1px solid #e9ecef !important;
+  border-radius: 6px !important;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  font-size: 0.9em !important;
+  overflow-x: auto !important;
+  line-height: 1.4 !important;
+}
+
+.document-renderer .page pre[data-block-id]:focus {
+  border-color: #007bff !important;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1) !important;
+}
+
+/* Tables styling */
+.document-renderer .page table[data-block-id] {
+  width: 100% !important;
+  max-width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 0.5em 0 !important;
+  font-size: 0.95em !important;
+  background: white !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  table-layout: fixed !important;
+  max-height: none !important;
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+}
+
+.document-renderer .page table[data-block-id] tr {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+  display: table-row !important;
+}
+
+.document-renderer .page table[data-block-id] td,
+.document-renderer .page table[data-block-id] th {
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+  vertical-align: top !important;
+}
+
+.document-renderer .page table[data-block-id] th,
+.document-renderer .page table[data-block-id] td {
+  padding: 0.8em !important;
+  text-align: left !important;
+  border-bottom: 1px solid #dee2e6 !important;
+  border-right: 1px solid #dee2e6 !important;
+  border-left: 1px solid #dee2e6 !important;
+  border-top: 1px solid #dee2e6 !important;
+}
+
+.document-renderer .page table[data-block-id] th {
+  background-color: #007bff !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.document-renderer .page table[data-block-id] tr:hover {
+  background-color: #f8f9fa !important;
+}
+
+.document-renderer .page table[data-block-id] td:empty::before,
+.document-renderer .page table[data-block-id] th:empty::before {
+  content: "\00a0" !important;
+}
+
+/* Images */
+.document-renderer .page figure.img-block {
+  display: block !important;
+  width: fit-content !important;
+  margin: 8px 0 !important;
+  margin-right: auto !important;
+  position: relative !important;
+  outline: none !important;
+  max-width: 100% !important;
+}
+
+.document-renderer .page figure.img-block[data-align="left"] {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.document-renderer .page figure.img-block[data-align="center"] {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.document-renderer .page figure.img-block[data-align="right"] {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+.document-renderer .page figure.img-block>img {
+  max-width: 100% !important;
+  display: block !important;
+  border-radius: 4px !important;
+}
+
+/* Locked/commented content */
+.document-renderer .page .locked-content {
+  background: transparent !important;
+  border-left: none !important;
+  padding: 0 !important;
+}
+
+.document-renderer .page .commented-text {
+  background: transparent !important;
+  border: none !important;
+}
+
+.document-renderer .page .suggested-text {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Version Notice Bar */
+.version-notice-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  margin: 12px 20px 4px 20px;
+  /* Left-aligned next to TOC sidebar */
+  max-width: 820px;
+  /* Centered narrow width matching the page sheets */
+  width: calc(100% - 32px);
+  /* Keep it responsive with safe margins */
+  box-sizing: border-box;
+  /* Prevent padding overflow */
+  border-radius: 8px;
+  font-size: 13px;
+  /* Premium compact font */
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: slideDown 0.3s ease-out forwards;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.version-notice-bar .notice-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.version-notice-bar .notice-icon {
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.version-notice-bar .notice-text {
+  color: #2c3e50;
+}
+
+.version-notice-bar .notice-btn {
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.version-notice-bar .notice-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.version-notice-bar .notice-btn:active {
+  transform: translateY(0);
+}
+
+/* Template Update Notice (Yellow/Amber Theme) */
+.notice-bar-template {
+  background: rgba(255, 243, 205, 0.85);
+  /* Premium warm translucent yellow */
+  border: 1px solid rgba(255, 238, 186, 0.5);
+  border-left: 5px solid #ffc107;
+  justify-content: center;
+  /* Center the warning text beautifully since there is no migrate button */
+}
+
+.btn-template-migrate {
+  background: #ffc107;
+  color: #343a40;
+}
+
+.btn-template-migrate:hover {
+  background: #e0a800;
+}
+
+/* Document Update Notice (Blue Theme) */
+.notice-bar-document {
+  background: rgba(209, 236, 241, 0.85);
+  /* Premium ice/sky blue translucent */
+  border: 1px solid rgba(190, 229, 235, 0.5);
+  border-left: 5px solid #17a2b8;
+}
+
+.btn-document-view {
+  background: #17a2b8;
+  color: #ffffff;
+}
+
+.btn-document-view:hover {
+  background: #138496;
+}
+
+/* Table Cell Dropdown — form control, not an editable text cell */
+.document-renderer .page table[data-block-id] td[data-type="dropdown"],
+.document-renderer .page table[data-block-id] th[data-type="dropdown"] {
+  user-select: none;
+  -webkit-user-select: none;
+  caret-color: transparent;
+}
+
+.document-renderer .page table[data-block-id] td[data-type="dropdown"]::selection,
+.document-renderer .page table[data-block-id] th[data-type="dropdown"]::selection {
+  background: transparent;
+}
+
+/* Table Cell Dropdown select styling */
+.document-renderer .page table[data-block-id] select.cell-dropdown {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%236c757d' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/><path d='M0 0h24v24H0z' fill='none'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 14px;
+  padding: 6px 20px 6px 8px !important;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 4px;
+  pointer-events: auto !important;
+}
+
+.document-renderer .page table[data-block-id] select.cell-dropdown:hover {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.document-renderer .page table[data-block-id] select.cell-dropdown:focus {
+  background-color: rgba(0, 123, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+  outline: none;
+}
+
+/* Adjust cell padding when select is inside so it spans the entire cell cleanly */
+.document-renderer .page table[data-block-id] td:has(select.cell-dropdown),
+.document-renderer .page table[data-block-id] th:has(select.cell-dropdown) {
+  padding: 4px !important;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   INLINE HYPERLINK BADGE STYLES (inside Editor & Preview content)
+   ══════════════════════════════════════════════════════════════════ */
+
+.doc-mention-link,
+a[data-type="doc-hyperlink"],
+a[href*="/document/"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 2px 7px 2px 5px !important;
+  margin: 0 2px !important;
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 6px !important;
+  font-size: 0.9em !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  line-height: 1.4 !important;
+  vertical-align: baseline !important;
+  cursor: pointer !important;
+  user-select: all !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.doc-mention-link:hover,
+a[data-type="doc-hyperlink"]:hover,
+a[href*="/document/"]:hover {
+  background-color: #dbeafe !important;
+  border-color: #93c5fd !important;
+  color: #1e40af !important;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.12) !important;
+  transform: translateY(-1px) !important;
+}
+
+.doc-mention-link-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  font-size: 12px !important;
+  color: #3b82f6 !important;
+  pointer-events: none !important;
+}
+
+.doc-mention-link-text {
+  font-weight: 600 !important;
+  pointer-events: none !important;
+}
+
+.doc-mention-link-version {
+  font-size: 10px !important;
+  padding: 0 4px !important;
+  border-radius: 3px !important;
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  margin-left: 2px !important;
+  pointer-events: none !important;
+}
+
+/* Obsolete referenced document mention style */
+.doc-mention-link.doc-mention-obsolete,
+a[data-type="doc-hyperlink"].doc-mention-obsolete {
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+}
+
+.doc-mention-link.doc-mention-obsolete:hover,
+a[data-type="doc-hyperlink"].doc-mention-obsolete:hover {
+  background-color: #fee2e2 !important;
+  border-color: #f87171 !important;
+  color: #991b1b !important;
+}
+
+.doc-mention-link.doc-mention-obsolete .doc-mention-link-icon {
+  color: #ef4444 !important;
+}
+
+.doc-mention-link.doc-mention-obsolete .doc-mention-link-version {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+}
+
+.doc-mention-link-obsolete-tag {
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  padding: 0 4px !important;
+  border-radius: 3px !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  margin-left: 3px !important;
+  pointer-events: none !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Read-only Document Renderer styles */
+.document-renderer.editor-read-only,
+.document-renderer.editor-read-only *,
+.preview-editor-wrapper.is-readonly,
+.preview-editor-wrapper.is-readonly * {
+  caret-color: transparent !important;
+}
+
+.document-renderer.editor-read-only,
+.document-renderer.editor-read-only .page,
+.document-renderer.editor-read-only .page-content,
+.document-renderer.editor-read-only [data-block-id],
+.document-renderer.editor-read-only p,
+.document-renderer.editor-read-only h1,
+.document-renderer.editor-read-only h2,
+.document-renderer.editor-read-only h3,
+.document-renderer.editor-read-only h4,
+.document-renderer.editor-read-only h5,
+.document-renderer.editor-read-only h6,
+.document-renderer.editor-read-only td,
+.document-renderer.editor-read-only th,
+.document-renderer.editor-read-only li,
+.document-renderer.editor-read-only span {
+  cursor: default;
+}
+
+.document-renderer.editor-read-only .doc-mention-link,
+.document-renderer.editor-read-only a[data-type="doc-hyperlink"],
+.document-renderer.editor-read-only a[href*="/document/"] {
+  cursor: pointer !important;
+}
+
+.document-renderer.editor-read-only {
+  user-select: text !important;
+}
+
+.document-renderer.editor-read-only:focus,
+.document-renderer.editor-read-only *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.document-renderer.editor-read-only [contenteditable] {
+  outline: none !important;
+}
+
+.document-renderer.editor-read-only select.cell-dropdown {
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}

@@ -1,0 +1,437 @@
+/* ===== Google Docs-like overrides ===== */
+:root {
+  --doc-margin: 2.54cm;
+  /* 1 inch */
+  --doc-header: 15mm;
+  /* Reduced header space */
+  --doc-footer: 18mm;
+  /* Increased footer space for better content utilization */
+}
+
+/* Fixed paper box – a physical A4 sheet */
+.page.a4 {
+  width: 210mm;
+  height: 297mm;
+  min-height: auto;
+  max-height: none;
+}
+
+.page.a4.portrait {
+  width: 210mm;
+  height: 297mm;
+}
+
+.page.a4.landscape {
+  width: 297mm;
+  height: 210mm;
+}
+
+/* Reserve header/footer and make footer visible */
+.page-header {
+  margin-top: 5mm;
+  /* Reduced spacing for template editor */
+  min-height: 8mm;
+  /* Much smaller height */
+  padding: 1mm var(--doc-margin);
+  /* Minimal padding */
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* Header text styling for editable content */
+.page-header .header-text-content {
+  flex: 1;
+  min-height: 1em;
+  outline: none;
+  font-size: 11pt;
+  line-height: 1.15;
+  color: #333;
+  cursor: text;
+  margin-left: 8px;
+}
+
+/* Template editor specific header styling */
+.template-container .page-header {
+  margin-top: 1mm;
+  /* Very compact for template editor */
+  min-height: 5mm;
+  /* Much smaller height - just enough for text */
+  max-height: 8mm;
+  /* Prevent header from expanding too much */
+  padding: 1mm var(--doc-margin);
+  /* Minimal padding */
+  line-height: 1.2;
+  /* Tighter line height */
+  overflow: hidden;
+  /* Prevent content overflow */
+  flex-shrink: 0;
+  /* Don't shrink in grid */
+}
+
+.template-container .page-content {
+  padding: 0.1cm var(--doc-margin) var(--doc-margin) var(--doc-margin);
+  /* Very minimal top padding for template editor */
+}
+
+/* Additional spacing optimization for template creation interface */
+.create-template-tabs {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.create-template-tabs .ant-row {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.create-template-tabs .ant-col {
+  padding-top: 0 !important;
+}
+
+.create-template-tabs .ant-tabs {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.create-template-tabs .ant-tabs-nav,
+.create-template-tabs .ant-tabs-top>.ant-tabs-nav,
+.template-container .ant-tabs-nav,
+.template-content>.ant-tabs>.ant-tabs-nav,
+.template-page .ant-tabs-nav {
+  position: sticky;
+  top: 0 !important;
+  z-index: 500 !important;
+  background-color: #f0f2f5;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  border-bottom: none !important;
+}
+
+/* Remove the line under the tabs */
+.create-template-tabs .ant-tabs-nav::before {
+  display: none !important;
+}
+
+.create-template-tabs .ant-tabs-tab {
+  margin-top: 0 !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+
+.create-template-tabs .ant-tabs-content-holder {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.create-template-tabs .ant-tabs-content {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+.create-template-tabs .ant-tabs-tabpane {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+/* Minimize spacing between tabs and editor toolbar */
+.template-container {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Optimize editor toolbar spacing — merged with the tab bar */
+.editor-toolbar,
+.toolbar {
+  position: sticky;
+  top: 38px !important;
+  z-index: 450 !important;
+  background-color: #f8f9fa;
+  border-top: none !important;
+  border-bottom: 1px solid #dee2e6;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Remove any default spacing from the parent container */
+body .create-template-tabs {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Ensure tabs are flush with top */
+.ant-layout-content .create-template-tabs {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Remove spacing from dashboard or parent containers */
+.dashboard-content .create-template-tabs,
+.main-content .create-template-tabs {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Target parent divs and any wrapping elements */
+.ant-layout-content>div:has(.create-template-tabs) {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Remove spacing from the immediate parent container */
+div:has(> .create-template-tabs) {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Force removal of any inherited spacing */
+.create-template-tabs * {
+  margin-top: 0 !important;
+}
+
+/* Override any Ant Design default spacing for tab components */
+.create-template-tabs .ant-tabs-top>.ant-tabs-nav,
+.ant-tabs-top>.ant-tabs-nav {
+  margin-bottom: 0 !important;
+}
+
+.ant-tabs-top>.ant-tabs-nav::before {
+  margin-bottom: 0 !important;
+}
+
+/* Ensure no spacing between header and tabs */
+.ant-layout-content:has(.create-template-tabs) {
+  padding-top: 0px !important;
+}
+
+.ant-layout-header+* .create-template-tabs {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* When header is in edit mode */
+.page-header[contenteditable="true"] {
+  background-color: #f8f9fa;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.page-header[contenteditable="true"] .header-text-content {
+  background-color: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+}
+
+.page-footer {
+  margin-bottom: 16mm;
+  /* Google Docs-style spacing - lifted above page edge */
+  min-height: var(--doc-footer);
+  max-height: calc(var(--doc-footer) + 10mm);
+  padding: 4mm var(--doc-margin);
+  /* Increased padding for taller/more spacious footer */
+  font-size: 9pt;
+  /* Slightly smaller font */
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 1.2;
+  /* Tighter line height */
+  overflow: hidden;
+}
+
+.page-footer [data-page-num] {
+  font-weight: bold;
+}
+
+/* Content area = Google Docs defaults with strict height enforcement */
+.page-content {
+  padding: 0.3cm var(--doc-margin) 0.8cm var(--doc-margin);
+  /* Further reduced top padding */
+  font-family: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 11pt;
+  line-height: 1.15;
+  overflow: hidden;
+  /* Critical: prevent any content overflow beyond page boundaries */
+  white-space: normal;
+  /* paragraphs behave like Google Docs */
+  box-sizing: border-box;
+  /* Include padding in height calculation */
+  min-height: 0;
+  /* grid child fix */
+  contain: layout paint;
+  /* prevents stray overflow/margin collapse */
+  position: relative;
+  /* Ensure proper positioning for overflow detection */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  /* Always align content to the top */
+}
+
+/* Fix for last page and all page content positioning */
+.page-content>*:first-child {
+  margin-top: 0 !important;
+  /* Remove any top margin from first element */
+}
+
+/* Ensure all content blocks start from top */
+.page-content>* {
+  flex-shrink: 0;
+}
+
+.page-content [data-block-id] {
+  flex-shrink: 0;
+  margin-top: 0.4em;
+  margin-bottom: 0.4em;
+}
+
+.page-content [data-block-id]:first-child {
+  margin-top: 0 !important;
+  /* First block should have no top margin */
+}
+
+/* Content overflow indicator removed - no more yellow warning banner */
+
+/* Neutral blocks (Google Docs-like) */
+.page [data-block-id] {
+  flex-shrink: 0;
+  margin: 0.4em 0;
+  border: 0;
+  padding: 0;
+}
+
+.page p[data-block-id] {
+  margin: 0.5em 0;
+  line-height: 1.15;
+  text-align: left;
+  /* don't justify by default */
+}
+
+/* Headings – remove decorative borders, use sane sizes/margins */
+.page h1[data-block-id] {
+  font-size: 2rem;
+  margin: 0.67em 0;
+  font-weight: 700;
+  border: 0;
+  color: #222;
+}
+
+.page h2[data-block-id] {
+  font-size: 1.5rem;
+  margin: 0.83em 0;
+  font-weight: 700;
+  border: 0;
+  color: #333;
+}
+
+.page h3[data-block-id] {
+  font-size: 1.25rem;
+  margin: 0.9em 0;
+  font-weight: 700;
+  border: 0;
+  color: #444;
+}
+
+.page h4[data-block-id] {
+  font-size: 1.1rem;
+  margin: 1em 0 0.6em;
+  border: 0;
+  color: #555;
+}
+
+.page h5[data-block-id] {
+  font-size: 1rem;
+  margin: 1em 0 0.5em;
+  border: 0;
+  color: #666;
+}
+
+.page h6[data-block-id] {
+  font-size: .9rem;
+  margin: 1em 0 0.4em;
+  border: 0;
+  color: #777;
+}
+
+/* Lists and tables: compact like Google Docs */
+.page .page-content ol,
+.page .page-content ul {
+  padding-inline-start: 2rem;
+  margin: 0.5em 0;
+}
+
+.page .page-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+}
+
+.page .page-content th,
+.page .page-content td {
+  border: 1px solid rgba(0, 0, 0, .15);
+  padding: .35rem .5rem;
+  vertical-align: top;
+}
+
+/* Code blocks keep exact whitespace */
+.page .page-content pre {
+  white-space: pre;
+  margin: 0.5em 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+/* Superscripts/subscripts (equations, "raised to power") */
+.page-content sup {
+  vertical-align: super;
+  font-size: 0.8em;
+}
+
+.page-content sub {
+  vertical-align: sub;
+  font-size: 0.8em;
+}
+
+/* Optional: MathML looks better with a math-capable font */
+.page-content math {
+  font-family: "Cambria Math", "STIX Two Math", "Times New Roman", serif;
+}
+
+/* Blockquotes - Google Docs style */
+.page blockquote[data-block-id] {
+  margin: 0.5em 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid #007bff;
+  background: #f8f9fa;
+  font-style: italic;
+  color: #495057;
+}
+
+/* Ensure proper spacing for all block types */
+.page ul[data-block-id] li,
+.page ol[data-block-id] li {
+  margin: 0.2em 0;
+  line-height: 1.15;
+}
+
+/* Table styling improvements */
+.page table[data-block-id] {
+  margin: 0.5em 0;
+  font-size: 0.95em;
+}
+
+.page table[data-block-id] th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.page table[data-block-id] tr:hover {
+  background-color: #f8f9fa;
+}
+

@@ -20,6 +20,7 @@ import MyTasksPage from "./pages/new/Workspace/MyTasksPage";
 import CalendarPage from "./pages/new/Workspace/CalendarPage";
 import ReferencesPage from "./pages/new/Hub/ReferencesPage";
 import TrainingApp from "./training/TrainingApp";
+import RbacDashboardPage from "./pages/new/Workspace/RbacDashboardPage";
 
 function App() {
   return (
@@ -85,6 +86,11 @@ function App() {
           <Route path="/workspace/audit-trail" element={
             <ProtectedRoute allowedRoles={['admin', 'project_manager']}>
               <AuditTrailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/workspace/rbac" element={
+            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+              <RbacDashboardPage />
             </ProtectedRoute>
           } />
           <Route path="/workspace/trending" element={

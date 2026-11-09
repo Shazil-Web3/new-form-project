@@ -1,0 +1,52 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.cleanStaleWorkflowApprovers = cleanStaleWorkflowApprovers;
+const db_1 = __importDefault(require("./db"));
+const documentHelpers_1 = require("../documents/documentHelpers");
+async function cleanStaleWorkflowApprovers(poolOrConn = db_1.default) {
+    try {
+        const db = poolOrConn || db_1.default;
+        console.log('🔄 Checking for templates and documents with stale workflow statuses...');
+        // 1. Templates in draft, pending_revision, pending_review, or pending_approval
+        const { rows: templates } = await db.query(`SELECT id, name, status, template_approvers
+       FROM templates
+       WHERE status IN ('draft', 'pending_revision', 'pending_review', 'pending_approval')
+         AND template_approvers IS NOT NULL`);
+        let fixedTemplatesCount = 0;
+        for (const tpl of templates) {
+            if (!tpl.template_approvers)
+                continue;
+            const cleaned = (0, documentHelpers_1.resetWorkflowState)(tpl.template_approvers, tpl.status);
+            const cleanedStr = JSON.stringify(cleaned);
+            if (cleanedStr !== tpl.template_approvers) {
+                await db.query('UPDATE templates SET template_approvers = $1, updated_at = NOW() WHERE id = $2', [cleanedStr, tpl.id]);
+                console.log(`  ✓ Fixed template: ${tpl.id} (${tpl.name}) [${tpl.status}]`);
+                fixedTemplatesCount++;
+            }
+        }
+        // 2. Documents in draft, pending_revision, pending_review, or pending_approval
+        const { rows: documents } = await db.query(`SELECT document_id, title, status, approvers
+       FROM documents
+       WHERE status IN ('draft', 'pending_revision', 'pending_review', 'pending_approval')
+         AND approvers IS NOT NULL`);
+        let fixedDocsCount = 0;
+        for (const doc of documents) {
+            if (!doc.approvers)
+                continue;
+            const cleaned = (0, documentHelpers_1.resetWorkflowState)(doc.approvers, doc.status);
+            const cleanedStr = JSON.stringify(cleaned);
+            if (cleanedStr !== doc.approvers) {
+                await db.query('UPDATE documents SET approvers = $1, updated_at = NOW() WHERE document_id = $2', [cleanedStr, doc.document_id]);
+                console.log(`  ✓ Fixed document: ${doc.document_id} (${doc.title}) [${doc.status}]`);
+                fixedDocsCount++;
+            }
+        }
+        console.log(`✅ Workflow cleanup finished. Cleaned ${fixedTemplatesCount} templates and ${fixedDocsCount} documents.`);
+    }
+    catch (err) {
+        console.error('❌ Error during workflow cleanup:', err);
+    }
+}

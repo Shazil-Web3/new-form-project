@@ -1,0 +1,36 @@
+✅ Attachments database table is ready
+✅ Sanitized users.template_approver column definition
+🚀 Phase 3 Audit Trail database migration completed successfully.
+🔄 Running Phase 6B Database Security Migrations...
+✅ Self-healed active status for all author permissions
+✅ Self-healed active status for pending workflow reviewers and approvers
+🚀 Phase 6B Database Security Migrations completed successfully.
+🔢 Checking numbering system database tables...
+  ✅ Table `number_sequences` verified/created
+  ✅ Table `project_numbers` verified/created
+🚀 Phase 3 Audit Trail database migration completed successfully.
+🔄 Running Phase 6B Database Security Migrations...
+  ✅ Table `cost_center_numbers` verified/created
+✅ Numbering system migration completed successfully
+🧹 [DeduplicationMigration] Running database deduplication audit & repair...
+  ✅ No duplicate template drafts found.
+  ✅ No duplicate document drafts found.
+  ✅ No duplicate published template names found.
+  ✅ No duplicate published document titles found.
+✅ [DeduplicationMigration] Database deduplication complete.
+🔄 Checking for templates and documents with stale workflow statuses...
+✅ Workflow cleanup finished. Cleaned 0 templates and 0 documents.
+🔗 Running Related Documents migration...
+🚀 Phase 6B Database Security Migrations completed successfully.
+🔢 Checking numbering system database tables...
+  ✅ Table `document_related` verified/created
+  ✅ Table `number_sequences` verified/created
+  ✅ Table `project_numbers` verified/created
+✅ Related Documents migration completed successfully
+  ✅ Table `cost_center_numbers` verified/created
+✅ Numbering system migration completed successfully
+RBAC v2 spreadsheet matrix reseeding checked
+RBAC default template already current
+RBAC migration completed: roles, permissions, role_permissions, user_roles ready
+Server running on http://localhost:5000
+SMTP server is ready to take our messages

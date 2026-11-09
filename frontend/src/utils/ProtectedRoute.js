@@ -1,15 +1,17 @@
 import React from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './authService';
-import { Spin, Button, Result } from 'antd';
+import { Spin } from 'antd';
+import { hasPermission } from './permissions';
 
 /**
  * Enhanced ProtectedRoute with optional Role-Based Access Control (RBAC).
  * 
  * @param {React.ReactNode} children - Component to render if authorized
  * @param {string[]} [allowedRoles] - Optional array of authorized roles
+ * @param {string} [requiredPermission] - Optional permission string key
  */
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, requiredPermission }) => {
   const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,11 +30,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   // 2. Role-Based Authorization check
-  if (allowedRoles && allowedRoles.length > 0) {
+  if ((allowedRoles && allowedRoles.length > 0) || requiredPermission) {
     const userRole = (user?.role || 'viewer').toLowerCase();
-    const hasPermission = allowedRoles.some((r) => r.toLowerCase() === userRole);
+    const hasAllowedRole = !allowedRoles || allowedRoles.length === 0 || user?.isSuperAdmin ||
+      allowedRoles.some((r) => r.toLowerCase() === userRole);
+    const hasRequiredPermission = !requiredPermission || hasPermission(user, requiredPermission);
 
-    if (!hasPermission) {
+    if (!hasAllowedRole || !hasRequiredPermission) {
       return (
         <div className="min-h-screen bg-surface flex items-center justify-center p-6 select-none">
           <div className="max-w-md w-full bg-surface-container-lowest border border-outline-variant rounded-3xl p-8 shadow-sm text-center">

@@ -1,0 +1,11 @@
+/* Editor.css - Master aggregator importing modular styles */
+@import "./modules/editorLayout.css";
+@import "./modules/editorPages.css";
+@import "./modules/editorBlocks.css";
+@import "./modules/editorImages.css";
+@import "./modules/editorTypography.css";
+@import "./modules/editorTocSidebar.css";
+@import "./modules/editorOverrides.css";
+@import "./modules/editorFloatingComments.css";
+@import "./modules/editorCommentRail.css";
+@import "./modules/editorModalLayers.css";

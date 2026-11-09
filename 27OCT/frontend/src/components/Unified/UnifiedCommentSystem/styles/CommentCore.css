@@ -1,0 +1,7 @@
+/* CommentCore.css - Shared base styles for all comment system modes
+ * Aggregator importing modularized comment components
+ */
+@import "./modules/commentCoreContainer.css";
+@import "./modules/commentCoreCards.css";
+@import "./modules/commentCoreRail.css";
+@import "./modules/commentCoreTabsAndComposer.css";

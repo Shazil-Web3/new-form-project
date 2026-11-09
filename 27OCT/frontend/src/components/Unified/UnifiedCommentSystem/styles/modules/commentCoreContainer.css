@@ -1,0 +1,179 @@
+/* CommentCore.css
+ * Shared base styles for all comment system modes
+ * Used by CreateComments, PreviewComments, and ReviewComments
+ */
+
+/* Comment container */
+.comments-container {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 300px;
+    background: #f8f9fa;
+    border-left: 1px solid #dee2e6;
+    overflow-y: auto;
+    padding: 16px;
+    z-index: 50;
+}
+
+/* Floating toolbar / Selection Pill */
+.floating-toolbar,
+.selection-pill {
+    position: absolute;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 4px;
+    display: flex;
+    gap: 4px;
+    z-index: 400;
+}
+
+.floating-toolbar button,
+.selection-pill button {
+    padding: 6px 12px;
+    border: none;
+    background: #f8f9fa;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #444;
+}
+
+.floating-toolbar button:hover,
+.selection-pill button:hover {
+    background: #e9ecef;
+    color: #007bff;
+}
+
+.floating-toolbar button.active,
+.selection-pill button.active {
+    background: #007bff;
+    color: white;
+}
+
+/* Highlighted text in editor */
+.highlighted-text {
+    position: relative;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.highlighted-text.editor-highlight-hovered {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Reference Specific Styles */
+.reference-citation-wrapper {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.reference-citation-wrapper:hover {
+    background-color: #ffe7ba !important;
+    /* Slightly darker on hover */
+}
+
+.reference-number {
+    font-size: 0.75em;
+    vertical-align: super;
+    margin-left: 2px;
+    color: #1890ff;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.2s ease, color 0.2s ease;
+    display: inline-block;
+}
+
+.reference-number:hover {
+    transform: scale(1.2);
+    color: #40a9ff;
+}
+
+.reference-highlight-glow {
+    animation: reference-glow 2s ease-in-out;
+}
+
+@keyframes reference-glow {
+    0% {
+        background-color: rgba(255, 169, 64, 0);
+    }
+
+    50% {
+        background-color: rgba(255, 169, 64, 0.5);
+    }
+
+    100% {
+        background-color: rgba(255, 169, 64, 0);
+    }
+}
+
+.highlight-glow {
+    animation: reference-entry-glow 2s ease-in-out;
+}
+
+@keyframes reference-entry-glow {
+    0% {
+        box-shadow: 0 0 0 rgba(24, 144, 255, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(24, 144, 255, 0.5);
+        border-color: #1890ff;
+    }
+
+    100% {
+        box-shadow: 0 0 0 rgba(24, 144, 255, 0);
+    }
+}
+
+/* Right rail composer */
+.right-rail-composer {
+    position: sticky;
+    top: 0;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.right-rail-composer textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.right-rail-composer button {
+    margin-top: 8px;
+    padding: 6px 16px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.right-rail-composer button:hover {
+    background: #0056b3;
+}
+
+.right-rail-composer button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+

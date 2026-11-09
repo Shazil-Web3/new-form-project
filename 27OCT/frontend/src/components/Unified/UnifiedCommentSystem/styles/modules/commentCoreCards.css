@@ -1,0 +1,138 @@
+/* Comment card base styles */
+.comment-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.comment-card .comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.comment-card .comment-author {
+    font-weight: 600;
+    font-size: 14px;
+    color: #333;
+}
+
+.comment-card .comment-timestamp {
+    font-size: 12px;
+    color: #666;
+}
+
+.comment-card .comment-text {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+
+.comment-card .quoted-text {
+    background: #f8f9fa;
+    border-left: 3px solid #007bff;
+    padding: 8px;
+    margin: 8px 0;
+    font-style: italic;
+    font-size: 13px;
+    color: #666;
+}
+
+/* Highlighted text in document */
+[data-comment-id] {
+    background: rgba(40, 167, 69, 0.2);
+    border-bottom: none;
+    cursor: pointer;
+    transition: background 0.2s, border-bottom 0.2s;
+}
+
+[data-comment-id]:hover,
+[data-comment-id].editor-highlight-hovered {
+    background: rgba(40, 167, 69, 0.3);
+    border-bottom: 2px solid #28a745;
+}
+
+[data-comment-id][data-comment-status="resolved"],
+[data-comment-id].comment-resolved {
+    border-bottom: 2px solid #28a745;
+}
+
+[data-comment-id][data-comment-status="resolved"]:hover,
+[data-comment-id][data-comment-status="resolved"].editor-highlight-hovered,
+[data-comment-id].comment-resolved:hover,
+[data-comment-id].comment-resolved.editor-highlight-hovered {
+    background: rgba(40, 167, 69, 0.35) !important;
+    border-bottom: 2px solid #28a745 !important;
+}
+
+[data-suggestededit-id] {
+    background: rgba(76, 175, 80, 0.2);
+    border-bottom: none !important;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+[data-suggestededit-id]:hover {
+    background: rgba(76, 175, 80, 0.3);
+}
+
+[data-backspace-strike-id],
+.backspace-strike-text {
+    text-decoration: line-through;
+    text-decoration-thickness: 1.5px;
+    text-decoration-color: #c62828;
+    background: rgba(198, 40, 40, 0.08);
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.backspace-strike-popup {
+    position: absolute;
+    display: flex;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #dadce0;
+    border-radius: 6px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    z-index: 420;
+}
+
+.backspace-strike-popup button {
+    border: none;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    background: #f1f3f4;
+    color: #202124;
+}
+
+.backspace-strike-popup button:hover {
+    background: #e8eaed;
+}
+
+/* =========================================
+   Bi-Directional Hover Highlighting Styles
+   ========================================= */
+
+/* Stronger emphasis when hovering on highlighted text in editor */
+[data-comment-id].editor-highlight-hovered {
+    background: rgba(40, 167, 69, 0.35) !important;
+    border-bottom: 2px solid #28a745 !important;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+[data-suggestededit-id].editor-highlight-hovered {
+    background: rgba(76, 175, 80, 0.4) !important;
+    border-bottom-width: 3px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+

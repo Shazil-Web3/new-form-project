@@ -1,0 +1,303 @@
+/* Block wrapper */
+.block-wrapper {
+  position: relative;
+  margin: 0.5em 0;
+}
+
+/* Block hover effects */
+.block-wrapper:hover {
+  background-color: transparent !important;
+}
+
+.block-wrapper.selected {
+  background-color: transparent !important;
+  outline: none !important;
+}
+
+/* Block drag handle */
+.block-wrapper::before {
+  content: "⋮⋮";
+  position: absolute;
+  left: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ccc;
+  font-size: 12px;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  line-height: 0.8;
+}
+
+.block-wrapper:hover::before {
+  opacity: 0.6;
+}
+
+.block-wrapper::before:hover {
+  opacity: 1;
+  color: #007bff;
+}
+
+/* Enhanced block styles for page context */
+.page [data-block-id] {
+  position: relative;
+  border: none !important;
+  background-color: transparent !important;
+  padding: 0;
+  margin: 0.3em 0;
+}
+
+.page [data-block-id]:focus {
+  outline: none !important;
+  border: none !important;
+  border-color: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.page [data-block-id]:hover {
+  border: none !important;
+  border-color: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Paragraph blocks in page context */
+.page p[data-block-id] {
+  margin: 0.4em 0;
+  min-height: 1.15em;
+  line-height: 1.15;
+  text-align: justify;
+}
+
+.page [data-block-id][data-text-align="left"],
+.page li[data-text-align="left"],
+.page td[data-text-align="left"],
+.page th[data-text-align="left"] {
+  text-align: left !important;
+}
+
+.page [data-block-id][data-text-align="center"],
+.page li[data-text-align="center"],
+.page td[data-text-align="center"],
+.page th[data-text-align="center"] {
+  text-align: center !important;
+}
+
+.page [data-block-id][data-text-align="right"],
+.page li[data-text-align="right"],
+.page td[data-text-align="right"],
+.page th[data-text-align="right"] {
+  text-align: right !important;
+}
+
+.page [data-block-id][data-text-align="justify"],
+.page li[data-text-align="justify"],
+.page td[data-text-align="justify"],
+.page th[data-text-align="justify"] {
+  text-align: justify !important;
+}
+
+.page p[data-block-id]:empty:first-child:last-child::before {
+  content: "Type here...";
+  color: #999;
+  font-style: italic;
+}
+
+/* Heading blocks in page context */
+.page h1[data-block-id] {
+  font-size: 2.2em;
+  font-weight: bold;
+  margin: 1.5em 0 1em 0;
+  color: #222;
+  border-bottom: 3px solid #007bff;
+  padding-bottom: 0.3em;
+}
+
+.page h2[data-block-id] {
+  font-size: 1.8em;
+  font-weight: bold;
+  margin: 1.3em 0 0.8em 0;
+  color: #333;
+  border-bottom: 2px solid #6c757d;
+  padding-bottom: 0.2em;
+}
+
+.page h3[data-block-id] {
+  font-size: 1.4em;
+  font-weight: bold;
+  margin: 1.1em 0 0.6em 0;
+  color: #444;
+}
+
+.page h4[data-block-id] {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin: 1em 0 0.5em 0;
+  color: #555;
+}
+
+.page h5[data-block-id] {
+  font-size: 1.1em;
+  font-weight: bold;
+  margin: 0.9em 0 0.4em 0;
+  color: #666;
+}
+
+.page h6[data-block-id] {
+  font-size: 1em;
+  font-weight: bold;
+  margin: 0.8em 0 0.3em 0;
+  color: #777;
+}
+
+/* List blocks in page context with better pagination */
+.page ul[data-block-id],
+.page ol[data-block-id] {
+  margin: 0.5em 0;
+  /* Reduced margin for better pagination */
+  padding-left: 1.5em;
+  break-inside: avoid;
+  /* Try to keep list items together */
+}
+
+.page ul[data-block-id] li {
+  list-style-type: disc;
+  margin: 0.4em 0;
+  line-height: 1.4;
+}
+
+.page ul[data-block-id] li::marker {
+  color: #007bff;
+}
+
+.page ol {
+  counter-reset: item;
+  list-style: none;
+  padding-left: 0;
+}
+
+.page ol li {
+  counter-increment: item;
+  margin: 0.4em 0;
+  padding-left: 1.5em;
+  position: relative;
+}
+
+.page ol li::before {
+  content: counter(item) ".";
+  position: absolute;
+  left: 0;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.page ol ol li {
+  padding-left: 2.4em;
+}
+
+.page ol ol ol li {
+  padding-left: 3.2em;
+}
+
+/* Quote blocks in page context */
+.page blockquote[data-block-id] {
+  margin: 1.5em 0;
+  padding: 1.2em 1.5em;
+  border-left: 4px solid #007bff;
+  background: linear-gradient(90deg, #f8f9fa 0%, #ffffff 100%);
+  font-style: italic;
+  color: #495057;
+  position: relative;
+}
+
+.page blockquote[data-block-id]::before {
+  content: "\201C";
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  font-size: 3em;
+  color: #007bff;
+  opacity: 0.3;
+}
+
+.page blockquote[data-block-id]::after {
+  content: "\201D";
+  position: absolute;
+  bottom: -10px;
+  right: 10px;
+  font-size: 3em;
+  color: #007bff;
+  opacity: 0.3;
+}
+
+/* Code blocks in page context */
+.page pre[data-block-id] {
+  margin: 1.5em 0;
+  padding: 1.2em;
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  overflow-x: auto;
+  line-height: 1.4;
+}
+
+.page pre[data-block-id]:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+/* Table blocks in page context with strict height enforcement */
+.page table[data-block-id] {
+  width: 100%;
+  max-width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  /* Reduced margin for better pagination */
+  font-size: 0.95em;
+  background: white;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  table-layout: fixed;
+  /* Ensure consistent table sizing */
+  max-height: none;
+  /* Let pagination handle height limits */
+  /* Screen: allow our manual paginator to split/clone tables by rows */
+  break-inside: auto;
+  page-break-inside: auto;
+}
+
+/* Table rows should allow splitting during screen pagination */
+.page table[data-block-id] tr {
+  break-inside: auto;
+  page-break-inside: auto;
+  display: table-row;
+}
+
+/* Table cells should allow splitting during screen pagination */
+.page table[data-block-id] td,
+.page table[data-block-id] th {
+  break-inside: auto;
+  page-break-inside: auto;
+  vertical-align: top;
+}
+
+.page table[data-block-id] th,
+.page table[data-block-id] td {
+  padding: 0.8em;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.page table[data-block-id] th {
+  background-color: #007bff;
+  color: white;
+  font-weight: 600;
+}
+
+.page table[data-block-id] tr:hover {
+  background-color: #f8f9fa;
+}
+

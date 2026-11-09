@@ -1,0 +1,342 @@
+/* CSS Fixes for Comments and Suggestions Compatibility */
+
+/* Template Preview Document Container - Ensure proper layout for comments panel */
+.template-content-preview {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  min-height: 500px;
+}
+
+.document-container {
+  display: flex;
+  gap: 20px;
+  width: 100%;
+  position: relative;
+}
+
+.document-viewer {
+  flex: 1;
+  min-width: 0;
+  /* Allow flexbox to shrink */
+}
+
+.document-page {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  margin: 0 auto;
+  max-width: 210mm;
+  /* A4 width */
+  min-height: 297mm;
+  /* A4 height */
+}
+
+.document-content {
+  line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #333;
+}
+
+/* Comments Panel - Right side panel */
+.comments-panel {
+  width: 280px;
+  /* reduced from 320px */
+  min-width: 280px;
+  max-width: 320px;
+  /* keep an upper bound */
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 12px;
+  /* reduced from 16px */
+  border: 1px solid #e1e5e9;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  position: sticky;
+  top: 140px !important;
+}
+
+/* Comments List Styling */
+.comments-list {
+  max-height: calc(100vh - 400px);
+  overflow-y: auto;
+}
+
+/* Compact cards */
+.comment-card,
+.suggestion-card {
+  font-size: 12px;
+  /* smaller text */
+  padding: 8px;
+  /* reduced padding */
+}
+
+.comment-card {
+  transition: all 0.2s ease;
+  border: 1px solid #e8e8e8;
+}
+
+.comment-card:hover {
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+.comment-card.highlighted-active {
+  border-color: #1890ff;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Suggestion Cards */
+.suggestions-list {
+  max-height: calc(100vh - 400px);
+  overflow-y: auto;
+}
+
+/* Custom Light Green Scrollbar for Comments & Suggestions Lists */
+.comments-panel::-webkit-scrollbar,
+.comments-list::-webkit-scrollbar,
+.suggestions-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.comments-panel::-webkit-scrollbar-track,
+.comments-list::-webkit-scrollbar-track,
+.suggestions-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+}
+
+.comments-panel::-webkit-scrollbar-thumb,
+.comments-list::-webkit-scrollbar-thumb,
+.suggestions-list::-webkit-scrollbar-thumb {
+  background: #52c41a;
+  border-radius: 4px;
+}
+
+.comments-panel::-webkit-scrollbar-thumb:hover,
+.comments-list::-webkit-scrollbar-thumb:hover,
+.suggestions-list::-webkit-scrollbar-thumb:hover {
+  background: #389e0d;
+}
+
+.suggestion-card {
+  transition: all 0.2s ease;
+  border: 1px solid #e8e8e8;
+}
+
+.suggestion-card:hover {
+  border-color: #faad14;
+  box-shadow: 0 2px 8px rgba(250, 173, 20, 0.15);
+}
+
+.suggestion-card.highlighted-active {
+  border-color: #faad14;
+  box-shadow: 0 4px 12px rgba(250, 173, 20, 0.25);
+  transform: translateY(-1px);
+}
+
+/* Reply sections */
+.replies-section {
+  border-top: 1px solid #f0f0f0;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.reply-item {
+  margin-bottom: 12px;
+  padding-left: 16px;
+  border-left: 2px solid #f0f0f0;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+
+/* Debug info styling */
+.debug-info {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  max-height: 100px;
+  overflow-y: auto;
+  word-break: break-all;
+}
+
+/* Show comments button */
+.show-comments-btn {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Content layout adjustments for comments active state */
+.content-container.comments-active .template-content-preview {
+  max-width: calc(100vw - 400px);
+}
+
+.content-container.toc-collapsed.comments-active .template-content-preview {
+  max-width: calc(100vw - 320px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .comments-panel {
+    width: 280px;
+    min-width: 280px;
+  }
+
+  .content-container.comments-active .template-content-preview {
+    max-width: calc(100vw - 320px);
+  }
+}
+
+@media (max-width: 768px) {
+  .document-container {
+    flex-direction: column;
+  }
+
+  .comments-panel {
+    width: 100%;
+    min-width: auto;
+    max-width: none;
+    position: relative;
+    top: auto;
+    max-height: 400px;
+  }
+
+  .show-comments-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    top: auto;
+    transform: none;
+  }
+}
+
+/* Fix for blockquote highlighting clickable area */
+blockquote {
+  cursor: pointer !important;
+  transition: background-color 0.2s ease;
+}
+
+blockquote:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* Ensure highlighted text spans are visible and selectable */
+[data-comment-id],
+[data-suggestededit-id] {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================
+   Clean View Catch-All Styling Overrides
+   ========================================= */
+body .template-page.clean-view .highlighted-text,
+body .template-page.clean-view [data-comment-id],
+body .template-page.clean-view [data-suggestededit-id],
+.clean-view-active .highlighted-text,
+.clean-view-active [data-comment-id],
+.clean-view-active [data-suggestededit-id],
+.clean-view-active.document-renderer .highlighted-text,
+.clean-view-active.document-renderer [data-comment-id],
+.clean-view-active.document-renderer [data-suggestededit-id] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  cursor: text !important;
+  padding: 0 !important;
+}
+
+body .template-page.clean-view .admin-edit,
+body .template-page.clean-view .reviewer-edit,
+.clean-view-active .admin-edit,
+.clean-view-active .reviewer-edit,
+.clean-view-active.document-renderer .admin-edit,
+.clean-view-active.document-renderer .reviewer-edit {
+  text-decoration: none !important;
+  -webkit-text-decoration: none !important;
+  border-bottom: none !important;
+}
+
+/* Mode 1: Clean View WITH Accepted Suggestions */
+body .template-page.clean-view:not(.clean-view-rejected) del,
+body .template-page.clean-view-accepted del,
+.clean-view-active:not(.clean-view-rejected) del,
+.clean-view-active-accepted del,
+.clean-view-active.document-renderer:not(.clean-view-rejected) del {
+  display: none !important;
+}
+
+body .template-page.clean-view:not(.clean-view-rejected) ins,
+body .template-page.clean-view-accepted ins,
+.clean-view-active:not(.clean-view-rejected) ins,
+.clean-view-active-accepted ins,
+.clean-view-active.document-renderer:not(.clean-view-rejected) ins {
+  display: inline !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+/* Mode 2: Clean View WITHOUT Accepted Suggestions (Original Text) */
+body .template-page.clean-view-rejected del,
+.clean-view-active-rejected del,
+.clean-view-active.document-renderer.clean-view-rejected del {
+  display: inline !important;
+  text-decoration: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: inherit !important;
+}
+
+body .template-page.clean-view-rejected ins,
+.clean-view-active-rejected ins,
+.clean-view-active.document-renderer.clean-view-rejected ins {
+  display: none !important;
+}
+
+/* Activity timeline styling */
+.activity-timeline {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Ensure proper spacing for tab content */
+.template-page-content {
+  padding: 0;
+}
+
+.template-content .ant-tabs-content-holder {
+  padding: 0;
+}
+
+.template-content .ant-card {
+  border-radius: 8px;
+}
+
+/* Fix for general comment section */
+.general-comment-section {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 16px;
+  border: 1px solid #e8e8e8;
+}
+
+/* Badge styling improvements */
+.ant-badge {
+  font-size: 12px;
+}
+
+.ant-badge-count {
+  box-shadow: 0 0 0 1px #fff;
+}
