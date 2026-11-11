@@ -263,20 +263,24 @@ export default function DashboardCardGrid({
                   (item.status === 'draft' || item.status === 'archive_draft') ? (
                     isAuthor ? (
                       <>
-                        <button
-                          onClick={() => onAction(item.status === 'archive_draft' ? 'archive_edit' : 'review', item.id, item.itemType)}
-                          className={`p-1.5 ${item.status === 'archive_draft' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-700 hover:bg-blue-800'} text-white rounded-lg flex items-center justify-center transition-colors shadow-sm`}
-                          title={item.status === 'archive_draft' ? "Edit Archive Draft" : "Resume"}
-                        >
-                          <span className="material-symbols-outlined text-[16px]">{item.status === 'archive_draft' ? 'inventory_2' : 'edit'}</span>
-                        </button>
-                        <button
-                          onClick={() => onAction('delete', item.id, item.itemType)}
-                          className="p-1 hover:bg-error/10 rounded text-error transition-colors"
-                          title="Discard"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
-                        </button>
+                        {canEditItem(item) && (
+                          <button
+                            onClick={() => onAction(item.status === 'archive_draft' ? 'archive_edit' : 'review', item.id, item.itemType)}
+                            className={`p-1.5 ${item.status === 'archive_draft' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-blue-700 hover:bg-blue-800'} text-white rounded-lg flex items-center justify-center transition-colors shadow-sm`}
+                            title={item.status === 'archive_draft' ? "Edit Archive Draft" : "Resume"}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">{item.status === 'archive_draft' ? 'inventory_2' : 'edit'}</span>
+                          </button>
+                        )}
+                        {can(isTemplate ? 't_delete' : 'd_delete') && (
+                          <button
+                            onClick={() => onAction('delete', item.id, item.itemType)}
+                            className="p-1 hover:bg-error/10 rounded text-error transition-colors"
+                            title="Discard"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                          </button>
+                        )}
                       </>
                     ) : (
                       <button
@@ -330,7 +334,7 @@ export default function DashboardCardGrid({
                       );
                     })()
                   ) : (
-                    currentUser?.role === 'viewer' ? (
+                    (!can(isTemplate ? 't_comment_review_approve' : 'd_comment_review_approve') || currentUser?.role === 'viewer' || activeRole?.id === 'temp_view') ? (
                       <button
                         onClick={() => onAction('preview', item.id, item.itemType)}
                         className="p-1 hover:bg-surface-container-high rounded text-on-surface-variant/40 transition-colors"
@@ -352,11 +356,11 @@ export default function DashboardCardGrid({
 
                 {activeTab === 'Published' && (
                   <button
-                    onClick={() => onAction(can('folder_file_access') && activeRole?.id !== 'temp_view' ? 'use' : 'preview', item.id, item.itemType)}
+                    onClick={() => onAction(can('folder_file_access') && activeRole?.id !== 'temp_view' && (isTemplate ? can('t_create') : can('d_create')) ? 'use' : 'preview', item.id, item.itemType)}
                     className="p-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm"
-                    title={can('folder_file_access') && activeRole?.id !== 'temp_view' ? (isTemplate ? 'Use Template' : 'Use Document') : (isTemplate ? 'View Template' : 'View Document')}
+                    title={can('folder_file_access') && activeRole?.id !== 'temp_view' && (isTemplate ? can('t_create') : can('d_create')) ? (isTemplate ? 'Use Template' : 'Use Document') : (isTemplate ? 'View Template' : 'View Document')}
                   >
-                    <span className="material-symbols-outlined text-[16px]">{can('folder_file_access') && activeRole?.id !== 'temp_view' ? 'note_add' : 'visibility'}</span>
+                    <span className="material-symbols-outlined text-[16px]">{can('folder_file_access') && activeRole?.id !== 'temp_view' && (isTemplate ? can('t_create') : can('d_create')) ? 'note_add' : 'visibility'}</span>
                   </button>
                 )}
 

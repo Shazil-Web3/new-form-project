@@ -53,7 +53,8 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
           department: u.department || null,
           email: u.email,
           organization_id: u.organization_id || u.orgId || u.org_id,
-          template_approver: u.template_approver || 'no'
+          template_approver: u.template_approver || 'no',
+          isSuperAdmin: Boolean(u.is_super_admin || u.isSuperAdmin || u.role === 'super_admin')
         }
       };
     })

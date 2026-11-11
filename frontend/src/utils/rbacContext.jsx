@@ -111,7 +111,7 @@ export const RbacProvider = ({ children }) => {
     }
 
     // Next check user's direct role or isSuperAdmin
-    if (user.isSuperAdmin) {
+    if (user.role === 'super_admin' || (user.isSuperAdmin && (!user.role || user.role === 'admin'))) {
       return roles.find(r => r.id === 'super_admin') || INITIAL_ROLES[1];
     }
 
@@ -130,7 +130,7 @@ export const RbacProvider = ({ children }) => {
     const granted = new Set();
 
     // Super Admin has unconditional bypass for all capabilities
-    if (activeRole.id === 'super_admin' || user?.isSuperAdmin) {
+    if (activeRole.id === 'super_admin') {
       CAPABILITIES.forEach(cap => granted.add(cap.id));
       return granted;
     }
@@ -151,33 +151,33 @@ export const RbacProvider = ({ children }) => {
     });
 
     return granted;
-  }, [activeRole, user, roleColIndex, matrix]);
+  }, [activeRole, roleColIndex, matrix]);
 
   // Primary Capability Check Function
   const can = useCallback((capabilityId) => {
     if (!capabilityId) return false;
-    if (activeRole.id === 'super_admin' || user?.isSuperAdmin) return true;
+    if (activeRole.id === 'super_admin') return true;
     return activeCapabilities.has(capabilityId);
-  }, [activeRole, user, activeCapabilities]);
+  }, [activeRole, activeCapabilities]);
 
   // Checks if user has ANY of the specified capabilities
   const canAny = useCallback((capabilityIds = []) => {
     if (!Array.isArray(capabilityIds) || capabilityIds.length === 0) return false;
-    if (activeRole.id === 'super_admin' || user?.isSuperAdmin) return true;
+    if (activeRole.id === 'super_admin') return true;
     return capabilityIds.some(id => activeCapabilities.has(id));
-  }, [activeRole, user, activeCapabilities]);
+  }, [activeRole, activeCapabilities]);
 
   // Checks if user has ALL of the specified capabilities
   const canAll = useCallback((capabilityIds = []) => {
     if (!Array.isArray(capabilityIds) || capabilityIds.length === 0) return false;
-    if (activeRole.id === 'super_admin' || user?.isSuperAdmin) return true;
+    if (activeRole.id === 'super_admin') return true;
     return capabilityIds.every(id => activeCapabilities.has(id));
-  }, [activeRole, user, activeCapabilities]);
+  }, [activeRole, activeCapabilities]);
 
   // Checks fine-grained catalog permission (e.g. 'documents.create')
   const hasPermission = useCallback((permissionKey) => {
     if (!permissionKey) return false;
-    if (activeRole.id === 'super_admin' || user?.isSuperAdmin) return true;
+    if (activeRole.id === 'super_admin') return true;
 
     // Check if permission is covered by any granted matrix capability
     for (const [capId, permList] of Object.entries(CAPABILITY_TO_PERMISSIONS)) {
@@ -195,14 +195,14 @@ export const RbacProvider = ({ children }) => {
     }
 
     return false;
-  }, [activeRole, user, activeCapabilities]);
+  }, [activeRole, activeCapabilities]);
 
   // Department Isolation Helper for d_edit_same:
   // User can edit document if they have capability d_edit_same AND:
   // (user.department === doc.department OR user is explicitly listed as a participant/author)
   const canEditDocument = useCallback((doc) => {
     if (!doc) return false;
-    if (activeRole.id === 'super_admin' || user?.isSuperAdmin) return true;
+    if (activeRole.id === 'super_admin') return true;
     if (!can('d_edit_same')) return false;
 
     // If document has no department restriction, allow
@@ -238,8 +238,8 @@ export const RbacProvider = ({ children }) => {
     return false;
   }, [activeRole, user, can]);
 
-  // Temporary Access Expiry Monitor for temp_view
-  const isTemporary = activeRole.id === 'temp_view';
+  // Temporary Access Expiry Monitor for temp_view or any role granted temp_view_row
+  const isTemporary = activeRole.id === 'temp_view' || can('temp_view_row');
 
   useEffect(() => {
     if (!isTemporary) {

@@ -69,6 +69,8 @@ const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetch
   const canManageUsers = isAdminOrSuper || can('manage_user');
   const canManageSite = isAdminOrSuper || can('manage_site');
   const canCreateAccount = isAdminOrSuper || can('create_account');
+  const canDataImport = isAdminOrSuper || can('data_import');
+  const canResetPassword = isAdminOrSuper || can('reset_pwd');
   const parseSites = (siteValue) => {
     if (!siteValue) return [];
     try {
@@ -1640,13 +1642,15 @@ const renderUserListView = () => {
                     >
                       Invite
                     </Button>
-                    <Button 
-                      icon={<UsergroupAddOutlined />} 
-                      onClick={() => setIsMultipleInviteModalVisible(true)}
-                    >
-                      Bulk Invite
-                    </Button>
                   </>
+                )}
+                {canDataImport && (
+                  <Button 
+                    icon={<UsergroupAddOutlined />} 
+                    onClick={() => setIsMultipleInviteModalVisible(true)}
+                  >
+                    Bulk Invite
+                  </Button>
                 )}
               </div>
             </div>
@@ -1928,6 +1932,16 @@ const renderUserListView = () => {
               extra="Must be at least 6 characters"
             >
               <Input.Password prefix={<LockOutlined />} placeholder="Password (minimum 6 characters)" />
+            </Form.Item>
+          )}
+
+          {editMode && canResetPassword && (
+            <Form.Item
+              name="resetPassword"
+              label="Reset Password"
+              extra="Leave blank to keep existing password"
+            >
+              <Input.Password prefix={<LockOutlined />} placeholder="Enter new password (optional)" />
             </Form.Item>
           )}
 

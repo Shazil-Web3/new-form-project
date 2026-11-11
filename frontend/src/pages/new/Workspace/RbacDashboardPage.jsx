@@ -5,11 +5,10 @@
  * together with the Custom Role Creation & User-Role Assignment forms below.
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Button, Checkbox, Form, Input, message, Select } from 'antd';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Button, Form, Input, message, Select } from 'antd';
 import MainLayout from '../../../components/new/tailwind/MainLayout';
 import {
-  listRbacPermissions,
   listRbacOrganizations,
   listRbacUsers,
   createRbacRole,
@@ -188,14 +187,9 @@ export function RbacDashboardContent() {
   const [rolesList, setRolesList] = useState(() => loadStoredRoles());
   const [matrix, setMatrix] = useState(() => loadStoredMatrix());
   const [savedMatrix, setSavedMatrix] = useState(() => loadStoredMatrix());
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isAuditOpen, setIsAuditOpen] = useState(false);
-  const [filterMode, setFilterMode] = useState('all'); // 'all', 'admin', 'authors', 'readonly'
-  const [auditMode, setAuditMode] = useState('standard'); // 'standard', 'strict', 'training'
   const [notice, setNotice] = useState(null);
 
   // Forms state
-  const [catalog, setCatalog] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [users, setUsers] = useState([]);
   const [savingForm, setSavingForm] = useState(false);
@@ -204,32 +198,11 @@ export function RbacDashboardContent() {
   const [assignForm] = Form.useForm();
   const selectedAssignRoleId = Form.useWatch('roleId', assignForm);
 
-  const filterRef = useRef(null);
-  const auditRef = useRef(null);
-
-  // Close dropdowns on outside click
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (filterRef.current && !filterRef.current.contains(e.target)) {
-        setIsFilterOpen(false);
-      }
-      if (auditRef.current && !auditRef.current.contains(e.target)) {
-        setIsAuditOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Load catalog permissions and organizations on mount
+  // Load organizations on mount
   useEffect(() => {
     async function initFormData() {
       try {
-        const [perms, orgs] = await Promise.all([
-          listRbacPermissions(),
-          listRbacOrganizations()
-        ]);
-        setCatalog(perms || []);
+        const orgs = await listRbacOrganizations();
         setOrganizations(orgs || []);
       } catch (err) {
         console.error('Failed to init forms data', err);
@@ -243,28 +216,8 @@ export function RbacDashboardContent() {
     setTimeout(() => setNotice(null), 3500);
   };
 
-  // Grouped catalog by resource
-  const catalogByResource = useMemo(() => {
-    return catalog.reduce((grouped, permission) => {
-      grouped[permission.resource] = grouped[permission.resource] || [];
-      grouped[permission.resource].push(permission);
-      return grouped;
-    }, {});
-  }, [catalog]);
-
-  // Filter roles based on selected Filter Mode
-  const visibleRoles = useMemo(() => {
-    if (filterMode === 'admin') {
-      return rolesList.filter(r => ['system', 'super_admin', 'admin', 'training_admin'].includes(r.id));
-    }
-    if (filterMode === 'authors') {
-      return rolesList.filter(r => ['approver', 'author'].includes(r.id));
-    }
-    if (filterMode === 'readonly') {
-      return rolesList.filter(r => ['view', 'temp_view'].includes(r.id));
-    }
-    return rolesList;
-  }, [filterMode, rolesList]);
+  // All roles are visible across the matrix
+  const visibleRoles = rolesList;
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -335,20 +288,6 @@ export function RbacDashboardContent() {
     message.success('Matrix changes saved.');
   };
 
-  // Elevate Admin role to full permissions in the matrix
-  const handleElevateAdmin = () => {
-    const adminColIdx = rolesList.findIndex(r => r.id === 'admin' || r.key === 'admin');
-    if (adminColIdx === -1) return;
-    setMatrix(prev => prev.map(row => {
-      const next = [...row];
-      next[adminColIdx] = true;
-      return next;
-    }));
-    setFilterMode('admin');
-    showNotice('Admin role elevated to full permissions (unsaved)');
-    message.info('Elevated Admin permissions across all capabilities. Click Save Changes to commit.');
-  };
-
   // Revert to initial template
   const handleRevert = () => {
     const confirmed = window.confirm('Are you sure you want to revert to default? Unsaved changes will be lost.');
@@ -389,7 +328,11 @@ export function RbacDashboardContent() {
   const handleCreateRole = async (values) => {
     setSavingForm(true);
     try {
-      const created = await createRbacRole(values);
+      const created = await createRbacRole({
+        name: values.name,
+        description: values.description || '',
+        permissions: []
+      });
       const newRole = {
         id: String(created.id || Date.now()),
         label: created.name,
@@ -402,9 +345,9 @@ export function RbacDashboardContent() {
       const updatedRoles = [...rolesList, newRole];
       setRolesList(updatedRoles);
 
-      // Add a column to each row of the matrix
-      const updatedMatrix = matrix.map(row => [...row, true]);
-      const updatedSavedMatrix = savedMatrix.map(row => [...row, true]);
+      // Add a clean column to each row of the matrix for the custom role
+      const updatedMatrix = matrix.map(row => [...row, false]);
+      const updatedSavedMatrix = savedMatrix.map(row => [...row, false]);
       setMatrix(updatedMatrix);
       setSavedMatrix(updatedSavedMatrix);
 
@@ -468,99 +411,6 @@ export function RbacDashboardContent() {
             <h1 className="text-[20px] sm:text-[24px] font-bold text-gray-900 tracking-tight leading-tight">
               Role-Based Access Control — Permission Matrix
             </h1>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Filter Matrix Dropdown */}
-            <div className="relative" ref={filterRef}>
-              <button
-                type="button"
-                onClick={() => setIsFilterOpen(prev => !prev)}
-                className="flex items-center gap-1.5 px-3 py-[6px] rounded-[6px] bg-white border border-gray-300 text-gray-700 text-[11px] font-medium hover:bg-gray-50 shadow-sm transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 4h12M4 8h8M6 12h4" stroke="#4b5563" strokeWidth="1.2" strokeLinecap="round" />
-                </svg>
-                {filterMode === 'all' && 'Filter Matrix: View All Roles'}
-                {filterMode === 'admin' && 'Filter Matrix: Admin Tier Only'}
-                {filterMode === 'authors' && 'Filter Matrix: Reviewers & Authors'}
-                {filterMode === 'readonly' && 'Filter Matrix: Read-Only'}
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M3 4.5L6 7.5L9 4.5" stroke="#4b5563" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-
-              {isFilterOpen && (
-                <div className="absolute right-0 mt-1 w-[180px] bg-white border border-gray-200 rounded-[8px] p-1 z-30 shadow-xl">
-                  <div
-                    onClick={() => { setFilterMode('all'); setIsFilterOpen(false); }}
-                    className={`px-2.5 py-1.5 text-[11px] rounded cursor-pointer ${filterMode === 'all' ? 'text-blue-600 bg-blue-50 font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    View All Roles
-                  </div>
-                  <div
-                    onClick={() => { setFilterMode('admin'); setIsFilterOpen(false); }}
-                    className={`px-2.5 py-1.5 text-[11px] rounded cursor-pointer ${filterMode === 'admin' ? 'text-blue-600 bg-blue-50 font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Admin Tier Only
-                  </div>
-                  <div
-                    onClick={() => { setFilterMode('authors'); setIsFilterOpen(false); }}
-                    className={`px-2.5 py-1.5 text-[11px] rounded cursor-pointer ${filterMode === 'authors' ? 'text-blue-600 bg-blue-50 font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Reviewers & Authors
-                  </div>
-                  <div
-                    onClick={() => { setFilterMode('readonly'); setIsFilterOpen(false); }}
-                    className={`px-2.5 py-1.5 text-[11px] rounded cursor-pointer ${filterMode === 'readonly' ? 'text-blue-600 bg-blue-50 font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Read-Only
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Audit Perspective Dropdown */}
-            <div className="relative" ref={auditRef}>
-              <button
-                type="button"
-                onClick={() => setIsAuditOpen(prev => !prev)}
-                className="flex items-center gap-1.5 px-3 py-[6px] rounded-[6px] bg-white border border-gray-300 text-gray-700 text-[11px] font-medium hover:bg-gray-50 shadow-sm transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 2L2 5v4c0 3 2.5 5 6 5s6-2 6-5V5L8 2z" stroke="#4b5563" strokeWidth="1.2" fill="none" />
-                </svg>
-                {auditMode === 'standard' && 'Audit Perspective: Standard'}
-                {auditMode === 'strict' && 'Audit Perspective: Strict Compliance'}
-                {auditMode === 'training' && 'Audit Perspective: Training Focus'}
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M3 4.5L6 7.5L9 4.5" stroke="#4b5563" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-
-              {isAuditOpen && (
-                <div className="absolute right-0 mt-1 w-[180px] bg-white border border-gray-200 rounded-[8px] p-1 z-30 shadow-xl">
-                  <div
-                    onClick={() => { setAuditMode('standard'); setIsAuditOpen(false); }}
-                    className={`px-2.5 py-1.5 text-[11px] rounded cursor-pointer ${auditMode === 'standard' ? 'text-blue-600 bg-blue-50 font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Standard
-                  </div>
-                  <div
-                    onClick={() => { setAuditMode('strict'); setIsAuditOpen(false); }}
-                    className={`px-2.5 py-1.5 text-[11px] rounded cursor-pointer ${auditMode === 'strict' ? 'text-blue-600 bg-blue-50 font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Strict Compliance
-                  </div>
-                  <div
-                    onClick={() => { setAuditMode('training'); setIsAuditOpen(false); }}
-                    className={`px-2.5 py-1.5 text-[11px] rounded cursor-pointer ${auditMode === 'training' ? 'text-blue-600 bg-blue-50 font-medium' : 'text-gray-700 hover:bg-gray-100'}`}
-                  >
-                    Training Focus
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
 
@@ -756,48 +606,6 @@ export function RbacDashboardContent() {
 
           {/* Action buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Risk Scan */}
-            <button
-              type="button"
-              onClick={() => {
-                setAuditMode('strict');
-                showNotice('Risk Scan completed');
-              }}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-white border border-gray-300 text-gray-700 text-[11px] font-medium hover:bg-gray-50 shadow-sm transition-colors"
-            >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 2a4 4 0 014 4" stroke="#4b5563" strokeWidth="1.2" />
-              </svg>
-              Risk Scan
-            </button>
-
-            {/* Matrix Templates */}
-            <button
-              type="button"
-              onClick={() => showNotice('Matrix Templates opened')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-white border border-gray-300 text-gray-700 text-[11px] font-medium hover:bg-gray-50 shadow-sm transition-colors"
-            >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="#4b5563" strokeWidth="1.2" />
-                <path d="M5 5h6M5 8h6M5 11h4" stroke="#4b5563" strokeWidth="1.1" />
-              </svg>
-              Matrix Templates
-            </button>
-
-            {/* Elevate Admin */}
-            <button
-              type="button"
-              onClick={handleElevateAdmin}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-white border border-gray-300 text-gray-700 text-[11px] font-medium hover:bg-gray-50 shadow-sm transition-colors"
-            >
-              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                <path d="M8 2l1.5 3.5L13 7l-2.5 2.5.5 4L8 11.5 5 13.5l.5-4L3 7l3.5-1.5L8 2z" stroke="#4b5563" strokeWidth="1.1" fill="none" />
-              </svg>
-              Elevate Admin
-            </button>
-
-            <div className="w-px h-5 bg-gray-300 mx-1 hidden lg:block" />
-
             {/* Revert to Default */}
             <button
               type="button"
@@ -828,50 +636,33 @@ export function RbacDashboardContent() {
         {/* The White Forms Below the Matrix */}
         <div className="mt-8 grid gap-5 lg:grid-cols-2">
           {/* Create a Custom Role Card */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5 text-gray-900 shadow-sm">
-            <h2 className="text-base font-semibold text-gray-900">Create a custom role</h2>
-            <Form form={createForm} layout="vertical" onFinish={handleCreateRole} className="mt-3">
-              <Form.Item
-                name="name"
-                label="Role name"
-                rules={[{ required: true, whitespace: true, max: 120, message: 'Please enter a role name.' }]}
-              >
-                <Input maxLength={120} placeholder="e.g. Regional Reviewer" />
-              </Form.Item>
+          <section className="rounded-xl border border-gray-200 bg-white p-5 text-gray-900 shadow-sm flex flex-col justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-gray-900">Create a custom role</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                Define a new role name and description. Once created, you can configure its capabilities directly in the matrix above.
+              </p>
 
-              <Form.Item name="description" label="Description">
-                <Input.TextArea rows={2} maxLength={500} placeholder="Role description and scope" />
-              </Form.Item>
+              <Form form={createForm} layout="vertical" onFinish={handleCreateRole} className="mt-4">
+                <Form.Item
+                  name="name"
+                  label="Role name"
+                  rules={[{ required: true, whitespace: true, max: 120, message: 'Please enter a role name.' }]}
+                >
+                  <Input maxLength={120} placeholder="e.g. Regional Reviewer" />
+                </Form.Item>
 
-              <Form.Item
-                name="permissions"
-                label="Permissions"
-                rules={[{ required: true, type: 'array', min: 1, message: 'Select at least one permission.' }]}
-              >
-                <Checkbox.Group className="w-full">
-                  <div className="grid gap-3 sm:grid-cols-2 max-h-[360px] overflow-y-auto pr-1">
-                    {Object.entries(catalogByResource).map(([resource, perms]) => (
-                      <div key={resource} className="rounded-lg border border-gray-200 p-3 bg-gray-50/50">
-                        <div className="text-sm font-medium capitalize text-gray-800">
-                          {resource.replace(/_/g, ' ')}
-                        </div>
-                        <div className="mt-2 grid grid-cols-2 gap-1.5">
-                          {perms.map(permission => (
-                            <Checkbox key={permission.key} value={permission.key}>
-                              {permission.action}
-                            </Checkbox>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Checkbox.Group>
-              </Form.Item>
+                <Form.Item name="description" label="Description">
+                  <Input.TextArea rows={3} maxLength={500} placeholder="Role description and scope" />
+                </Form.Item>
 
-              <Button type="primary" htmlType="submit" loading={savingForm} className="bg-blue-600">
-                Create role
-              </Button>
-            </Form>
+                <div className="pt-2">
+                  <Button type="primary" htmlType="submit" loading={savingForm} className="bg-blue-600">
+                    Create role
+                  </Button>
+                </div>
+              </Form>
+            </div>
           </section>
 
           {/* Assign a Role to a User Card */}
