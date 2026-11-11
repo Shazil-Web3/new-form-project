@@ -323,6 +323,30 @@ export const assignUserRbacRole = async (userId, data) => {
     }
   }
   persistState();
+
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const existing = JSON.parse(window.localStorage.getItem('watermelon_rbac_user_assignments_v1') || '{}');
+      existing[userId] = {
+        roleId: data.roleId,
+        expiresIn: data.expiresIn || null,
+        assignedAt: new Date().toISOString()
+      };
+      window.localStorage.setItem('watermelon_rbac_user_assignments_v1', JSON.stringify(existing));
+
+      if (data.expiresIn) {
+        const hours = data.expiresIn === '1h' ? 1 : data.expiresIn === '4h' ? 4 : 8;
+        const expiresAt = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+        window.localStorage.setItem('watermelon_rbac_temp_expiration_v1', JSON.stringify({
+          userId,
+          expiresAt,
+          duration: data.expiresIn
+        }));
+      }
+      window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));
+    }
+  } catch (e) {}
+
   return { success: true, userId, ...data };
 };
 

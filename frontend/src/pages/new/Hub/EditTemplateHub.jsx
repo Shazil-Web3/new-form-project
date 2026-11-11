@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../utils/authService';
+import { useRbac } from '../../../utils/rbacContext';
 import apiClient from '../../../api/apiClient';
 import MainLayout from '../../../components/new/tailwind/MainLayout';
 import EditTemplate from '../../../components/Home/components/Dashboard/Templates/EditTemplate';
@@ -14,6 +15,7 @@ import { Spin } from 'antd';
 export default function EditTemplateHub() {
   const { tempId } = useParams();
   const { user } = useAuth();
+  const { can, isTemporary } = useRbac();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -104,7 +106,7 @@ export default function EditTemplateHub() {
         obsoleteDocs={obsoleteDocs}
         itemType="template"
         onRevise={() => setIsRevising(true)}
-        canRevise={true}
+        canRevise={can('t_create') && !isTemporary}
       />
       {loading || !template ? (
         <div className="flex items-center justify-center min-h-[400px]">
@@ -138,7 +140,7 @@ export default function EditTemplateHub() {
           onSuccess={handleBack}
           obsoleteDocIds={obsoleteDocIds}
         />
-      ) : template.status === 'draft' ? (
+      ) : (template.status === 'draft' && can('t_edit') && !isTemporary) ? (
         <EditTemplate
           template={template}
           user={user}
@@ -162,6 +164,7 @@ export default function EditTemplateHub() {
           onCancel={handleBack}
           onRevise={() => setIsRevising(true)}
           onArchive={() => setIsArchiving(true)}
+          readOnly={!can('t_edit') || isTemporary}
           obsoleteDocIds={obsoleteDocIds}
         />
       )}

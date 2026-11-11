@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useRbac } from "../../../../utils/rbacContext";
 
 /**
  * Hook to manage user permissions for acting on strikes and items.
@@ -11,14 +12,19 @@ export const useCommentPermissions = ({
   currentUserEmail,
   sessionCreatedIds
 }) => {
+  const { can, activeRole } = useRbac();
+  const hasCommentApproveCap = can('d_comment_review_approve') || can('t_comment_review_approve');
+
   const canActOnStrike = useCallback((strikeEl) => {
     if (!strikeEl) return false;
+    if (activeRole?.id === 'super_admin' || user?.isSuperAdmin) return true;
+    if (!hasCommentApproveCap) return false;
 
     // Check role restriction: reviewer cannot act on admin text
     const creatorRole = strikeEl.getAttribute('data-creator-role') || (strikeEl.classList.contains('admin-edit') ? 'admin' : '');
-    const rawRole = userRole || user?.role || '';
+    const rawRole = userRole || user?.role || activeRole?.id || '';
     const normalizedRole = String(rawRole).trim().toLowerCase();
-    const isCurrentAdmin = normalizedRole === 'admin' || normalizedRole === '1' || normalizedRole === 'author';
+    const isCurrentAdmin = normalizedRole === 'admin' || normalizedRole === '1' || normalizedRole === 'author' || activeRole?.id === 'admin';
     
     if (creatorRole === 'admin' && !isCurrentAdmin) {
       return false; // Reviewers cannot accept/reject admin (author) text
@@ -32,7 +38,7 @@ export const useCommentPermissions = ({
     if (currentUserId && creatorId && currentUserId === String(creatorId)) return false;
     if (currentUserEmail && creatorEmail && currentUserEmail === creatorEmail) return false;
     return true;
-  }, [currentUserEmail, currentUserId, userRole, user]);
+  }, [currentUserEmail, currentUserId, userRole, user, activeRole, hasCommentApproveCap]);
 
   const isCommentItem = (item) => {
     const t = String(item?.type || item?.elementType || 'comment').trim().toLowerCase();
@@ -42,6 +48,8 @@ export const useCommentPermissions = ({
   const canApproveOrRejectItem = useCallback((item) => {
     if (disableAcceptReject) return false;
     if (!item) return false;
+    if (activeRole?.id === 'super_admin' || user?.isSuperAdmin) return true;
+    if (!hasCommentApproveCap) return false;
     
     // Check if current user is the creator of this item
     const creatorId = item.userId;
@@ -62,15 +70,15 @@ export const useCommentPermissions = ({
 
     // Suggested edits: reviewers cannot accept/reject changes on author/admin-owned text.
     const creatorRole = String(item.creatorRole || '').trim().toLowerCase();
-    const rawRole = userRole || user?.role || '';
+    const rawRole = userRole || user?.role || activeRole?.id || '';
     const normalizedRole = String(rawRole).trim().toLowerCase();
-    const isCurrentAdmin = normalizedRole === 'admin' || normalizedRole === '1' || normalizedRole === 'author';
+    const isCurrentAdmin = normalizedRole === 'admin' || normalizedRole === '1' || normalizedRole === 'author' || activeRole?.id === 'admin';
     const isCreatorAdmin = creatorRole === 'admin' || creatorRole === 'author';
     if (isCreatorAdmin && !isCurrentAdmin) {
       return false;
     }
     return true;
-  }, [userRole, user, currentUserId, currentUserEmail, disableAcceptReject, sessionCreatedIds]);
+  }, [userRole, user, currentUserId, currentUserEmail, disableAcceptReject, sessionCreatedIds, activeRole, hasCommentApproveCap]);
 
   return {
     canActOnStrike,

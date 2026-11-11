@@ -13,6 +13,7 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useTemplateSocket } from '../hooks/useTemplateSocket';
+import { useRbac } from '../../../utils/rbacContext';
 import './styles/CommentCore.css';
 import './styles/ReviewComments.css';
 
@@ -47,6 +48,10 @@ const ReviewComments = ({
   }, []);
 
   const effectiveIsDraft = isRevise ? false : isDraft;
+  const { can, activeRole } = useRbac();
+  const canCommentReview = can('d_comment_review_approve') || can('t_comment_review_approve') || user?.isSuperAdmin || activeRole?.id === 'super_admin';
+  const effectiveShowFloatingToolbar = showFloatingToolbar && canCommentReview;
+  const effectiveShowApprovalActions = showApprovalActions && canCommentReview;
 
   // Socket.io for real-time comment sync
   const socketCallbacks = socketEnabled ? {
@@ -86,7 +91,7 @@ const ReviewComments = ({
         props.onContentChange(change);
       }
     },
-    showFloatingElements: showFloatingToolbar,
+    showFloatingElements: effectiveShowFloatingToolbar,
     handleMakeEditable,
     enableReplies: true, // Enable reply system in review mode
     isDraft: effectiveIsDraft,
@@ -97,7 +102,7 @@ const ReviewComments = ({
   // Portal the FloatingToolbar into the scroll container (pagesContainerRef)
   // This ensures checking scrollTop in CommentCore logic aligns with the container's scroll
   const renderToolbar = () => {
-    if (isMounted && showFloatingToolbar && pagesContainerRef && pagesContainerRef.current) {
+    if (isMounted && effectiveShowFloatingToolbar && pagesContainerRef && pagesContainerRef.current) {
       return (
         <>
           {ReactDOM.createPortal(
@@ -131,7 +136,7 @@ const ReviewComments = ({
       {showRightRail && <system.RightRail system={system} />}
       
       {/* Approval actions UI is handled by ReviewComments.css styling */}
-      {showApprovalActions && (
+      {effectiveShowApprovalActions && (
         <div className="approval-actions">
           {/* Approve/Reject buttons are rendered by CommentCore */}
         </div>

@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-d
 import AuthCard from "./components/AuthCard";
 import InvitedUserRegistration from "./components/InvitedUserRegistration";
 import { AuthProvider } from "./utils/authService";
+import { RbacProvider } from "./utils/rbacContext";
 import ProtectedRoute from "./utils/ProtectedRoute";
 import Home from "./components/Home/Home";
 import Editor from "./components/Editor/Editor";
@@ -25,126 +26,128 @@ import RbacDashboardPage from "./pages/new/Workspace/RbacDashboardPage";
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Authentication & Base Routes */}
-          <Route path="/login" element={<AuthCard />} />
-          <Route path="/join/:token" element={<InvitedUserRegistration />} />
-          
-          {/* Main Home & Dashboard Routes - NOW SET TO THE NEW UI HUB DASHBOARD */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <UnifiedDashboard initialType="all" />
-            </ProtectedRoute>
-          } />
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <UnifiedDashboard initialType="all" />
-            </ProtectedRoute>
-          } />
-          <Route path="/workspace" element={
-            <ProtectedRoute>
-              <UnifiedDashboard initialType="all" />
-            </ProtectedRoute>
-          } />
+      <RbacProvider>
+        <Router>
+          <Routes>
+            {/* Authentication & Base Routes */}
+            <Route path="/login" element={<AuthCard />} />
+            <Route path="/join/:token" element={<InvitedUserRegistration />} />
+            
+            {/* Main Home & Dashboard Routes - NOW SET TO THE NEW UI HUB DASHBOARD */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <UnifiedDashboard initialType="all" />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <UnifiedDashboard initialType="all" />
+              </ProtectedRoute>
+            } />
+            <Route path="/workspace" element={
+              <ProtectedRoute>
+                <UnifiedDashboard initialType="all" />
+              </ProtectedRoute>
+            } />
 
-          {/* Legacy fallback route for old dashboard */}
-          <Route path="/old-home" element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          } />
-          
-          {/* PROTECTED UNIFIED DOCUMENT EDITOR ROUTE */}
-          <Route path="/document/:docId" element={
-            <ProtectedRoute>
-              <EditDocumentHub />
-            </ProtectedRoute>
-          } />
+            {/* Legacy fallback route for old dashboard */}
+            <Route path="/old-home" element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            } />
+            
+            {/* PROTECTED UNIFIED DOCUMENT EDITOR ROUTE */}
+            <Route path="/document/:docId" element={
+              <ProtectedRoute requiredCapability="folder_file_access">
+                <EditDocumentHub />
+              </ProtectedRoute>
+            } />
 
-          {/* New UI Hub & Workspace Routes */}
-          <Route path="/workspace/tasks" element={
-            <ProtectedRoute>
-              <MyTasksPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/tasks" element={
-            <ProtectedRoute>
-              <MyTasksPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/workspace/account-management" element={
-            <ProtectedRoute allowedRoles={['admin', 'project_manager']}>
-              <AccountManagementPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/workspace/users" element={
-            <ProtectedRoute allowedRoles={['admin', 'project_manager']}>
-              <AccountManagementPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/workspace/audit-trail" element={
-            <ProtectedRoute allowedRoles={['admin', 'project_manager']}>
-              <AuditTrailPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/workspace/rbac" element={
-            <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
-              <RbacDashboardPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/workspace/trending" element={
-            <ProtectedRoute>
-              <TrendingPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/calendar" element={
-            <ProtectedRoute>
-              <CalendarPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/workspace/calendar" element={<Navigate to="/calendar" replace />} />
-          <Route path="/training/*" element={
-            <ProtectedRoute>
-              <TrainingApp />
-            </ProtectedRoute>
-          } />
-          <Route path="/references" element={
-            <ProtectedRoute>
-              <ReferencesPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/accounts" element={<Navigate to="/workspace/account-management" replace />} />
-          <Route path="/published-docs" element={
-            <ProtectedRoute>
-              <UnifiedDashboard initialType="all" initialActiveTab="Published" />
-            </ProtectedRoute>
-          } />
-          <Route path="/repository" element={
-            <ProtectedRoute>
-              <UnifiedDashboard initialType="all" initialActiveTab="Archived" />
-            </ProtectedRoute>
-          } />
-          <Route path="/document/new" element={
-            <ProtectedRoute allowedRoles={['admin', 'project_manager', 'author', 'reviewer', 'approver', 'editor', 'member', 'user']}>
-              <CreateDocumentHub />
-            </ProtectedRoute>
-          } />
-          <Route path="/template/new" element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <CreateTemplateHub />
-            </ProtectedRoute>
-          } />
-          <Route path="/template/:tempId" element={
-            <ProtectedRoute>
-              <EditTemplateHub />
-            </ProtectedRoute>
-          } />
+            {/* New UI Hub & Workspace Routes */}
+            <Route path="/workspace/tasks" element={
+              <ProtectedRoute>
+                <MyTasksPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/tasks" element={
+              <ProtectedRoute>
+                <MyTasksPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/workspace/account-management" element={
+              <ProtectedRoute requiredCapability="manage_user">
+                <AccountManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/workspace/users" element={
+              <ProtectedRoute requiredCapability="manage_user">
+                <AccountManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/workspace/audit-trail" element={
+              <ProtectedRoute requiredCapability="report_access">
+                <AuditTrailPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/workspace/rbac" element={
+              <ProtectedRoute allowedRoles={['admin', 'super_admin']}>
+                <RbacDashboardPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/workspace/trending" element={
+              <ProtectedRoute>
+                <TrendingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/calendar" element={
+              <ProtectedRoute>
+                <CalendarPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/workspace/calendar" element={<Navigate to="/calendar" replace />} />
+            <Route path="/training/*" element={
+              <ProtectedRoute>
+                <TrainingApp />
+              </ProtectedRoute>
+            } />
+            <Route path="/references" element={
+              <ProtectedRoute>
+                <ReferencesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/accounts" element={<Navigate to="/workspace/account-management" replace />} />
+            <Route path="/published-docs" element={
+              <ProtectedRoute requiredCapability="folder_file_access">
+                <UnifiedDashboard initialType="all" initialActiveTab="Published" />
+              </ProtectedRoute>
+            } />
+            <Route path="/repository" element={
+              <ProtectedRoute requiredCapability="folder_file_access">
+                <UnifiedDashboard initialType="all" initialActiveTab="Archived" />
+              </ProtectedRoute>
+            } />
+            <Route path="/document/new" element={
+              <ProtectedRoute requiredCapability="d_create">
+                <CreateDocumentHub />
+              </ProtectedRoute>
+            } />
+            <Route path="/template/new" element={
+              <ProtectedRoute requiredCapability="t_create">
+                <CreateTemplateHub />
+              </ProtectedRoute>
+            } />
+            <Route path="/template/:tempId" element={
+              <ProtectedRoute requiredCapability="folder_file_access">
+                <EditTemplateHub />
+              </ProtectedRoute>
+            } />
 
-          {/* Catch-all fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
+            {/* Catch-all fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </RbacProvider>
     </AuthProvider>
   );
 }

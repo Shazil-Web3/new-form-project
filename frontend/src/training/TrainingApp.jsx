@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import { useAuth } from '../utils/authService';
+import { useRbac } from '../utils/rbacContext';
 import apiClient from '../api/apiClient';
 import { TrainingContext } from './context';
 import { trainingService, useTrainingState } from './store';
@@ -64,23 +65,23 @@ const roleFromSiteUser = (siteRole) => {
   return 'employee';
 };
 
-function RoutesForRole({ role }) {
+function RoutesForRole({ role, can }) {
   if (role === 'administrator') {
     return (
       <Routes>
         <Route path="dashboard" element={<B44Page><B44Dashboard /></B44Page>} />
-        <Route path="catalog" element={<B44Page><B44AdminContent /></B44Page>} />
-        <Route path="library" element={<B44Page><B44AdminClassLibrary /></B44Page>} />
-        <Route path="matrix" element={<B44Page><B44AdminMatrix /></B44Page>} />
-        <Route path="matrix-table" element={<B44Page><B44AdminMatrixTable /></B44Page>} />
+        <Route path="catalog" element={!can || can('tr_content_catalog') ? <B44Page><B44AdminContent /></B44Page> : <Navigate to="/training/dashboard" replace />} />
+        <Route path="library" element={!can || can('tr_class_library') ? <B44Page><B44AdminClassLibrary /></B44Page> : <Navigate to="/training/dashboard" replace />} />
+        <Route path="matrix" element={!can || can('tr_training_matrix') ? <B44Page><B44AdminMatrix /></B44Page> : <Navigate to="/training/dashboard" replace />} />
+        <Route path="matrix-table" element={!can || can('tr_training_matrix') ? <B44Page><B44AdminMatrixTable /></B44Page> : <Navigate to="/training/dashboard" replace />} />
         <Route path="class/:classId" element={<B44Page><B44AdminClassDetail /></B44Page>} />
-        <Route path="quiz/:classId" element={<B44Page><B44QuizBuilder /></B44Page>} />
-        <Route path="users" element={<B44Page><B44AdminUsers /></B44Page>} />
-        <Route path="assignments" element={<B44Page><B44AdminAssignments /></B44Page>} />
+        <Route path="quiz/:classId" element={!can || can('tr_create') ? <B44Page><B44QuizBuilder /></B44Page> : <Navigate to="/training/dashboard" replace />} />
+        <Route path="users" element={!can || can('manage_user') ? <B44Page><B44AdminUsers /></B44Page> : <Navigate to="/training/dashboard" replace />} />
+        <Route path="assignments" element={!can || can('tr_assignments') ? <B44Page><B44AdminAssignments /></B44Page> : <Navigate to="/training/dashboard" replace />} />
         <Route path="tasks" element={<B44Page><B44ManagerTasks /></B44Page>} />
-        <Route path="reports" element={<Reports />} />
-        <Route path="records" element={<RecordsTab />} />
-        <Route path="numbering" element={<NumberingRules />} />
+        <Route path="reports" element={!can || can('tr_reports') ? <Reports /> : <Navigate to="/training/dashboard" replace />} />
+        <Route path="records" element={!can || can('tr_records') ? <RecordsTab /> : <Navigate to="/training/dashboard" replace />} />
+        <Route path="numbering" element={!can || can('tr_numbering_rule') ? <NumberingRules /> : <Navigate to="/training/dashboard" replace />} />
         <Route path="*" element={<Navigate to="/training/dashboard" replace />} />
       </Routes>
     );
@@ -113,9 +114,16 @@ function RoutesForRole({ role }) {
 
 export default function TrainingApp() {
   const { user } = useAuth();
+  const { can, activeRole } = useRbac();
   const navigate = useNavigate();
   const state = useTrainingState();
-  const [role, setRole] = useState(() => roleFromSiteUser((user?.role || '').toLowerCase()));
+
+  const isTrainingAdmin = can('manage_training') || can('tr_create') || can('tr_training_matrix') || activeRole?.id === 'training_admin' || user?.role === 'admin' || user?.isSuperAdmin;
+
+  const [role, setRole] = useState(() => {
+    if (isTrainingAdmin) return 'administrator';
+    return roleFromSiteUser((user?.role || '').toLowerCase());
+  });
   const [ready, setReady] = useState(false);
 
   const currentUserId = user?.id || user?.userId;
@@ -124,13 +132,14 @@ export default function TrainingApp() {
     if (!currentUserId) return;
     let cancelled = false;
     (async () => {
-      let resolvedRole = roleFromSiteUser((user?.role || '').toLowerCase());
+      let resolvedRole = isTrainingAdmin ? 'administrator' : roleFromSiteUser((user?.role || '').toLowerCase());
       try {
         const { data } = await apiClient.get('/api/training/me/role');
         if (data?.role) resolvedRole = data.role;
       } catch (error) {
         // Fall back to the client-side guess if the endpoint is unreachable.
       }
+      if (isTrainingAdmin) resolvedRole = 'administrator';
       if (cancelled) return;
       setRole(resolvedRole);
       await trainingService.hydrate(resolvedRole, currentUserId);
@@ -139,7 +148,7 @@ export default function TrainingApp() {
     return () => {
       cancelled = true;
     };
-  }, [currentUserId, user?.role]);
+  }, [currentUserId, user?.role, isTrainingAdmin]);
 
   const persona = useMemo(
     () => ({
@@ -150,7 +159,22 @@ export default function TrainingApp() {
     [currentUserId, user]
   );
 
-  const nav = NAV[role];
+  const nav = useMemo(() => {
+    const rawNav = NAV[role] || NAV.employee;
+    if (role !== 'administrator') return rawNav;
+    return rawNav.filter(item => {
+      if (item.to === 'dashboard') return true;
+      if (item.to === 'catalog') return can('tr_content_catalog');
+      if (item.to === 'library') return can('tr_class_library');
+      if (item.to === 'assignments') return can('tr_assignments');
+      if (item.to === 'matrix' || item.to === 'matrix-table') return can('tr_training_matrix');
+      if (item.to === 'reports') return can('tr_reports');
+      if (item.to === 'records') return can('tr_records');
+      if (item.to === 'numbering') return can('tr_numbering_rule');
+      if (item.to === 'users') return can('manage_user');
+      return true;
+    });
+  }, [role, can]);
   const roleLabel = { administrator: 'Administrator', manager: 'Manager', employee: 'Student' }[role];
 
   return (
@@ -244,7 +268,7 @@ export default function TrainingApp() {
           </nav>
 
           <main className="flex-1 overflow-y-auto">
-            {ready ? <RoutesForRole role={role} key={role} /> : null}
+            {ready ? <RoutesForRole role={role} can={can} key={role} /> : null}
           </main>
         </div>
       </div>

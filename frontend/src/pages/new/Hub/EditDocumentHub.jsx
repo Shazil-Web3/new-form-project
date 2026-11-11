@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../utils/authService';
+import { useRbac } from '../../../utils/rbacContext';
 import apiClient from '../../../api/apiClient';
 import MainLayout from '../../../components/new/tailwind/MainLayout';
 import ReviseDocument from '../../../components/Home/components/Dashboard/Documents/ReviseDocument';
@@ -35,6 +36,7 @@ const parseWorkflowParticipants = (raw) => {
 export default function EditDocumentHub() {
   const { docId } = useParams();
   const { user } = useAuth();
+  const { can, canEditDocument, isTemporary } = useRbac();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -200,7 +202,8 @@ export default function EditDocumentHub() {
     (participant) => String(participant?.status || '').toLowerCase() === 'rejected'
   );
   const isLockedWorkflowStatus = LOCKED_WORKFLOW_STATUSES.includes(docStatus) && !hasUnresolvedRejection;
-  const isReadOnly = isReferenceView || isLockedWorkflowStatus || searchParams.get('readonly') === 'true';
+  const canEdit = canEditDocument(document);
+  const isReadOnly = !canEdit || isReferenceView || isLockedWorkflowStatus || searchParams.get('readonly') === 'true' || isTemporary;
 
   const obsoleteDocIds = obsoleteDocs.map((d) => d.id);
 
@@ -210,7 +213,7 @@ export default function EditDocumentHub() {
         obsoleteDocs={obsoleteDocs}
         itemType="document"
         onRevise={handleStartRevision}
-        canRevise={!isReferenceView}
+        canRevise={!isReferenceView && can('d_create') && !isTemporary}
       />
       {loading || !document ? (
         <div className="flex items-center justify-center min-h-[400px]">

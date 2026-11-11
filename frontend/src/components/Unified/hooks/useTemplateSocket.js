@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { socket } from '../../../utils/SocketProvider';
+import { useRbac } from '../../../utils/rbacContext';
 
 /**
  * Centralized Socket.io hook for template real-time synchronization
@@ -87,9 +88,15 @@ export const useTemplateSocket = (templateId, mode, callbacks = {}) => {
     };
   }, [templateId, mode]);
 
+  const { can, isTemporary } = useRbac();
+
   // Emit functions
   const emitContentChange = useCallback((data) => {
-    if (!templateId) {
+    if (!templateId || isTemporary) {
+      return;
+    }
+    // Block sync emission if user lacks template and document edit capabilities
+    if (!can('t_edit') && !can('d_edit_same')) {
       return;
     }
     // data can be a string (legacy) or an object { content, headerHTML, footerHTML }
@@ -98,7 +105,7 @@ export const useTemplateSocket = (templateId, mode, callbacks = {}) => {
     } else {
       socket.emit('updateTemplateContent', { templateId, ...data });
     }
-  }, [templateId]);
+  }, [templateId, isTemporary, can]);
 
   const emitCommentAdded = useCallback((comment) => {
     if (!templateId) {

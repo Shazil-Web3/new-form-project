@@ -54,6 +54,7 @@ import moment from 'moment';
 import TemplateApproversConfig from './TemplateApproversConfig';
 import NumbersManagement from './NumbersManagement';
 import { RbacDashboardContent } from '../../../../pages/new/Workspace/RbacDashboardPage';
+import { useRbac } from '../../../../utils/rbacContext';
 
 const { Text, Title, Paragraph } = Typography;
 const { Search } = Input;
@@ -62,8 +63,12 @@ const { TabPane } = Tabs;
 const { TextArea } = Input;
 
 const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetchUserData, departments, sites, templates = [], getConsistentColor }) => {
+  const { can, activeRole } = useRbac();
   const currentOrgId = user?.orgId || user?.organization_id || user?.organizationId || user?.org_id;
-  const canManageUsers = user?.role === 'admin' || user?.isSuperAdmin;
+  const isAdminOrSuper = user?.role === 'admin' || user?.isSuperAdmin || activeRole?.id === 'super_admin' || activeRole?.id === 'admin';
+  const canManageUsers = isAdminOrSuper || can('manage_user');
+  const canManageSite = isAdminOrSuper || can('manage_site');
+  const canCreateAccount = isAdminOrSuper || can('create_account');
   const parseSites = (siteValue) => {
     if (!siteValue) return [];
     try {
@@ -995,7 +1000,7 @@ const renderUserTableView = () => {
     }, */
   ];
 
-if (user?.role === 'admin') {
+if (canManageUsers) {
   columns.push({
       title: 'Action',
       key: 'action',
@@ -1064,7 +1069,7 @@ const renderUserListView = () => {
 
               return (
                 <List.Item
-                  actions={user?.role === 'admin' && ([
+                  actions={canManageUsers && ([
                     <Button key="edit" 
                       type="text" 
                       icon={<EditOutlined />}
@@ -1486,7 +1491,7 @@ const renderUserListView = () => {
         <Switch 
           checked={approver === 'yes'} 
           onChange={() => handleToggleTemplateApprover(record)}
-          disabled={!user || user.role !== 'admin'}
+          disabled={!canManageUsers}
         />
       ),
     }
@@ -1620,7 +1625,7 @@ const renderUserListView = () => {
               </div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
 
-                {user?.role === 'admin' && (
+                {canCreateAccount && (
                   <>
                     <Button 
                       type="primary" 
@@ -1650,7 +1655,7 @@ const renderUserListView = () => {
 
         </TabPane>
 
-        {user?.role === 'admin' && (
+        {canManageUsers && (
           <TabPane 
             tab={
               <>
@@ -1677,7 +1682,7 @@ const renderUserListView = () => {
           </TabPane>
         )}
 
-        {user?.role === 'admin' && (
+        {canManageUsers && (
           <TabPane 
             tab={
               <>
@@ -1704,7 +1709,7 @@ const renderUserListView = () => {
           </TabPane>
         )}
 
-        {user?.role === 'admin' && (
+        {canManageUsers && (
           <TabPane 
             tab={
               <>
@@ -1747,7 +1752,7 @@ const renderUserListView = () => {
           </TabPane>
         )}
 
-        {user?.role === 'admin' && (
+        {canManageSite && (
           <TabPane 
             tab={
               <>
@@ -1790,7 +1795,7 @@ const renderUserListView = () => {
           </TabPane>
         )}
 
-        {user?.role === 'admin' && (
+        {canManageUsers && (
           <TabPane 
             tab={
               <>
@@ -1807,7 +1812,7 @@ const renderUserListView = () => {
           </TabPane>
         )}
 
-        {user?.role === 'admin' && (
+        {canManageUsers && (
           <TabPane 
             tab={
               <>
@@ -1829,7 +1834,7 @@ const renderUserListView = () => {
           </TabPane>
         )}
 
-        {user?.role === 'admin' && (
+        {canManageUsers && (
           <TabPane 
             tab={
               <>

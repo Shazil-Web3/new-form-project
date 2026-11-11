@@ -328,10 +328,25 @@ export function RbacDashboardContent() {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem(STORAGE_KEY_MATRIX, JSON.stringify(matrix));
         window.localStorage.setItem(STORAGE_KEY_ROLES, JSON.stringify(rolesList));
+        window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));
       }
     } catch (e) {}
     showNotice('Changes Saved — local only');
     message.success('Matrix changes saved.');
+  };
+
+  // Elevate Admin role to full permissions in the matrix
+  const handleElevateAdmin = () => {
+    const adminColIdx = rolesList.findIndex(r => r.id === 'admin' || r.key === 'admin');
+    if (adminColIdx === -1) return;
+    setMatrix(prev => prev.map(row => {
+      const next = [...row];
+      next[adminColIdx] = true;
+      return next;
+    }));
+    setFilterMode('admin');
+    showNotice('Admin role elevated to full permissions (unsaved)');
+    message.info('Elevated Admin permissions across all capabilities. Click Save Changes to commit.');
   };
 
   // Revert to initial template
@@ -349,6 +364,7 @@ export function RbacDashboardContent() {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.setItem(STORAGE_KEY_MATRIX, JSON.stringify(revertedMatrix));
         window.localStorage.setItem(STORAGE_KEY_ROLES, JSON.stringify(revertedRoles));
+        window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));
       }
     } catch (e) {}
 
@@ -396,6 +412,7 @@ export function RbacDashboardContent() {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem(STORAGE_KEY_ROLES, JSON.stringify(updatedRoles));
           window.localStorage.setItem(STORAGE_KEY_MATRIX, JSON.stringify(updatedMatrix));
+          window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));
         }
       } catch (e) {}
 
@@ -770,10 +787,7 @@ export function RbacDashboardContent() {
             {/* Elevate Admin */}
             <button
               type="button"
-              onClick={() => {
-                setFilterMode('admin');
-                showNotice('Elevate Admin requested');
-              }}
+              onClick={handleElevateAdmin}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-white border border-gray-300 text-gray-700 text-[11px] font-medium hover:bg-gray-50 shadow-sm transition-colors"
             >
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">

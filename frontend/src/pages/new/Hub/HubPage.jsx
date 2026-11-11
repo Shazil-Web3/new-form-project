@@ -12,6 +12,7 @@ import FilterBar from '../../../components/new/tailwind/FilterBar';
 import EmptyState from '../../../components/new/tailwind/EmptyState';
 import Pagination from '../../../components/new/tailwind/Pagination';
 import { useAuth } from '../../../utils/authService';
+import { useRbac } from '../../../utils/rbacContext';
 
 // Subcomponents & Custom hooks / utilities
 
@@ -26,6 +27,7 @@ import { getDisplayCategory, getMockedDueDate, getApproversForTemplate, getAppro
 
 export default function HubPage({ initialType, initialActiveTab }) {
   const { user } = useAuth();
+  const { can, activeRole } = useRbac();
   const navigate = useNavigate();
 
   const state = useDashboardState(initialType, user, initialActiveTab);
@@ -110,17 +112,19 @@ export default function HubPage({ initialType, initialActiveTab }) {
             ))}
           </div>
 
-          {/* Add buttons relocated to the end of the main scope switcher row */}
-          {user?.role !== 'viewer' && (
+          {/* Add buttons wired directly to RBAC matrix capabilities (d_create & t_create) */}
+          {(can('d_create') || can('t_create')) && (
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/document/new')}
-                className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-all duration-150 flex items-center gap-1.5 shadow-sm hover:shadow"
-              >
-                <span className="material-symbols-outlined text-[16px]">add</span>
-                <span>Add Document</span>
-              </button>
-              {user?.role === 'admin' && (
+              {can('d_create') && (
+                <button
+                  onClick={() => navigate('/document/new')}
+                  className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold px-4 py-2.5 rounded-lg transition-all duration-150 flex items-center gap-1.5 shadow-sm hover:shadow"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <span>Add Document</span>
+                </button>
+              )}
+              {can('t_create') && (
                 <button
                   onClick={() => navigate('/template/new')}
                   className="border border-blue-600 bg-white hover:bg-blue-50 text-blue-600 hover:text-blue-700 active:bg-blue-100 text-xs font-semibold px-4 py-2.5 rounded-lg transition-all duration-150 flex items-center gap-1.5 shadow-sm hover:shadow"

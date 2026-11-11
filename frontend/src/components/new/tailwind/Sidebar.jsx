@@ -9,12 +9,14 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../utils/authService';
+import { useRbac } from '../../../utils/rbacContext';
 
 export default function Sidebar({ activeRoute }) {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { can, activeRole } = useRbac();
   const [isExpanded, setIsExpanded] = useState(false);
-  const userRole = (user?.role || 'viewer').toLowerCase();
+  const userRole = (user?.role || activeRole?.id || 'viewer').toLowerCase();
 
   const allMenuItems = [
     {
@@ -41,7 +43,7 @@ export default function Sidebar({ activeRoute }) {
       name: 'Account Management',
       path: '/workspace/account-management',
       icon: 'person',
-      allowedRoles: ['admin', 'project_manager'],
+      requiredCapability: 'manage_user',
     },
     {
       name: 'References',
@@ -52,7 +54,7 @@ export default function Sidebar({ activeRoute }) {
       name: 'Audit Trail',
       path: '/workspace/audit-trail',
       icon: 'history',
-      allowedRoles: ['admin', 'project_manager'],
+      requiredCapability: 'report_access',
     },
     {
       name: 'RBAC Dashboard',
@@ -74,9 +76,14 @@ export default function Sidebar({ activeRoute }) {
   ];
 
   const menuItems = allMenuItems.filter((item) => {
-    if (!item.allowedRoles) return true;
-    if (user?.isSuperAdmin && item.allowedRoles.includes('admin')) return true;
-    return item.allowedRoles.includes(userRole);
+    if (user?.isSuperAdmin || activeRole?.id === 'super_admin') return true;
+    if (item.requiredCapability && !can(item.requiredCapability)) {
+      return false;
+    }
+    if (item.allowedRoles) {
+      return item.allowedRoles.includes(userRole) || item.allowedRoles.includes(activeRole?.id);
+    }
+    return true;
   });
 
   return (

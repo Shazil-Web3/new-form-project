@@ -10,6 +10,7 @@ import PropTypes from 'prop-types';
 import ProgressToggle from './ProgressToggle';
 import ApproverAvatars from './ApproverAvatars';
 import ActionMenu from './ActionMenu';
+import { useRbac } from '../../../../utils/rbacContext';
 import { getStatusTagColor, getInlineDueDateInfo, getContentPreviewText, getReceivedAt } from '../utils/dashboardUtils';
 
 export default function DashboardTable({
@@ -27,12 +28,15 @@ export default function DashboardTable({
   onPreviewItem,
   onReassign,
 }) {
+  const { can, canEditDocument } = useRbac();
+
   const canEditItem = (item) => {
     if (!currentUser) return false;
-    if (currentUser.role === 'author') {
-      return Number(currentUser.id) === Number(item.created_by) && item.status === 'draft';
+    const isTemplate = item.itemType === 'template';
+    if (isTemplate) {
+      return can('t_edit') && (currentUser.role === 'admin' || Number(currentUser.id) === Number(item.created_by));
     }
-    return currentUser.role === 'admin' || currentUser.role === 'project_manager' || Number(currentUser.id) === Number(item.created_by);
+    return canEditDocument(item);
   };
 
   const canReassignItem = (item) => {

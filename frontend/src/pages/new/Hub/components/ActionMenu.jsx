@@ -8,14 +8,23 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../../../../utils/authService';
+import { useRbac } from '../../../../utils/rbacContext';
 
 export default function ActionMenu({ item, activeTab, onAction }) {
   const [isOpen, setIsOpen] = useState(false);
   const isTemplate = item.itemType === 'template';
   const { user } = useAuth();
+  const { can, canEditDocument, activeRole } = useRbac();
 
   const isAuthor = user ? (Number(item.created_by) === Number(user.id) || user.role === 'admin') : false;
   const statusLower = String(item.status || '').toLowerCase();
+
+  const canEdit = isTemplate ? can('t_edit') : canEditDocument(item);
+  const canDeleteOrPullBack = isTemplate ? can('t_delete') : can('d_delete');
+  const canCreateOrRevise = isTemplate ? can('t_create') : can('d_create');
+  const canView = can('folder_file_access');
+  const canUse = canView && activeRole?.id !== 'temp_view';
+  const canPublish = canCreateOrRevise && (user?.role === 'admin' || user?.isSuperAdmin || activeRole?.id === 'super_admin' || activeRole?.id === 'admin');
 
   const isApprover = (() => {
     if (!user?.id) return false;
@@ -65,7 +74,7 @@ export default function ActionMenu({ item, activeTab, onAction }) {
   const isDraftItem = statusLower === 'draft' || statusLower === 'archive_draft';
   const hasDraftActions = (activeTab === 'Draft' || (activeTab === 'In Progress' && isDraftItem));
   const hasInProgressActions = activeTab === 'In Progress' && isAuthor && !isDraftItem;
-  const hasPublishedActions = activeTab === 'Published' && user?.role !== 'viewer';
+  const hasPublishedActions = activeTab === 'Published' && canView;
   const hasArchivedActions = activeTab === 'Archived';
 
   if (!hasDraftActions && !hasInProgressActions && !hasPublishedActions && !hasArchivedActions) {
@@ -90,29 +99,35 @@ export default function ActionMenu({ item, activeTab, onAction }) {
             {(activeTab === 'Draft' || (activeTab === 'In Progress' && isDraftItem)) && (
               isAuthor ? (
                 <>
-                  <button
-                    onClick={() => handleSelect(item.status === 'archive_draft' ? 'archive_edit' : 'edit')}
-                    className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 border-b border-outline-variant/30 font-semibold"
-                  >
-                    <span className="material-symbols-outlined text-xs">{item.status === 'archive_draft' ? 'inventory_2' : 'edit'}</span>
-                    {item.status === 'archive_draft' ? 'Edit Archive Draft' : (isTemplate ? 'Resume' : 'Edit')}
-                  </button>
-                  <button
-                    onClick={() => handleSelect('delete')}
-                    className="w-full px-3 py-1.5 text-xs text-error hover:bg-error/10 transition-colors flex items-center gap-2 font-semibold"
-                  >
-                    <span className="material-symbols-outlined text-xs text-error">delete</span>
-                    Discard
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() => handleSelect(item.status === 'archive_draft' ? 'archive_edit' : 'edit')}
+                      className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 border-b border-outline-variant/30 font-semibold"
+                    >
+                      <span className="material-symbols-outlined text-xs">{item.status === 'archive_draft' ? 'inventory_2' : 'edit'}</span>
+                      {item.status === 'archive_draft' ? 'Edit Archive Draft' : (isTemplate ? 'Resume' : 'Edit')}
+                    </button>
+                  )}
+                  {canDeleteOrPullBack && (
+                    <button
+                      onClick={() => handleSelect('delete')}
+                      className="w-full px-3 py-1.5 text-xs text-error hover:bg-error/10 transition-colors flex items-center gap-2 font-semibold"
+                    >
+                      <span className="material-symbols-outlined text-xs text-error">delete</span>
+                      Discard
+                    </button>
+                  )}
                 </>
               ) : (
-                <button
-                  onClick={() => handleSelect('preview')}
-                  className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 font-semibold"
-                >
-                  <span className="material-symbols-outlined text-xs">visibility</span>
-                  View Draft
-                </button>
+                canView && (
+                  <button
+                    onClick={() => handleSelect('preview')}
+                    className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 font-semibold"
+                  >
+                    <span className="material-symbols-outlined text-xs">visibility</span>
+                    View Draft
+                  </button>
+                )
               )
             )}
 
@@ -127,17 +142,19 @@ export default function ActionMenu({ item, activeTab, onAction }) {
                       <span className="material-symbols-outlined text-xs text-amber-700">inventory_2</span>
                       Submit for Archive Approval
                     </button>
-                    <button
-                      onClick={() => handleSelect('revert')}
-                      className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 font-semibold"
-                    >
-                      <span className="material-symbols-outlined text-xs">undo</span>
-                      Revert to Archive Draft
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleSelect('revert')}
+                        className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 font-semibold"
+                      >
+                        <span className="material-symbols-outlined text-xs">undo</span>
+                        Revert to Archive Draft
+                      </button>
+                    )}
                   </>
                 ) : statusLower === 'approved' ? (
                   <>
-                    {user?.role === 'admin' && (
+                    {canPublish && (
                       <button
                         onClick={() => handleSelect('publish')}
                         className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 border-b border-outline-variant/30 font-semibold"
@@ -146,29 +163,33 @@ export default function ActionMenu({ item, activeTab, onAction }) {
                         Publish
                       </button>
                     )}
-                    <button
-                      onClick={() => handleSelect('revert')}
-                      className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 font-semibold"
-                    >
-                      <span className="material-symbols-outlined text-xs">undo</span>
-                      Revert to Draft
-                    </button>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleSelect('revert')}
+                        className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 font-semibold"
+                      >
+                        <span className="material-symbols-outlined text-xs">undo</span>
+                        Revert to Draft
+                      </button>
+                    )}
                   </>
                 ) : (
-                  <button
-                    onClick={() => handleSelect('unsubmit')}
-                    className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 font-semibold"
-                  >
-                    <span className="material-symbols-outlined text-xs">cancel</span>
-                    Unsubmit
-                  </button>
+                  canDeleteOrPullBack && (
+                    <button
+                      onClick={() => handleSelect('unsubmit')}
+                      className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 font-semibold"
+                    >
+                      <span className="material-symbols-outlined text-xs">cancel</span>
+                      Unsubmit
+                    </button>
+                  )
                 )}
               </>
             )}
 
             {activeTab === 'Published' && (
               <>
-                {user?.role !== 'viewer' && (
+                {canUse && (
                   <button
                     onClick={() => handleSelect('use')}
                     className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 border-b border-outline-variant/30 font-semibold"
@@ -177,7 +198,7 @@ export default function ActionMenu({ item, activeTab, onAction }) {
                     {isTemplate ? 'Use Template' : 'Use Document'}
                   </button>
                 )}
-                {user?.role !== 'viewer' && (
+                {canCreateOrRevise && (
                   <button
                     onClick={() => handleSelect('revise')}
                     className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 border-b border-outline-variant/30 font-semibold"
@@ -186,14 +207,16 @@ export default function ActionMenu({ item, activeTab, onAction }) {
                     Revise
                   </button>
                 )}
-                <button
-                  onClick={() => handleSelect('preview')}
-                  className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 border-b border-outline-variant/30 font-semibold"
-                >
-                  <span className="material-symbols-outlined text-xs">visibility</span>
-                  {isTemplate ? 'View Template' : 'View Document'}
-                </button>
-                {user?.role === 'admin' && (
+                {canView && (
+                  <button
+                    onClick={() => handleSelect('preview')}
+                    className="w-full px-3 py-1.5 text-xs text-on-surface hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2 border-b border-outline-variant/30 font-semibold"
+                  >
+                    <span className="material-symbols-outlined text-xs">visibility</span>
+                    {isTemplate ? 'View Template' : 'View Document'}
+                  </button>
+                )}
+                {canDeleteOrPullBack && (
                   <button
                     onClick={() => handleSelect('archive')}
                     className="w-full px-3 py-1.5 text-xs text-error hover:bg-error/10 transition-colors flex items-center gap-2 font-semibold"

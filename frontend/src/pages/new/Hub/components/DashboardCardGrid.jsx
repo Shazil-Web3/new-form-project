@@ -10,6 +10,7 @@ import PropTypes from 'prop-types';
 import ProgressToggle from './ProgressToggle';
 import ApproverAvatars from './ApproverAvatars';
 import ActionMenu from './ActionMenu';
+import { useRbac } from '../../../../utils/rbacContext';
 import { getStatusTagColor } from '../utils/dashboardUtils';
 
 export default function DashboardCardGrid({
@@ -27,6 +28,8 @@ export default function DashboardCardGrid({
   onPreviewItem,
   onReassign,
 }) {
+  const { can, canEditDocument, activeRole } = useRbac();
+
   const canReassignItem = (item) => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin' || currentUser.role === 'superadmin' || currentUser.role === 'project_manager') return true;
@@ -94,10 +97,11 @@ export default function DashboardCardGrid({
 
   const canEditItem = (item) => {
     if (!currentUser) return false;
-    if (currentUser.role === 'author') {
-      return Number(currentUser.id) === Number(item.created_by) && item.status === 'draft';
+    const isTemplate = item.itemType === 'template';
+    if (isTemplate) {
+      return can('t_edit') && (currentUser.role === 'admin' || Number(currentUser.id) === Number(item.created_by));
     }
-    return currentUser.role === 'admin' || currentUser.role === 'project_manager' || Number(currentUser.id) === Number(item.created_by);
+    return canEditDocument(item);
   };
 
   return (
@@ -348,11 +352,11 @@ export default function DashboardCardGrid({
 
                 {activeTab === 'Published' && (
                   <button
-                    onClick={() => onAction(currentUser?.role !== 'viewer' ? 'use' : 'preview', item.id, item.itemType)}
+                    onClick={() => onAction(can('folder_file_access') && activeRole?.id !== 'temp_view' ? 'use' : 'preview', item.id, item.itemType)}
                     className="p-1.5 bg-blue-700 hover:bg-blue-800 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm"
-                    title={currentUser?.role !== 'viewer' ? (isTemplate ? 'Use Template' : 'Use Document') : (isTemplate ? 'View Template' : 'View Document')}
+                    title={can('folder_file_access') && activeRole?.id !== 'temp_view' ? (isTemplate ? 'Use Template' : 'Use Document') : (isTemplate ? 'View Template' : 'View Document')}
                   >
-                    <span className="material-symbols-outlined text-[16px]">{currentUser?.role !== 'viewer' ? 'note_add' : 'visibility'}</span>
+                    <span className="material-symbols-outlined text-[16px]">{can('folder_file_access') && activeRole?.id !== 'temp_view' ? 'note_add' : 'visibility'}</span>
                   </button>
                 )}
 
