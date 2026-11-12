@@ -132,7 +132,7 @@ async function runRbacMigration(poolOrConnection) {
             const roleId = roleIdByKey.get(roleKey);
             if (!roleId)
                 continue;
-            const seedKey = `rbac:v2:${roleKey}`;
+            const seedKey = `rbac:v3:${roleKey}`;
             const { rows: [v2marker] } = await connection.query('SELECT seed_key FROM permission_seed_state WHERE seed_key = $1', [seedKey]);
             if (v2marker)
                 continue;

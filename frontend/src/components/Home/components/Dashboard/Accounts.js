@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { successAlert, errorAlert, confirmAlert, toastAlert } from '../../../../utils/alerts';
 import { 
@@ -55,6 +55,30 @@ import TemplateApproversConfig from './TemplateApproversConfig';
 import NumbersManagement from './NumbersManagement';
 import { RbacDashboardContent } from '../../../../pages/new/Workspace/RbacDashboardPage';
 import { useRbac } from '../../../../utils/rbacContext';
+import { STORAGE_KEY_ROLES, STORAGE_KEY_USER_ASSIGNMENTS, INITIAL_ROLES } from '../../../../utils/rbacConstants';
+import { getAssignableRbacRoles } from '../../../../api/rbac';
+
+const LEGACY_ROLE_BY_RBAC_KEY = {
+  org_admin: 'admin',
+  author: 'author',
+  review_approval: 'reviewer',
+  project_manager: 'project_manager',
+  people_manager: 'viewer',
+  view_only: 'viewer',
+  temporary_view: 'viewer'
+};
+
+const RBAC_KEY_BY_LEGACY_ROLE = {
+  admin: 'org_admin',
+  author: 'author',
+  reviewer: 'review_approval',
+  approver: 'review_approval',
+  project_manager: 'project_manager',
+  people_manager: 'people_manager',
+  viewer: 'view_only',
+  view_only: 'view_only',
+  temporary_view: 'temporary_view'
+};
 
 const { Text, Title, Paragraph } = Typography;
 const { Search } = Input;
@@ -92,6 +116,8 @@ const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetch
   const [isNotificationSettingsVisible, setIsNotificationSettingsVisible] = useState(false);
   const [activeTab, setActiveTab] = useState(localStorage.getItem('accountsActiveTab') || '1');
   const [form] = Form.useForm();
+  const selectedRoleKey = Form.useWatch('roleKey', form);
+  const [rbacRoles, setRbacRoles] = useState([]);
   const [inviteForm] = Form.useForm();
   const [templateApprovers, setTemplateApprovers] = useState([]);
   const [departmentForm] = Form.useForm();
@@ -125,6 +151,91 @@ const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetch
   const [currentSite, setCurrentSite] = useState(null);
   const [filterSiteStatus, setFilterSiteStatus] = useState('active');
   const [viewableSites, setViewableSites] = useState([]);
+
+  // Role options for Add/Edit User, synced with the RBAC Dashboard matrix & custom roles
+  const fetchAssignableRoles = useCallback(async () => {
+    const rolesMap = new Map();
+
+    const addRole = (rawRole, isSystem = false) => {
+      if (!rawRole) return;
+      const key = rawRole.role_key || rawRole.key || (rawRole.id ? String(rawRole.id) : null);
+      const name = rawRole.name || rawRole.label || rawRole.title || key;
+      if (!key || key === 'super_admin') return;
+
+      const existing = rolesMap.get(key);
+      rolesMap.set(key, {
+        id: rawRole.id || key,
+        role_key: key,
+        key: key,
+        name: name,
+        label: name,
+        is_system: rawRole.is_system !== undefined ? Boolean(rawRole.is_system) : (existing ? existing.is_system : isSystem)
+      });
+    };
+
+    // 1. Initial base roles
+    INITIAL_ROLES.forEach(r => addRole(r, true));
+
+    // 2. Custom roles from STORAGE_KEY_ROLES (saved by RbacDashboardPage when a role is created)
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = window.localStorage.getItem(STORAGE_KEY_ROLES);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(r => addRole(r, r.is_system));
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 3. Custom roles from watermelon_rbac_matrix_v1
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const matrixStored = window.localStorage.getItem('watermelon_rbac_matrix_v1');
+        if (matrixStored) {
+          const parsedMatrix = JSON.parse(matrixStored);
+          if (Array.isArray(parsedMatrix?.roles)) {
+            parsedMatrix.roles.forEach(r => addRole(r, r.is_system));
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 4. Fetch from backend API
+    try {
+      const response = await axios.get('/api/rbac/assignable-roles');
+      if (Array.isArray(response.data)) {
+        response.data.forEach(r => addRole(r, r.is_system));
+      }
+    } catch (e) {}
+
+    // 5. Mock layer
+    try {
+      const mockRoles = await getAssignableRbacRoles();
+      if (Array.isArray(mockRoles)) {
+        mockRoles.forEach(r => addRole(r, r.is_system));
+      }
+    } catch (e) {}
+
+    const result = Array.from(rolesMap.values());
+    setRbacRoles(result);
+  }, []);
+
+  useEffect(() => {
+    fetchAssignableRoles();
+    const handleMatrixChanged = () => fetchAssignableRoles();
+    window.addEventListener('watermelon_rbac_matrix_changed', handleMatrixChanged);
+    return () => {
+      window.removeEventListener('watermelon_rbac_matrix_changed', handleMatrixChanged);
+    };
+  }, [fetchAssignableRoles]);
+
+  useEffect(() => {
+    if (isModalVisible || isInviteModalVisible || isMultipleInviteModalVisible) {
+      fetchAssignableRoles();
+    }
+  }, [isModalVisible, isInviteModalVisible, isMultipleInviteModalVisible, fetchAssignableRoles]);
 
   // Check if there's already a project manager when users change
   useEffect(() => {
@@ -206,19 +317,23 @@ useEffect(() => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      const selectedRole = values.roleKey || values.role;
       
       // Check if trying to add a new project manager when one already exists
-      if (!editMode && values.role === 'project_manager' && hasProjectManager) {
+      if (!editMode && selectedRole === 'project_manager' && hasProjectManager) {
         errorAlert('Role Conflict', 'There can only be one Project Manager in the team');
         return;
       }
+
+      const legacyRole = LEGACY_ROLE_BY_RBAC_KEY[selectedRole] || selectedRole || 'viewer';
 
       const payload = {
         firstName: values.first_name,
         lastName: values.last_name,
         email: values.email,
         password: values.password,
-        role: values.role || null,
+        role: legacyRole,
+        roleKey: selectedRole,
         department: values.department || null,
         site: values.site && values.site.length > 0 ? JSON.stringify(values.site) : null,
         status: values.status || 'active',
@@ -229,11 +344,32 @@ useEffect(() => {
         if (editMode) {
           await axios.put(`/api/edit_org_member/${currentUser.id}`, payload);
           
+          if (typeof window !== 'undefined' && window.localStorage && selectedRole) {
+            try {
+              const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+              assignments[currentUser.id] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+              if (currentUser.email) {
+                assignments[currentUser.email] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+              }
+              window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
+            } catch (e) {}
+          }
+
           successAlert('Update Successful', `${values.first_name} ${values.last_name}'s profile has been updated`);
           fetchUserData();
         } else {
-          await axios.post(`/api/add_org_member/${currentOrgId}`, payload);
+          const res = await axios.post(`/api/add_org_member/${currentOrgId}`, payload);
           
+          if (typeof window !== 'undefined' && window.localStorage && selectedRole) {
+            try {
+              const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+              const newId = res?.data?.id || values.email;
+              assignments[newId] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+              assignments[values.email] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+              window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
+            } catch (e) {}
+          }
+
           successAlert('Success!', `${values.first_name} ${values.last_name} has been added to the organization`);
           fetchUserData();
         }
@@ -561,16 +697,20 @@ useEffect(() => {
   const handleInviteSubmit = async () => {
     try {
       const values = await inviteForm.validateFields();
+      const selectedRole = values.roleKey || values.role;
       
       // Check if trying to invite a new project manager when one already exists
-      if (values.role === 'project_manager' && hasProjectManager) {
+      if (selectedRole === 'project_manager' && hasProjectManager) {
         errorAlert('There can only be one Project Manager in the team');
         return;
       }
 
+      const legacyRole = LEGACY_ROLE_BY_RBAC_KEY[selectedRole] || selectedRole || null;
+
       const payload = {
         email: values.email,
-        role: values.role || null,
+        role: legacyRole,
+        roleKey: selectedRole,
         department: values.department || null,
         site: values.site && values.site.length > 0 ? JSON.stringify(values.site) : null,
         message: values.message || null
@@ -579,6 +719,14 @@ useEffect(() => {
       try {
         const response = await axios.post(`/api/invite_org_member/${currentOrgId}`, payload);
         
+        if (typeof window !== 'undefined' && window.localStorage && selectedRole && values.email) {
+          try {
+            const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+            assignments[values.email] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+            window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
+          } catch (e) {}
+        }
+
         console.log('Invitation Link:', response.data?.link);
         
         setIsInviteModalVisible(false);
@@ -600,6 +748,7 @@ useEffect(() => {
   const handleMultipleInviteSubmit = async () => {
     try {
       const values = await multipleInviteForm.validateFields();
+      const selectedRole = values.roleKey || values.role;
       
       // Parse emails from the textarea
       const emails = values.emails.split(/[\s,;]+/).filter(email => email.trim() !== '');
@@ -610,14 +759,17 @@ useEffect(() => {
       }
       
       // Check if trying to invite a new project manager when one already exists
-      if (values.role === 'project_manager' && hasProjectManager) {
+      if (selectedRole === 'project_manager' && hasProjectManager) {
         errorAlert('There can only be one Project Manager in the team');
         return;
       }
+
+      const legacyRole = LEGACY_ROLE_BY_RBAC_KEY[selectedRole] || selectedRole;
       
       const payload = {
         emails: emails,
-        role: values.role,
+        role: legacyRole,
+        roleKey: selectedRole,
         department: values.department,
         site: values.site && values.site.length > 0 ? JSON.stringify(values.site) : null,
         message: values.message
@@ -626,6 +778,16 @@ useEffect(() => {
       try {
         await axios.post(`/api/invite_multiple_org_members/${currentOrgId}`, payload);
               
+        if (typeof window !== 'undefined' && window.localStorage && selectedRole) {
+          try {
+            const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+            emails.forEach(em => {
+              assignments[em] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+            });
+            window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
+          } catch (e) {}
+        }
+
         setIsMultipleInviteModalVisible(false);
         multipleInviteForm.resetFields();
         
@@ -667,11 +829,24 @@ useEffect(() => {
   const handleEdit = (member) => {
     setCurrentUser(member);
     setEditMode(true);
+    let resolvedRoleKey = member.rbac_role_key;
+    if (!resolvedRoleKey) {
+      try {
+        const assignments = JSON.parse(localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+        const assigned = assignments[member.id] || assignments[member.email];
+        if (assigned?.roleKey) resolvedRoleKey = assigned.roleKey;
+      } catch (e) {}
+    }
+    if (!resolvedRoleKey) {
+      resolvedRoleKey = RBAC_KEY_BY_LEGACY_ROLE[member.role] || member.role || 'view_only';
+    }
+
     form.setFieldsValue({
       first_name: `${member.first_name}`,
       last_name: `${member.last_name}`,
       email: member.email,
       role: member.role,
+      roleKey: resolvedRoleKey,
       department: member.department,
       site: parseSites(member.site),
       status: member.status,
@@ -793,6 +968,7 @@ useEffect(() => {
   const handleTabChange = (key) => {
     setActiveTab(key);
     localStorage.setItem('accountsActiveTab', key);
+    fetchAssignableRoles();
   };
 
   // Close modal and reset form
@@ -807,11 +983,17 @@ useEffect(() => {
   const getRoleColor = (role) => {
     const roleColorMap = {
       'admin': 'red',
-      'project_manager': 'green',
-      'author': 'green',
+      'org_admin': 'red',
+      'project_manager': 'blue',
+      'author': 'orange',
       'reviewer': 'green',
-      'approver': 'green',
-      'viewer': 'green',
+      'approver': 'purple',
+      'review_approval': 'purple',
+      'people_manager': 'cyan',
+      'viewer': 'default',
+      'view_only': 'default',
+      'temporary_view': 'gold',
+      'system': 'geekblue'
     };
     
     // Use the predefined color if it exists, otherwise get a consistent color
@@ -837,14 +1019,36 @@ useEffect(() => {
   };
 
   // Format role name
-  const formatRoleName = (role) => {
+  const formatRoleName = (role, record) => {
+    if (record?.rbac_role_name) return record.rbac_role_name;
+    if (record) {
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+          const assigned = assignments[record?.id] || assignments[record?.email];
+          if (assigned?.roleKey) {
+            const matched = rbacRoles.find(r => r.role_key === assigned.roleKey);
+            if (matched) return matched.name;
+          }
+        }
+      } catch (e) {}
+    }
+    const matched = rbacRoles.find(r => r.role_key === role);
+    if (matched) return matched.name;
+
     switch(role) {
       case 'admin': return 'Administrator';
-      case 'author': return 'Author (Engineer)';
+      case 'org_admin': return 'Administrator';
+      case 'author': return 'Author';
       case 'project_manager': return 'Project Manager';
+      case 'people_manager': return 'People Manager';
       case 'reviewer': return 'Reviewer';
       case 'approver': return 'Approver';
+      case 'review_approval': return 'Approver/Reviewer';
       case 'viewer': return 'Viewer';
+      case 'view_only': return 'View';
+      case 'temporary_view': return 'Temp View';
+      case 'system': return 'System';
       default: return role;
     }
   };
@@ -949,9 +1153,9 @@ const renderUserTableView = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: role => (
+      render: (role, record) => (
         <Tag color={getRoleColor(role)}>
-          {formatRoleName(role)}
+          {formatRoleName(role, record)}
         </Tag>
       ),
     },
@@ -1119,7 +1323,7 @@ const renderUserListView = () => {
                             color={getRoleColor(record.role)} 
                             style={{ margin: 0 }}
                           >
-                            {formatRoleName(record.role)}
+                            {formatRoleName(record.role, record)}
                           </Tag>
                           <Tag color={getDepartmentColor(record.department)} icon={<TeamOutlined />} style={{ margin: 0 }}>
                             {record.department || 'Unassigned'}
@@ -1212,9 +1416,9 @@ const renderUserListView = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: role => (
+      render: (role, record) => (
         <Tag color={getRoleColor(role)}>
-          {formatRoleName(role)}
+          {formatRoleName(role, record)}
         </Tag>
       ),
     },
@@ -1285,9 +1489,9 @@ const renderUserListView = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: role => (
+      render: (role, record) => (
         <Tag color={getRoleColor(role)}>
-          {formatRoleName(role)}
+          {formatRoleName(role, record)}
         </Tag>
       ),
     },
@@ -1465,9 +1669,9 @@ const renderUserListView = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: role => (
+      render: (role, record) => (
         <Tag color={getRoleColor(role)}>
-          {formatRoleName(role)}
+          {formatRoleName(role, record)}
         </Tag>
       ),
     },
@@ -1632,13 +1836,13 @@ const renderUserListView = () => {
                     <Button 
                       type="primary" 
                       icon={<PlusOutlined />} 
-                      onClick={() => { setCurrentUser(null); setEditMode(false); setIsModalVisible(true); }}
+                      onClick={() => { setCurrentUser(null); setEditMode(false); fetchAssignableRoles(); setIsModalVisible(true); }}
                     >
                       Add User
                     </Button>
                     <Button 
                       icon={<SendOutlined />} 
-                      onClick={() => setIsInviteModalVisible(true)}
+                      onClick={() => { fetchAssignableRoles(); setIsInviteModalVisible(true); }}
                     >
                       Invite
                     </Button>
@@ -1647,7 +1851,7 @@ const renderUserListView = () => {
                 {canDataImport && (
                   <Button 
                     icon={<UsergroupAddOutlined />} 
-                    onClick={() => setIsMultipleInviteModalVisible(true)}
+                    onClick={() => { fetchAssignableRoles(); setIsMultipleInviteModalVisible(true); }}
                   >
                     Bulk Invite
                   </Button>
@@ -1945,23 +2149,62 @@ const renderUserListView = () => {
             </Form.Item>
           )}
 
-          {(currentUser?.role === 'admin') && (
-          <Form.Item name="role" hidden>
+          {editMode && (currentUser?.role === 'admin' || currentUser?.roleKey === 'org_admin') && (
+          <Form.Item name="roleKey" hidden>
             <Input type="hidden" />
           </Form.Item>
           )}
 
-          {(currentUser?.role !== 'admin') && (
+          {editMode && currentUser?.role !== 'admin' && currentUser?.roleKey !== 'org_admin' && (
           <Form.Item
-            name="role"
-            label="Role"
+            name="roleKey"
+            label="Role (RBAC)"
+            rules={[{ required: true, message: 'Please select a role.' }]}
           >
             <Select placeholder="Select role" allowClear>
-              <Option value="project_manager" disabled={hasProjectManager}>Project Manager</Option>
-              <Option value="author">Author (Engineer)</Option>
-              <Option value="reviewer">Reviewer</Option>
-              <Option value="approver">Approver</Option>
-              <Option value="viewer">Viewer</Option>
+              {rbacRoles
+                .filter((r) => (r.role_key || r.key) !== 'super_admin')
+                .filter((r) => user?.isSuperAdmin || ((r.role_key || r.key) !== 'org_admin'))
+                .map((r) => {
+                  const rKey = r.role_key || r.key || r.id;
+                  const rName = r.name || r.label || rKey;
+                  return (
+                    <Option
+                      key={rKey}
+                      value={rKey}
+                      disabled={rKey === 'project_manager' && hasProjectManager}
+                    >
+                      {rName}
+                    </Option>
+                  );
+                })}
+            </Select>
+          </Form.Item>
+          )}
+
+          {!editMode && (
+          <Form.Item
+            name="roleKey"
+            label="Role (RBAC)"
+            rules={[{ required: true, message: 'Please select a role.' }]}
+          >
+            <Select placeholder="Select a role">
+              {rbacRoles
+                .filter((r) => (r.role_key || r.key) !== 'super_admin')
+                .filter((r) => user?.isSuperAdmin || ((r.role_key || r.key) !== 'org_admin'))
+                .map((r) => {
+                  const rKey = r.role_key || r.key || r.id;
+                  const rName = r.name || r.label || rKey;
+                  return (
+                    <Option
+                      key={rKey}
+                      value={rKey}
+                      disabled={rKey === 'project_manager' && hasProjectManager}
+                    >
+                      {rName}
+                    </Option>
+                  );
+                })}
             </Select>
           </Form.Item>
           )}
@@ -2017,15 +2260,27 @@ const renderUserListView = () => {
             <Input prefix={<MailOutlined />} placeholder="Email" />
           </Form.Item>
           <Form.Item
-            name="role"
-            label="Role"
+            name="roleKey"
+            label="Role (RBAC)"
+            rules={[{ required: true, message: 'Please select a role.' }]}
           >
-            <Select placeholder="Select role" allowClear>
-              <Option value="project_manager" disabled={hasProjectManager}>Project Manager</Option>
-              <Option value="author">Author (Engineer)</Option>
-              <Option value="reviewer">Reviewer</Option>
-              <Option value="approver">Approver</Option>
-              <Option value="viewer">Viewer</Option>
+            <Select placeholder="Select a role" allowClear>
+              {rbacRoles
+                .filter((r) => (r.role_key || r.key) !== 'super_admin')
+                .filter((r) => user?.isSuperAdmin || ((r.role_key || r.key) !== 'org_admin'))
+                .map((r) => {
+                  const rKey = r.role_key || r.key || r.id;
+                  const rName = r.name || r.label || rKey;
+                  return (
+                    <Option
+                      key={rKey}
+                      value={rKey}
+                      disabled={rKey === 'project_manager' && hasProjectManager}
+                    >
+                      {rName}
+                    </Option>
+                  );
+                })}
             </Select>
           </Form.Item>
           <Form.Item
@@ -2088,15 +2343,27 @@ const renderUserListView = () => {
             />
           </Form.Item>
           <Form.Item
-            name="role"
-            label="Role"
+            name="roleKey"
+            label="Role (RBAC)"
+            rules={[{ required: true, message: 'Please select a role.' }]}
           >
-            <Select placeholder="Select role">
-              <Option value="project_manager" disabled >Project Manager</Option>
-              <Option value="author">Author (Engineer)</Option>
-              <Option value="reviewer">Reviewer</Option>
-              <Option value="approver">Approver</Option>
-              <Option value="viewer">Viewer</Option>
+            <Select placeholder="Select a role">
+              {rbacRoles
+                .filter((r) => (r.role_key || r.key) !== 'super_admin')
+                .filter((r) => user?.isSuperAdmin || ((r.role_key || r.key) !== 'org_admin'))
+                .map((r) => {
+                  const rKey = r.role_key || r.key || r.id;
+                  const rName = r.name || r.label || rKey;
+                  return (
+                    <Option
+                      key={rKey}
+                      value={rKey}
+                      disabled={rKey === 'project_manager' && hasProjectManager}
+                    >
+                      {rName}
+                    </Option>
+                  );
+                })}
             </Select>
           </Form.Item>
           <Form.Item

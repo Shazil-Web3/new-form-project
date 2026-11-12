@@ -279,7 +279,9 @@ export const createRbacRole = async (data) => {
   const newRole = {
     id: Date.now(),
     role_key: roleKey,
+    key: roleKey,
     name: data.name.trim(),
+    label: data.name.trim(),
     description: data.description || '',
     is_system: false
   };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { successAlert, errorAlert, confirmAlert, toastAlert } from '../../../../utils/alerts';
 import { hasPermission } from '../../../../utils/permissions';
@@ -151,7 +151,7 @@ const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetch
   const [viewableSites, setViewableSites] = useState([]);
 
   // Role options for Add/Edit User, synced with the RBAC Dashboard matrix.
-  useEffect(() => {
+  const fetchAssignableRoles = useCallback(() => {
     axios.get('/api/rbac/assignable-roles')
       .then((response) => {
         const assignable = (response.data || []).filter((rbacRole) => rbacRole.role_key !== 'super_admin');
@@ -161,6 +161,21 @@ const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetch
         console.error('Failed to load RBAC roles:', error);
       });
   }, []);
+
+  useEffect(() => {
+    fetchAssignableRoles();
+    const handleMatrixChanged = () => fetchAssignableRoles();
+    window.addEventListener('watermelon_rbac_matrix_changed', handleMatrixChanged);
+    return () => {
+      window.removeEventListener('watermelon_rbac_matrix_changed', handleMatrixChanged);
+    };
+  }, [fetchAssignableRoles]);
+
+  useEffect(() => {
+    if (isModalVisible || isInviteModalVisible) {
+      fetchAssignableRoles();
+    }
+  }, [isModalVisible, isInviteModalVisible, fetchAssignableRoles]);
 
   // Approved documents for Temp View assignment (approved only).
   useEffect(() => {

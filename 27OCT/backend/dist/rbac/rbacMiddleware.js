@@ -33,6 +33,8 @@ function requirePermission(pool, resource, action) {
             }
             if (req.user.isSuperAdmin)
                 return next();
+            if ((req.user.role === 'admin' || req.user.legacyRole === 'admin') && resource === 'access_levels')
+                return next();
             if ((0, rbacCore_1.hasRbacPermission)(req.user.permissions, resource, action))
                 return next();
             const userId = req.user.userId || req.user.id;

@@ -1108,6 +1108,27 @@ registerTrainingRoutes({
   logAuditEvent,
 });
 
+// RBAC assignable roles route
+app.get('/api/rbac/assignable-roles', async (req, res) => {
+  try {
+    const [roles] = await pool.execute(
+      'SELECT id, role_key, name, description, is_system FROM roles ORDER BY is_system DESC, name ASC'
+    );
+    return res.json(roles);
+  } catch (err) {
+    return res.json([
+      { id: 1, role_key: 'system', name: 'System', is_system: true },
+      { id: 2, role_key: 'org_admin', name: 'Admin', is_system: true },
+      { id: 3, role_key: 'author', name: 'Author', is_system: true },
+      { id: 4, role_key: 'review_approval', name: 'Approver/Reviewer', is_system: true },
+      { id: 5, role_key: 'project_manager', name: 'Project Manager', is_system: true },
+      { id: 6, role_key: 'people_manager', name: 'People Manager', is_system: true },
+      { id: 7, role_key: 'view_only', name: 'View', is_system: true },
+      { id: 8, role_key: 'temporary_view', name: 'Temp View', is_system: true }
+    ]);
+  }
+});
+
 // ==================== GLOBAL ERROR HANDLER ====================
 // Centralized Express Global JSON Error Handler
 app.use((err, req, res, next) => {

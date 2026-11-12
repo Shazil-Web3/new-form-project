@@ -1,5 +1,9 @@
 import dotenv from "dotenv";
+import path from "path";
 dotenv.config();
+if (!process.env.PG_DATABASE && !process.env.PG_HOST) {
+  dotenv.config({ path: path.join(__dirname, '../../.env') });
+}
 import { Pool } from "pg";
 
 // Use individual connection parameters to avoid special character parsing issues

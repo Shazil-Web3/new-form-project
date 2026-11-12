@@ -35,6 +35,7 @@ function requirePermission(pool, resource, action) {
         return res.status(401).json({ error: 'Access token required', code: 'TOKEN_REQUIRED' });
       }
       if (req.user.isSuperAdmin) return next();
+      if ((req.user.role === 'admin' || req.user.legacyRole === 'admin') && resource === 'access_levels') return next();
       if (hasRbacPermission(req.user.permissions, resource, action)) return next();
 
       const userId = req.user.userId || req.user.id;

@@ -59,13 +59,14 @@ function DeniedMark({ risk, changed }) {
 export function RbacDashboardContent() {
   const [matrix, setMatrix] = useState<any>(null);
   const [draft, setDraft] = useState<any>({});
-  const [catalog, setCatalog] = useState([]);
+  const [catalog, setCatalog] = useState<any[]>([]);
   const [myRbac, setMyRbac] = useState<any>(null);
-  const [organizations, setOrganizations] = useState([]);
-  const [users, setUsers] = useState([]);
+  const [organizations, setOrganizations] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [roleFilter, setRoleFilter] = useState('all');
   const [perspective, setPerspective] = useState('standard');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savingMatrix, setSavingMatrix] = useState(false);
   const [reverting, setReverting] = useState(false);
@@ -73,26 +74,45 @@ export function RbacDashboardContent() {
   const [assignForm] = Form.useForm();
   const selectedAssignRoleId = Form.useWatch('roleId', assignForm);
 
-  const applyMatrix = (matrixData) => {
+  const applyMatrix = (matrixData: any) => {
+    if (!matrixData) return;
     setMatrix(matrixData);
     setDraft(JSON.parse(JSON.stringify(matrixData.permissionsByRole || {})));
   };
 
   const loadAll = async () => {
     setLoading(true);
+    setError(null);
     try {
-      const [matrixData, permissionData, me, orgs] = await Promise.all([
+      const [matrixRes, permissionRes, meRes, orgsRes] = await Promise.allSettled([
         getRbacMatrix(),
         listRbacPermissions(),
         getMyRbac(),
         listRbacOrganizations()
       ]);
-      applyMatrix(matrixData);
-      setCatalog(permissionData);
-      setMyRbac(me);
-      setOrganizations(orgs);
-    } catch (error) {
-      message.error(error.response?.data?.error || 'Unable to load RBAC data.');
+
+      if (matrixRes.status === 'fulfilled' && matrixRes.value) {
+        applyMatrix(matrixRes.value);
+      } else {
+        const failureReason = matrixRes.status === 'rejected' ? matrixRes.reason : null;
+        const msg = failureReason?.response?.data?.error || failureReason?.message || 'Unable to load RBAC matrix from server.';
+        setError(msg);
+        message.error(msg);
+      }
+
+      if (permissionRes.status === 'fulfilled' && Array.isArray(permissionRes.value)) {
+        setCatalog(permissionRes.value);
+      }
+      if (meRes.status === 'fulfilled' && meRes.value) {
+        setMyRbac(meRes.value);
+      }
+      if (orgsRes.status === 'fulfilled' && Array.isArray(orgsRes.value)) {
+        setOrganizations(orgsRes.value);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.error || err.message || 'Unable to load RBAC data.';
+      setError(msg);
+      message.error(msg);
     } finally {
       setLoading(false);
     }
@@ -101,23 +121,23 @@ export function RbacDashboardContent() {
   useEffect(() => { loadAll(); }, []);
 
   const visibleRoles = useMemo(() => {
-    if (!matrix) return [];
+    if (!matrix || !Array.isArray(matrix.roles)) return [];
     return roleFilter === 'all'
       ? matrix.roles
-      : matrix.roles.filter(role => String(role.id) === String(roleFilter));
+      : matrix.roles.filter((role: any) => String(role.id) === String(roleFilter));
   }, [matrix, roleFilter]);
 
   const dirtyRoleKeys = useMemo(() => {
-    if (!matrix) return [];
+    if (!matrix || !Array.isArray(matrix.roles) || !matrix.permissionsByRole) return [];
     return matrix.roles
-      .filter(role => !LOCKED_ROLE_KEYS.includes(role.role_key))
-      .filter(role => !samePermissions(draft[role.role_key], matrix.permissionsByRole[role.role_key]))
-      .map(role => role.role_key);
+      .filter((role: any) => !LOCKED_ROLE_KEYS.includes(role.role_key))
+      .filter((role: any) => !samePermissions(draft[role.role_key], matrix.permissionsByRole[role.role_key]))
+      .map((role: any) => role.role_key);
   }, [matrix, draft]);
 
   const changedCellKeys = useMemo(() => {
     const changed = new Set();
-    if (!matrix) return changed;
+    if (!matrix || !Array.isArray(matrix.roles) || !Array.isArray(matrix.rows) || !matrix.permissionsByRole) return changed;
     for (const role of matrix.roles) {
       if (LOCKED_ROLE_KEYS.includes(role.role_key)) continue;
       for (const row of matrix.rows) {
@@ -130,21 +150,23 @@ export function RbacDashboardContent() {
   }, [matrix, draft]);
 
   const localStats = useMemo(() => {
-    if (!matrix) return { granted: 0, total: 0, restrictedRoles: 0 };
+    if (!matrix || !Array.isArray(matrix.roles) || !Array.isArray(matrix.rows)) {
+      return { granted: 0, total: 0, restrictedRoles: 0 };
+    }
     let granted = 0;
     for (const row of matrix.rows) {
       for (const role of matrix.roles) {
         if (isGranted(draft[role.role_key], row)) granted += 1;
       }
     }
-    const restrictedRoles = matrix.roles.filter(role =>
-      !matrix.rows.every(row => isGranted(draft[role.role_key], row))
+    const restrictedRoles = matrix.roles.filter((role: any) =>
+      !matrix.rows.every((row: any) => isGranted(draft[role.role_key], row))
     ).length;
     return { granted, total: matrix.rows.length * matrix.roles.length, restrictedRoles };
   }, [matrix, draft]);
 
   const auditViolations = useMemo(() => {
-    if (!matrix) return 0;
+    if (!matrix || !Array.isArray(matrix.roles) || !Array.isArray(matrix.rows)) return 0;
     let count = 0;
     for (const row of matrix.rows) {
       if (row.key === 'temp_view') continue;
@@ -157,11 +179,14 @@ export function RbacDashboardContent() {
     return count;
   }, [matrix, draft]);
 
-  const catalogByResource = useMemo(() => catalog.reduce((grouped, permission) => {
-    grouped[permission.resource] = grouped[permission.resource] || [];
-    grouped[permission.resource].push(permission);
-    return grouped;
-  }, {}), [catalog]);
+  const catalogByResource = useMemo(() => {
+    if (!Array.isArray(catalog)) return {};
+    return catalog.reduce((grouped: any, permission: any) => {
+      grouped[permission.resource] = grouped[permission.resource] || [];
+      grouped[permission.resource].push(permission);
+      return grouped;
+    }, {});
+  }, [catalog]);
 
   const assigningTemporary = matrix?.roles.some(role =>
     String(role.id) === String(selectedAssignRoleId) && role.role_key === 'temporary_view'
@@ -223,14 +248,15 @@ export function RbacDashboardContent() {
     }
   };
 
-  const handleCreateRole = async (values) => {
+  const handleCreateRole = async (values: any) => {
     setSaving(true);
     try {
       await createRbacRole(values);
       message.success('Custom role created.');
       createForm.resetFields();
+      window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));
       await loadAll();
-    } catch (error) {
+    } catch (error: any) {
       message.error(error.response?.data?.error || 'Unable to create role.');
     } finally {
       setSaving(false);
@@ -270,8 +296,31 @@ export function RbacDashboardContent() {
 
   return (
     <>
-      {loading || !matrix ? (
-        <div className="flex items-center justify-center py-24"><Spin size="large" /></div>
+      {loading && !matrix ? (
+        <div className="flex flex-col items-center justify-center py-24 space-y-4">
+          <Spin size="large" />
+          <p className="text-sm text-zinc-400">Loading RBAC permissions matrix...</p>
+        </div>
+      ) : error && !matrix ? (
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="rounded-2xl bg-[#17181d] p-8 max-w-lg border border-red-500/20 text-zinc-200 shadow-xl space-y-4">
+            <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-400 text-xl font-bold">
+              ✕
+            </div>
+            <h2 className="text-lg font-semibold text-zinc-100">Unable to Load RBAC Dashboard</h2>
+            <p className="text-sm text-zinc-400 leading-relaxed">{error}</p>
+            <div className="pt-2">
+              <Button type="primary" onClick={loadAll}>
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : !matrix ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+          <p className="text-zinc-400">No RBAC matrix data available.</p>
+          <Button className="mt-4" onClick={loadAll}>Reload</Button>
+        </div>
       ) : (
         <div className="w-full max-w-none space-y-5 py-4">
           <div className="rounded-2xl bg-[#17181d] p-5 text-zinc-200 shadow-xl sm:p-7">
@@ -391,7 +440,7 @@ export function RbacDashboardContent() {
                   className="min-w-[170px]"
                   options={[
                     { value: 'all', label: 'All Roles' },
-                    ...matrix.roles.map(role => ({ value: role.id, label: role.name }))
+                    ...(matrix?.roles || []).map((role: any) => ({ value: role.id, label: role.name }))
                   ]}
                 />
               </label>
@@ -516,14 +565,14 @@ export function RbacDashboardContent() {
                   <Select
                     placeholder="Select an organization"
                     onChange={handleOrgChange}
-                    options={organizations.map(org => ({ value: org.id, label: org.name }))}
+                    options={(organizations || []).map((org: any) => ({ value: org.id, label: org.name }))}
                   />
                 </Form.Item>
                 <Form.Item name="userId" label="User" rules={[{ required: true }]}>
                   <Select
                     placeholder="Select a user"
                     disabled={!users.length}
-                    options={users.map(user => ({
+                    options={(users || []).map((user: any) => ({
                       value: user.id,
                       label: `${user.first_name} ${user.last_name} (${user.email})`
                     }))}
@@ -532,7 +581,7 @@ export function RbacDashboardContent() {
                 <Form.Item name="roleId" label="Role" rules={[{ required: true }]}>
                   <Select
                     placeholder="Select a role"
-                    options={matrix.roles.map(role => ({ value: role.id, label: role.name }))}
+                    options={(matrix?.roles || []).map((role: any) => ({ value: role.id, label: role.name }))}
                   />
                 </Form.Item>
                 {assigningTemporary && (
@@ -554,7 +603,7 @@ export function RbacDashboardContent() {
 
               <h3 className="mt-6 text-sm font-semibold text-gray-900">Roles in this matrix</h3>
               <ul className="mt-2 space-y-1 text-sm text-gray-600">
-                {matrix.roles.map(role => (
+                {(matrix?.roles || []).map((role: any) => (
                   <li key={role.id} className="flex justify-between gap-3">
                     <span>{role.name}</span>
                     <span className="text-gray-400">

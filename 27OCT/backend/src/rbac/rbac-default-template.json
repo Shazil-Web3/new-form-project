@@ -32,7 +32,12 @@
       "users.create_personal_account",
       "users.manage",
       "users.reset_password",
-      "users.view"
+      "users.view",
+      "access_levels.view",
+      "access_levels.create",
+      "access_levels.edit",
+      "access_levels.delete",
+      "access_levels.manage"
     ],
     "author": [
       "calendar.view",

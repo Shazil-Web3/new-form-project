@@ -46,7 +46,9 @@ const BUILTIN_PERMISSIONS = {
         ['documents', 'obsolete'], ['templates', 'delete_draft'], ['tasks', 'reassign_own'],
         ['tasks', 'reassign_others'], ['users', 'account_management_tab'],
         ['training', 'view'], ['training', 'admin'], ['training', 'classes'],
-        ['calendar', 'view'], ['billing', 'view'], ['billing', 'manage']
+        ['calendar', 'view'], ['billing', 'view'], ['billing', 'manage'],
+        ['access_levels', 'view'], ['access_levels', 'edit'], ['access_levels', 'create'],
+        ['access_levels', 'delete'], ['access_levels', 'manage']
     ],
     author: [
         ['documents', 'view'], ['documents', 'create'], ['documents', 'review'],

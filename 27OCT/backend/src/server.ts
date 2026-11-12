@@ -1,4 +1,12 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import path from "path";
+dotenv.config();
+if (!process.env.ACCESS_SECRET) {
+  dotenv.config({ path: path.join(__dirname, '../.env') });
+}
+if (!process.env.ACCESS_SECRET) {
+  dotenv.config({ path: path.join(__dirname, '../../.env') });
+}
 import express from "express";
 import http from "http";
 import cors from "cors";
@@ -11,7 +19,6 @@ import jsonwebtoken from "jsonwebtoken";
 const jwt: any = jsonwebtoken;
 import nodemailer from "nodemailer";
 import fs from "fs";
-import path from "path";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Module Registrars (Folders)
@@ -970,7 +977,9 @@ const authenticateToken = async (req, res, next) => {
     const isSelfRead = req.method === 'GET' &&
       (req.path === '/api/rbac/me' || req.path === '/api/rbac/check' || req.path === '/api/users/me');
     const requiredPermission = classifyRequest(req);
-    if (!isSelfRead && !authenticatedUser.isSuperAdmin &&
+    const isAdminAccessLevels = (authenticatedUser.role === 'admin' || authenticatedUser.legacyRole === 'admin') &&
+      requiredPermission.feature === 'access_levels';
+    if (!isSelfRead && !authenticatedUser.isSuperAdmin && !isAdminAccessLevels &&
       !canAccess(authenticatedUser.permissions, requiredPermission.feature, requiredPermission.action)) {
       return res.status(403).json({
         error: 'Access denied: permission required',

@@ -247,9 +247,11 @@ export function RbacDashboardContent() {
       const newRole = {
         id: String(created.id || Date.now()),
         label: created.name,
+        name: created.name,
         short: created.name.substring(0, 4).toUpperCase(),
         sub: created.description || '',
         key: created.role_key,
+        role_key: created.role_key,
         is_system: false
       };
 

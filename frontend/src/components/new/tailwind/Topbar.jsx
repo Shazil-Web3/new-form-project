@@ -5,7 +5,7 @@
  * @author Codegen
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../../../utils/authService';
 import apiClient from '../../../api/apiClient';

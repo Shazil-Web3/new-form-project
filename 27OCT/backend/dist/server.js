@@ -3,7 +3,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-require("dotenv/config");
+const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
+dotenv_1.default.config();
+if (!process.env.ACCESS_SECRET) {
+    dotenv_1.default.config({ path: path_1.default.join(__dirname, '../.env') });
+}
+if (!process.env.ACCESS_SECRET) {
+    dotenv_1.default.config({ path: path_1.default.join(__dirname, '../../.env') });
+}
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const cors_1 = __importDefault(require("cors"));
@@ -16,7 +24,6 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const jwt = jsonwebtoken_1.default;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
 const generative_ai_1 = require("@google/generative-ai");
 // Module Registrars (Folders)
 const auth_1 = __importDefault(require("./auth"));
@@ -723,7 +730,9 @@ const authenticateToken = async (req, res, next) => {
         const isSelfRead = req.method === 'GET' &&
             (req.path === '/api/rbac/me' || req.path === '/api/rbac/check' || req.path === '/api/users/me');
         const requiredPermission = (0, accessControl_1.classifyRequest)(req);
-        if (!isSelfRead && !authenticatedUser.isSuperAdmin &&
+        const isAdminAccessLevels = (authenticatedUser.role === 'admin' || authenticatedUser.legacyRole === 'admin') &&
+            requiredPermission.feature === 'access_levels';
+        if (!isSelfRead && !authenticatedUser.isSuperAdmin && !isAdminAccessLevels &&
             !(0, accessControl_1.canAccess)(authenticatedUser.permissions, requiredPermission.feature, requiredPermission.action)) {
             return res.status(403).json({
                 error: 'Access denied: permission required',
