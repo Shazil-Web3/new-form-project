@@ -43,7 +43,7 @@ const ProtectedRoute = ({ children, allowedRoles, requiredPermission, requiredCa
   }
 
   // 2. Capability & Role Authorization check
-  const hasCapabilityAccess = !requiredCapability || can(requiredCapability);
+  const hasCapabilityAccess = !requiredCapability || (Array.isArray(requiredCapability) ? requiredCapability.some(c => can(c)) : can(requiredCapability));
   const userRole = (user?.role || activeRole?.id || 'viewer').toLowerCase();
   const hasAllowedRole = !allowedRoles || allowedRoles.length === 0 || user?.isSuperAdmin || activeRole?.id === 'super_admin' ||
     allowedRoles.some((r) => r.toLowerCase() === userRole || r.toLowerCase() === activeRole?.id);

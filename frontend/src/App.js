@@ -76,12 +76,12 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/workspace/account-management" element={
-              <ProtectedRoute requiredCapability="manage_user">
+              <ProtectedRoute requiredCapability={['manage_user', 'manage_site']}>
                 <AccountManagementPage />
               </ProtectedRoute>
             } />
             <Route path="/workspace/users" element={
-              <ProtectedRoute requiredCapability="manage_user">
+              <ProtectedRoute requiredCapability={['manage_user', 'manage_site']}>
                 <AccountManagementPage />
               </ProtectedRoute>
             } />
@@ -96,7 +96,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/workspace/trending" element={
-              <ProtectedRoute>
+              <ProtectedRoute requiredCapability="report_access">
                 <TrendingPage />
               </ProtectedRoute>
             } />

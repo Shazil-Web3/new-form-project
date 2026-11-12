@@ -43,7 +43,7 @@ export default function Sidebar({ activeRoute }) {
       name: 'Account Management',
       path: '/workspace/account-management',
       icon: 'person',
-      requiredCapability: 'manage_user',
+      requiredCapability: ['manage_user', 'manage_site'],
     },
     {
       name: 'References',
@@ -66,6 +66,7 @@ export default function Sidebar({ activeRoute }) {
       name: 'Trending',
       path: '/workspace/trending',
       icon: 'trending_up',
+      requiredCapability: 'report_access',
     },
     {
       name: 'Training',
@@ -77,8 +78,11 @@ export default function Sidebar({ activeRoute }) {
 
   const menuItems = allMenuItems.filter((item) => {
     if (user?.isSuperAdmin || activeRole?.id === 'super_admin') return true;
-    if (item.requiredCapability && !can(item.requiredCapability)) {
-      return false;
+    if (item.requiredCapability) {
+      const allowed = Array.isArray(item.requiredCapability)
+        ? item.requiredCapability.some(c => can(c))
+        : can(item.requiredCapability);
+      if (!allowed) return false;
     }
     if (item.allowedRoles) {
       return item.allowedRoles.includes(userRole) || item.allowedRoles.includes(activeRole?.id);
