@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import apiClient from '../../api/apiClient';
 import { saveDocumentImpactComment, deleteDocumentImpactComment } from '../../api/documents';
 import { saveTemplateImpactComment, deleteTemplateImpactComment } from '../../api/templates';
+import { useRbac } from '../../utils/rbacContext';
 
 const ImpactCommentContext = createContext(null);
 
@@ -28,6 +29,8 @@ export const ImpactCommentProvider = ({
   templateId = null,
   currentUser = null,
 }) => {
+  const { can } = useRbac();
+  const canComment = templateId ? can('t_comment_review_approve') : documentId ? can('d_comment_review_approve') : true;
   // Safe parsing of initialComments (could be string or array)
   const parseComments = useCallback((raw) => {
     if (!raw) return [];
@@ -281,7 +284,7 @@ export const ImpactCommentProvider = ({
     fields = [],
     customAuthor = null,
   }) => {
-    if (!text || !text.trim()) return;
+    if (!text || !text.trim() || !canComment) return;
 
     const user = resolveUser(customAuthor);
     const authorName = [user.first_name || user.firstName, user.last_name || user.lastName].filter(Boolean).join(' ') || user.name || user.username || 'User';
@@ -320,7 +323,7 @@ export const ImpactCommentProvider = ({
 
   // Add reply to an existing comment
   const addReply = useCallback(async (commentId, replyText, customAuthor = null) => {
-    if (!replyText || !replyText.trim()) return;
+    if (!replyText || !replyText.trim() || !canComment) return;
 
     const user = resolveUser(customAuthor);
     const authorName = [user.first_name || user.firstName, user.last_name || user.lastName].filter(Boolean).join(' ') || user.name || user.username || 'User';
@@ -446,6 +449,7 @@ export const ImpactCommentProvider = ({
     availableActors,
     activeActorId,
     setActiveActorId,
+    canComment,
   };
 
   return (

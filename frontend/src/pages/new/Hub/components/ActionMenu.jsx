@@ -39,8 +39,10 @@ export default function ActionMenu({ item, activeTab, onAction }) {
     return false;
   })();
 
+  const canCommentReviewApprove = isTemplate ? can('t_comment_review_approve') : can('d_comment_review_approve');
+
   const isAssignedApprover = (() => {
-    if (!user?.id) return false;
+    if (!canCommentReviewApprove || !user?.id) return false;
     const raw = isTemplate ? item.template_approvers : item.approvers;
     if (!raw) return false;
     try {
@@ -52,7 +54,7 @@ export default function ActionMenu({ item, activeTab, onAction }) {
   })();
 
   const isAssignedReviewer = (() => {
-    if (!user?.id) return false;
+    if (!canCommentReviewApprove || !user?.id) return false;
     const raw = isTemplate ? item.template_approvers : item.approvers;
     if (!raw) return false;
     try {

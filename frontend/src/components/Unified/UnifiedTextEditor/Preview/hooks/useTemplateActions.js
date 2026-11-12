@@ -2,8 +2,10 @@ import { useState } from 'react';
 import apiClient from '../../../../../api/apiClient';
 import { Modal } from 'antd';
 import { successAlert, errorAlert } from '../../../../../utils/alerts';
+import { useRbac } from '../../../../../utils/rbacContext';
 
 export const useTemplateActions = (parsedTemplate, setParsedTemplate, currentUser) => {
+  const { can } = useRbac();
   const [isReviewing, setIsReviewing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -13,7 +15,11 @@ export const useTemplateActions = (parsedTemplate, setParsedTemplate, currentUse
   const templateId = parsedTemplate?.id || parsedTemplate?.template_id;
 
   const handleReview = async () => {
-    if (!templateId) return;
+    if (!templateId) return false;
+    if (!can('t_comment_review_approve')) {
+      errorAlert('Permission Denied', 'Template review operations are disabled for your role in the RBAC matrix.');
+      return false;
+    }
     setIsReviewing(true);
     try {
       const res = await apiClient.put(`/api/template_review/${templateId}`, {
@@ -59,7 +65,11 @@ export const useTemplateActions = (parsedTemplate, setParsedTemplate, currentUse
   };
 
   const handleApprove = async () => {
-    if (!templateId) return;
+    if (!templateId) return false;
+    if (!can('t_comment_review_approve')) {
+      errorAlert('Permission Denied', 'Template approval operations are disabled for your role in the RBAC matrix.');
+      return false;
+    }
     setIsApproving(true);
     try {
       const res = await apiClient.put(`/api/template_approve/${templateId}`, {
@@ -106,7 +116,11 @@ export const useTemplateActions = (parsedTemplate, setParsedTemplate, currentUse
   };
 
   const handleReject = async () => {
-    if (!templateId) return;
+    if (!templateId) return false;
+    if (!can('t_comment_review_approve')) {
+      errorAlert('Permission Denied', 'Template rejection operations are disabled for your role in the RBAC matrix.');
+      return false;
+    }
     setIsRejecting(true);
     try {
       const res = await apiClient.put(`/api/template_reject/${templateId}`, {

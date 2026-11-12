@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import apiClient from '../../../../../api/apiClient';
 import { successAlert, errorAlert } from '../../../../../utils/alerts';
+import { useRbac } from '../../../../../utils/rbacContext';
 
 export const useDocumentWorkflowActions = (parsedTemplate, setParsedTemplate, currentUser) => {
+  const { can } = useRbac();
   const [isReviewing, setIsReviewing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -13,6 +15,10 @@ export const useDocumentWorkflowActions = (parsedTemplate, setParsedTemplate, cu
 
   const handleReview = async () => {
     if (!documentId) return false;
+    if (!can('d_comment_review_approve')) {
+      errorAlert('Permission Denied', 'Document review operations are disabled for your role in the RBAC matrix.');
+      return false;
+    }
     setIsReviewing(true);
     try {
       const res = await apiClient.put(`/api/document_review/${documentId}`, {
@@ -42,6 +48,10 @@ export const useDocumentWorkflowActions = (parsedTemplate, setParsedTemplate, cu
 
   const handleApprove = async () => {
     if (!documentId) return false;
+    if (!can('d_comment_review_approve')) {
+      errorAlert('Permission Denied', 'Document approval operations are disabled for your role in the RBAC matrix.');
+      return false;
+    }
     setIsApproving(true);
     try {
       const res = await apiClient.put(`/api/document_approve/${documentId}`, {
@@ -71,6 +81,10 @@ export const useDocumentWorkflowActions = (parsedTemplate, setParsedTemplate, cu
 
   const handleReject = async () => {
     if (!documentId) return false;
+    if (!can('d_comment_review_approve')) {
+      errorAlert('Permission Denied', 'Document rejection operations are disabled for your role in the RBAC matrix.');
+      return false;
+    }
     setIsRejecting(true);
     try {
       const res = await apiClient.put(`/api/document_reject/${documentId}`, {

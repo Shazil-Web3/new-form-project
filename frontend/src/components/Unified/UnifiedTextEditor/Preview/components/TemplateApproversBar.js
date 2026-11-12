@@ -1,6 +1,7 @@
 import React from 'react';
 import { Typography, Badge, Tag, Space, Button, notification } from 'antd';
 import { CheckOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { useRbac } from '../../../../../utils/rbacContext';
 
 const TemplateApproversBar = ({
   parsedTemplate,
@@ -16,6 +17,15 @@ const TemplateApproversBar = ({
   namesOnly = false
 }) => {
   const safeTemplate = parsedTemplate || {};
+  const { can } = useRbac();
+
+  const isDoc = Boolean(
+    parsedTemplate?.document_id ||
+    parsedTemplate?.document_number ||
+    safeTemplate?.itemType === 'document' ||
+    safeTemplate?.document_id
+  );
+  const canReviewApprove = isDoc ? can('d_comment_review_approve') : can('t_comment_review_approve');
 
   const getCurrentUsersToShow = () => {
     if (!parsedTemplate?.template_approvers) return [];
@@ -101,7 +111,25 @@ const TemplateApproversBar = ({
     return !isBlocked;
   };
 
+  const handleReviewClick = () => {
+    if (!canReviewApprove) {
+      notification.warning({
+        message: 'Permission Restricted',
+        description: 'Review operations are disabled for your role in the permissions matrix.'
+      });
+      return;
+    }
+    handleReview && handleReview();
+  };
+
   const handleApproveClick = () => {
+    if (!canReviewApprove) {
+      notification.warning({
+        message: 'Permission Restricted',
+        description: 'Approval operations are disabled for your role in the permissions matrix.'
+      });
+      return;
+    }
     if (!isApproverStageActive()) {
       notification.warning({
         message: 'Approval Blocked',
@@ -113,6 +141,13 @@ const TemplateApproversBar = ({
   };
 
   const handleRejectClick = () => {
+    if (!canReviewApprove) {
+      notification.warning({
+        message: 'Permission Restricted',
+        description: 'Approval operations are disabled for your role in the permissions matrix.'
+      });
+      return;
+    }
     if (!isApproverStageActive()) {
       notification.warning({
         message: 'Approval Blocked',
@@ -128,6 +163,7 @@ const TemplateApproversBar = ({
   };
 
   if (actionsOnly) {
+    if (!canReviewApprove) return null;
     if (!currentUser?.email) return null;
     const roleObj = getCurrentUserRole();
     if (!roleObj) return null;
@@ -145,7 +181,7 @@ const TemplateApproversBar = ({
           type="primary"
           icon={<CheckOutlined />}
           loading={isReviewing}
-          onClick={handleReview}
+          onClick={handleReviewClick}
           size="small"
           style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', fontSize: '11px', height: '24px', padding: '0 8px' }}
         >
@@ -242,13 +278,20 @@ const TemplateApproversBar = ({
               const { role } = currentUserRole;
               
               if (!isDraftState && userStatus === 'pending') {
+                if (!canReviewApprove) {
+                  return (
+                    <Tag color="default" style={{ fontSize: '10px', height: '22px', lineHeight: '20px', color: '#8c8c8c' }}>
+                      Review/Approval Disabled by Role
+                    </Tag>
+                  );
+                }
                 if (role === 'reviewer') {
                   return (
                     <Button
                       type="primary"
                       icon={<CheckOutlined />}
                       loading={isReviewing}
-                      onClick={handleReview}
+                      onClick={handleReviewClick}
                       size="small"
                       style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', fontSize: '11px', height: '24px', padding: '0 8px' }}
                     >

@@ -29,6 +29,7 @@ import StructureTab from './UnifiedPreviewModal/tabs/StructureTab';
 import NotesTab from './UnifiedPreviewModal/tabs/NotesTab';
 import { getDisplayCategory } from '../../../pages/new/Hub/utils/dashboardUtils';
 import { useAuth } from '../../../utils/authService';
+import { useRbac } from '../../../utils/rbacContext';
 import { getDocument } from '../../../api/documents';
 import { getTemplate } from '../../../api/templates';
 
@@ -125,6 +126,7 @@ function TabContent({ tabId, item, isDocument, stage, user }) {
 export default function UnifiedPreviewModal({ visible, item, onClose, onEdit, onAction, onProgressChange }) {
   const [activeTab, setActiveTab] = useState('overview');
   const { user } = useAuth();
+  const { can } = useRbac();
 
   const stage = item ? detectStage(item.status) : 'draft';
   const [detailedItem, setDetailedItem] = useState(null);
@@ -143,6 +145,12 @@ export default function UnifiedPreviewModal({ visible, item, onClose, onEdit, on
   // Check if current user is an active reviewer/approver
   const isReviewerOrApprover = (() => {
     if (!effectiveItem || !user?.id) return false;
+
+    // RBAC Capability Check
+    const hasPermission = isTemplate
+      ? can('t_comment_review_approve')
+      : can('d_comment_review_approve');
+    if (!hasPermission) return false;
 
     const status = String(effectiveItem.status || '').toLowerCase();
     // Admins can always review/approve for standard workflows, but NOT for archive requests unless explicitly assigned

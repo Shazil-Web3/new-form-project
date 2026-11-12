@@ -231,6 +231,7 @@ export default function ImpactTextSelectionPopover({ containerRef }) {
     isComposerOpen,
     setIsComposerOpen,
     setSelectionState,
+    canComment = true,
   } = useImpactComments();
 
   const [popoverPos, setPopoverPos] = useState(null);
@@ -307,7 +308,7 @@ export default function ImpactTextSelectionPopover({ containerRef }) {
     setPopoverPos(null);
   };
 
-  if (!popoverPos || isComposerOpen) return null;
+  if (!popoverPos || isComposerOpen || !canComment) return null;
 
   return (
     <div
