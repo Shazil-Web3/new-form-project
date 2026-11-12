@@ -3,8 +3,8 @@
  * @description Central definitions for RBAC roles, 25 capabilities, initial matrix, and permission mappings.
  */
 
-export const STORAGE_KEY_MATRIX = 'watermelon_rbac_permission_matrix_v4';
-export const STORAGE_KEY_ROLES = 'watermelon_rbac_roles_v4';
+export const STORAGE_KEY_MATRIX = 'watermelon_rbac_permission_matrix_v5';
+export const STORAGE_KEY_ROLES = 'watermelon_rbac_roles_v5';
 export const STORAGE_KEY_USER_ASSIGNMENTS = 'watermelon_rbac_user_assignments_v1';
 export const STORAGE_KEY_TEMP_EXPIRATION = 'watermelon_rbac_temp_expiration_v1';
 
@@ -51,25 +51,25 @@ export const CAPABILITIES = [
   { id: 'tr_numbering_rule', group: 'TRAINING', label: 'Numbering Rule', detail: 'Training Admin responsibility - manage Numbering Rule', level: 'Training Admin Only' }
 ];
 
-// Exact 25 x 10 initial matrix from Rbac-Matrix-Temp-View.html
+// Exact 25 x 10 initial matrix from Rbac-Matrix-Temp-View.html (83 total checks)
 export const INITIAL_MATRIX = [
   [false, true, true, false, true, true, true, true, true, false],
   [false, true, true, false, true, true, true, true, true, false],
   [false, true, true, false, false, false, false, false, false, false],
-  [false, true, true, false, false, false, false, false, false, false],
-  [false, true, true, true, false, false, false, false, false, false],
-  [false, true, true, false, false, true, true, true, true, false],
+  [false, true, true, false, false, false, true, true, false, false],
+  [false, true, true, true, false, false, true, true, false, false],
+  [false, true, true, false, true, true, true, true, true, false],
   [false, false, false, false, false, false, false, false, false, true],
   [false, true, true, false, true, true, true, true, false, false],
-  [false, true, true, false, false, false, false, false, false, false],
+  [false, true, true, false, false, false, true, false, false, false],
   [false, true, true, false, true, true, false, false, false, false],
-  [false, true, true, false, false, true, false, false, false, false],
   [false, true, true, false, false, false, false, false, false, false],
-  [false, true, true, false, false, false, false, false, false, false],
-  [false, true, true, false, true, true, true, true, false, false],
-  [false, true, true, false, true, true, true, true, false, false],
-  [false, true, true, false, true, true, true, true, false, false],
   [false, true, true, false, false, true, false, false, false, false],
+  [false, false, true, false, true, true, false, false, false, false],
+  [false, true, true, false, true, true, true, true, false, false],
+  [false, true, true, false, true, true, true, true, false, false],
+  [false, true, true, false, true, true, true, true, false, false],
+  [false, false, true, false, true, true, false, false, false, false],
   [false, false, false, true, false, false, false, false, false, false],
   [false, false, false, true, false, false, false, false, false, false],
   [false, false, false, true, false, false, false, false, false, false],

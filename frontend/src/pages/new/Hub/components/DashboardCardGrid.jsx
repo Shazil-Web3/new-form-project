@@ -159,8 +159,19 @@ export default function DashboardCardGrid({
 
                 {/* 36x36px icon tile (w-9 h-9), 8px radius (rounded-lg), accent tint bg, centered 18px icon */}
                 <div className="flex items-start gap-3 mb-2">
-                  <div className={`w-9 h-9 rounded-lg ${isArchiveFlow ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-100'} border flex items-center justify-center select-none flex-shrink-0`} title={isArchiveFlow ? 'Archive Item' : (isTemplate ? 'Template' : 'Document')}>
-                    <span className={`material-symbols-outlined text-[18px] ${isArchiveFlow ? 'text-amber-700' : 'text-blue-700'} flex items-center justify-center`}>
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPreviewItem && onPreviewItem(item);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      onPreviewItem && onPreviewItem(item);
+                    }}
+                    className={`w-9 h-9 rounded-lg ${isArchiveFlow ? 'bg-amber-50 border-amber-200' : isTemplate ? 'bg-purple-50 border-purple-200' : 'bg-blue-50 border-blue-100'} border flex items-center justify-center select-none flex-shrink-0 cursor-pointer hover:scale-105 transition-transform`}
+                    title={isArchiveFlow ? 'Archive Item' : (isTemplate ? 'Template' : 'Document')}
+                  >
+                    <span className={`material-symbols-outlined text-[18px] ${isArchiveFlow ? 'text-amber-700' : isTemplate ? 'text-purple-600' : 'text-blue-700'} flex items-center justify-center`}>
                       {isArchiveFlow ? 'inventory_2' : (isTemplate ? 'assignment' : 'feed')}
                     </span>
                   </div>

@@ -138,7 +138,18 @@ export default function DashboardTable({
               >
                 {/* Type Icon Start Column - 36x36px container, 8px radius, accent tint bg, centered 18px icon in accent color */}
                 <td className={`${cellPadding} py-3 w-[4%] align-middle`}>
-                  <div className={`${isArchiveFlow ? 'border-amber-500 bg-amber-500/15' : isTemplate ? 'border-purple-600 bg-purple-600/10' : 'border-blue-600 bg-blue-700/10'} b-4 w-9 h-9 rounded-lg text-white border border-1px flex items-center justify-center select-none flex-shrink-0`} title={isArchiveFlow ? 'Archive Item' : (isTemplate ? 'Template' : 'Document')}>
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPreviewItem && onPreviewItem(item);
+                    }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      onPreviewItem && onPreviewItem(item);
+                    }}
+                    className={`${isArchiveFlow ? 'border-amber-500 bg-amber-500/15' : isTemplate ? 'border-purple-600 bg-purple-600/10' : 'border-blue-600 bg-blue-700/10'} b-4 w-9 h-9 rounded-lg text-white border border-1px flex items-center justify-center select-none flex-shrink-0 cursor-pointer hover:scale-105 transition-transform`}
+                    title={isArchiveFlow ? 'Archive Item' : (isTemplate ? 'Template' : 'Document')}
+                  >
                     <span className={`${isArchiveFlow ? 'text-amber-700' : isTemplate ? 'text-purple-600' : 'text-blue-700'} material-symbols-outlined text-[22px] flex items-center justify-center`}>
                       {isArchiveFlow ? 'inventory_2' : (isTemplate ? 'assignment' : 'feed')}
                     </span>

@@ -262,15 +262,16 @@ function ActionButton({ stage, item, isDocument, onEdit, onAction, isAuthor, isR
   return null;
 }
 
-export default function PreviewLeftPane({ item, stage, onEdit, onAction, onProgressChange, isReviewerOrApprover }) {
+export default function PreviewLeftPane({ item, stage, onEdit, onAction, onProgressChange, isReviewerOrApprover, isTemplate: propIsTemplate, isDocument: propIsDocument }) {
   const { user } = useAuth();
   const isAuthor = user ? (Number(item.created_by) === Number(user.id) || user.role === 'admin') : false;
 
-  const isDocument = item.itemType !== 'template';
-  const displayId = formatId(item.id, item.itemType);
+  const isTemplate = propIsTemplate !== undefined ? propIsTemplate : (item.itemType === 'template' || (!item.document_id && !item.document_number && !item.template_id));
+  const isDocument = propIsDocument !== undefined ? propIsDocument : !isTemplate;
+  const displayId = formatId(item.id, isTemplate ? 'template' : 'document');
   const category = getDisplayCategory(item);
   const rawDueDate = isDocument ? getMockedDueDate(item) : item.due_date;
-  const dueDateInfo = getInlineDueDateInfo(item.due_date, !isDocument, item);
+  const dueDateInfo = getInlineDueDateInfo(item.due_date, isTemplate, item);
   const receivedDate = getReceivedAt(item, user);
   const initials = String(item.owner_name || item.created_by_name || 'U').substring(0, 2).toUpperCase();
   const statusKey = (item.status || 'draft').toLowerCase();
@@ -282,8 +283,8 @@ export default function PreviewLeftPane({ item, stage, onEdit, onAction, onProgr
       <div className="space-y-5 overflow-y-auto">
         {/* Badge row */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${isDocument ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}`}>
-            {isDocument ? 'Document' : 'Template'}
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${isTemplate ? 'bg-purple-100 text-purple-800 border-purple-200' : 'bg-blue-100 text-blue-800 border-blue-200'}`}>
+            {isTemplate ? 'Template' : 'Document'}
           </span>
           {item.document_number && (
             <span className="text-body-sm font-mono font-bold text-on-surface-variant/60">{item.document_number}</span>

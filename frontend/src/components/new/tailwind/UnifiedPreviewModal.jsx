@@ -109,7 +109,7 @@ function TabContent({ tabId, item, isDocument, stage, user }) {
   const shared = { item, isDocument, user };
   switch (tabId) {
     case 'overview': return <OverviewTab     {...shared} getDisplayCategory={getDisplayCategory} />;
-    case 'content': return <ContentTab item={item} dimmed={stage === 'archived'} />;
+    case 'content': return <ContentTab item={item} dimmed={stage === 'archived'} isDocument={isDocument} />;
     case 'tasks': return <TasksTab item={item} />;
     case 'participants': return <ParticipantsTab item={item} isDocument={isDocument} />;
     case 'workflow': return <WorkflowTab item={item} onlyApprovers={stage === 'published' || stage === 'archived'} />;
@@ -131,8 +131,13 @@ export default function UnifiedPreviewModal({ visible, item, onClose, onEdit, on
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   const effectiveItem = detailedItem || item;
-  const isDocument = effectiveItem ? effectiveItem.itemType !== 'template' : true;
-  const isTemplate = !isDocument;
+  const isTemplate = Boolean(
+    (item && item.itemType === 'template') ||
+    (detailedItem && detailedItem.itemType === 'template') ||
+    (effectiveItem && effectiveItem.itemType === 'template') ||
+    (effectiveItem && !effectiveItem.document_id && !effectiveItem.document_number && !effectiveItem.template_id && (effectiveItem.template_structure || effectiveItem.template_approvers || item?.itemType === 'template'))
+  );
+  const isDocument = !isTemplate;
   const tabs = effectiveItem ? buildTabs(stage, isDocument, isTemplate) : [];
 
   // Check if current user is an active reviewer/approver
@@ -143,7 +148,7 @@ export default function UnifiedPreviewModal({ visible, item, onClose, onEdit, on
     // Admins can always review/approve for standard workflows, but NOT for archive requests unless explicitly assigned
     if (user.role === 'admin' && status !== 'pending_archive_approval' && status !== 'pending_archive_review') return true;
 
-    const raw = effectiveItem.itemType !== 'template' ? effectiveItem.approvers : effectiveItem.template_approvers;
+    const raw = isDocument ? effectiveItem.approvers : effectiveItem.template_approvers;
     if (!raw) return false;
     try {
       const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -173,12 +178,17 @@ export default function UnifiedPreviewModal({ visible, item, onClose, onEdit, on
       setActiveTab('overview');
       setDetailedItem(item);
       setLoadingDetails(true);
+      const isTpl = Boolean(item.itemType === 'template' || (!item.document_id && !item.document_number && !item.template_id));
       const loadDetails = async () => {
         try {
-          const fetched = item.itemType !== 'template'
+          const fetched = !isTpl
             ? await getDocument(item.id)
             : await getTemplate(item.id);
-          setDetailedItem(fetched);
+          setDetailedItem({
+            ...item,
+            ...fetched,
+            itemType: isTpl ? 'template' : 'document'
+          });
         } catch (e) {
           console.warn('Failed to load item preview details:', e);
         } finally {
@@ -189,7 +199,7 @@ export default function UnifiedPreviewModal({ visible, item, onClose, onEdit, on
     } else {
       setDetailedItem(null);
     }
-  }, [visible, item?.id]);
+  }, [visible, item?.id, item?.itemType]);
 
   // Close on Escape key
   useEffect(() => {
@@ -220,6 +230,8 @@ export default function UnifiedPreviewModal({ visible, item, onClose, onEdit, on
         {/* ── Left Sidebar ── */}
         <PreviewLeftPane
           item={detailedItem || item}
+          isTemplate={isTemplate}
+          isDocument={isDocument}
           stage={stage}
           onEdit={onEdit}
           onAction={onAction || (() => { })}

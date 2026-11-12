@@ -13,7 +13,7 @@ import EmptyState from '../../../components/new/tailwind/EmptyState';
 import Pagination from '../../../components/new/tailwind/Pagination';
 import { useAuth } from '../../../utils/authService';
 import { useRbac } from '../../../utils/rbacContext';
-import { STORAGE_KEY_MATRIX, normalizeRoleId } from '../../../utils/rbacConstants';
+import { STORAGE_KEY_MATRIX, STORAGE_KEY_ROLES, normalizeRoleId } from '../../../utils/rbacConstants';
 
 // Subcomponents & Custom hooks / utilities
 
@@ -34,21 +34,30 @@ export default function HubPage({ initialType, initialActiveTab }) {
   const isSuper = user?.role === 'super_admin' || user?.isSuperAdmin || activeRole?.id === 'super_admin';
   const hasFileAccess = useMemo(() => {
     if (isSuper) return true;
-    if (!can('folder_file_access')) return false;
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         const storedStr = window.localStorage.getItem(STORAGE_KEY_MATRIX);
+        const storedRolesStr = window.localStorage.getItem(STORAGE_KEY_ROLES);
         if (storedStr) {
           const matrixArr = JSON.parse(storedStr);
-          const currentRoleId = normalizeRoleId(activeRole?.id || user?.role || 'viewer');
-          const roleIndex = ['system', 'super_admin', 'admin', 'training_admin', 'approver', 'author', 'people', 'project', 'view', 'temp_view'].indexOf(currentRoleId);
-          if (roleIndex !== -1 && matrixArr[5] && matrixArr[5][roleIndex] === false) {
-            return false;
+          const rolesArr = storedRolesStr ? JSON.parse(storedRolesStr) : null;
+          const currentRoleId = normalizeRoleId(activeRole?.id || user?.role || 'view');
+
+          let roleIndex = -1;
+          if (Array.isArray(rolesArr)) {
+            roleIndex = rolesArr.findIndex(r => r.id === currentRoleId || r.key === currentRoleId);
+          }
+          if (roleIndex === -1) {
+            roleIndex = ['system', 'super_admin', 'admin', 'training_admin', 'approver', 'author', 'people', 'project', 'view', 'temp_view'].indexOf(currentRoleId);
+          }
+
+          if (roleIndex !== -1 && matrixArr[5] && matrixArr[5][roleIndex] !== undefined) {
+            return Boolean(matrixArr[5][roleIndex]);
           }
         }
       }
     } catch (e) {}
-    return can('folder_file_access');
+    return Boolean(can('folder_file_access'));
   }, [isSuper, user, activeRole, can]);
 
   const state = useDashboardState(initialType, user, initialActiveTab);

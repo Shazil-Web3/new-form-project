@@ -50,13 +50,14 @@ function extractHtml(item) {
   return raw;
 }
 
-export default function ContentTab({ item, dimmed }) {
+export default function ContentTab({ item, dimmed, isDocument = true }) {
   const html = extractHtml(item);
+  const isTemplate = item?.itemType === 'template' || !isDocument;
 
   return (
     <div className="animate-fade-in flex flex-col h-full min-h-[300px]">
       <p className="text-xs text-on-surface-variant/60 font-semibold uppercase tracking-wider mb-3">
-        Document Content
+        {isTemplate ? 'Template Content' : 'Document Content'}
       </p>
       <div className={`flex-1 overflow-y-auto border border-outline-variant rounded-xl bg-white shadow-inner p-6 ${dimmed ? 'opacity-60' : ''}`}>
         {html ? (
