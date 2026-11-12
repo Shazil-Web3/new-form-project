@@ -110,6 +110,11 @@ export const RbacProvider = ({ children }) => {
       if (matched) return matched;
     }
 
+    if (user.customRoleId) {
+      const matched = roles.find(r => String(r.id) === String(user.customRoleId));
+      if (matched) return matched;
+    }
+
     // Next check user's direct role or isSuperAdmin
     if (user.role === 'super_admin' || (user.isSuperAdmin && (!user.role || user.role === 'admin'))) {
       return roles.find(r => r.id === 'super_admin') || INITIAL_ROLES[1];
@@ -122,7 +127,7 @@ export const RbacProvider = ({ children }) => {
 
   // Find column index of the active role in the matrix
   const roleColIndex = useMemo(() => {
-    return roles.findIndex(r => r.id === activeRole.id);
+    return roles.findIndex(r => String(r.id) === String(activeRole.id));
   }, [roles, activeRole]);
 
   // Compile the set of granted capability IDs for the active role

@@ -14,6 +14,17 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
   const isDev = process.env.NODE_ENV === 'development';
   const { mockUserOverride, setMockUserOverride } = useAuth();
   const [orgUsers, setOrgUsers] = useState([]);
+  const [matrixRevision, setMatrixRevision] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => setMatrixRevision(v => v + 1);
+    window.addEventListener('watermelon_rbac_matrix_changed', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('watermelon_rbac_matrix_changed', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isDev) return;
@@ -33,12 +44,30 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
     return () => { isMounted = false; };
   }, [isDev]);
 
-  // Format dynamic actor options from DB
-  const actorOptions = isDev ? [
-    { label: 'Real User (Admin)', value: 'real_user', user: null },
-    ...orgUsers.map(u => {
+  // Format dynamic actor options from DB and storage
+  const actorOptions = useMemo(() => {
+    if (!isDev) return [];
+
+    let userAssignments = {};
+    let customRoles = [];
+    try {
+      userAssignments = JSON.parse(window.localStorage.getItem('watermelon_rbac_user_assignments_v1') || '{}');
+      const allRoles = JSON.parse(window.localStorage.getItem('watermelon_rbac_roles_v5') || '[]');
+      customRoles = allRoles.filter(r => !r.is_system);
+    } catch (e) {}
+
+    const userOptions = orgUsers.map(u => {
       const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
-      const roleName = u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1) : 'Member';
+      let roleName = u.role ? u.role.charAt(0).toUpperCase() + u.role.slice(1) : 'Member';
+
+      const customAssign = userAssignments[u.id];
+      if (customAssign?.roleId) {
+        const foundRole = customRoles.find(r => String(r.id) === String(customAssign.roleId));
+        if (foundRole) {
+          roleName = foundRole.label || foundRole.name;
+        }
+      }
+
       return {
         label: `${roleName}: ${fullName} (${u.email})`,
         value: String(u.id),
@@ -58,10 +87,36 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
           isSuperAdmin: Boolean(u.is_super_admin || u.isSuperAdmin || u.role === 'super_admin')
         }
       };
-    })
-  ] : [];
+    });
 
-  const currentSelectedValue = (isDev && mockUserOverride) ? String(mockUserOverride.id) : 'real_user';
+    const customRoleOptions = customRoles.map(cr => ({
+      label: `🎭 Custom Role: ${cr.label || cr.name}`,
+      value: `custom_role_${cr.id}`,
+      user: {
+        id: `custom_actor_${cr.id}`,
+        userId: `custom_actor_${cr.id}`,
+        name: `${cr.label || cr.name} (Custom Persona)`,
+        firstName: cr.label || cr.name,
+        lastName: 'Persona',
+        role: cr.key || cr.id,
+        customRoleId: cr.id,
+        department: 'Quality Assurance',
+        email: `${(cr.key || 'custom').toLowerCase()}@watermelon.local`,
+        is_super_admin: false,
+        isSuperAdmin: false
+      }
+    }));
+
+    return [
+      { label: 'Real User (Admin)', value: 'real_user', user: null },
+      ...userOptions,
+      ...customRoleOptions
+    ];
+  }, [isDev, orgUsers, matrixRevision]);
+
+  const currentSelectedValue = (isDev && mockUserOverride)
+    ? (mockUserOverride.customRoleId ? `custom_role_${mockUserOverride.customRoleId}` : String(mockUserOverride.id))
+    : 'real_user';
 
   const handleRoleChange = (e) => {
     if (!isDev) return;
