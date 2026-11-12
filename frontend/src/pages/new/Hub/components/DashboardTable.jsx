@@ -30,6 +30,10 @@ export default function DashboardTable({
 }) {
   const { can, canEditDocument, activeRole } = useRbac();
 
+  if (!can('folder_file_access')) {
+    return null;
+  }
+
   const canEditItem = (item) => {
     if (!currentUser) return false;
     const isTemplate = item.itemType === 'template';

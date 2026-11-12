@@ -54,6 +54,7 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
           email: u.email,
           organization_id: u.organization_id || u.orgId || u.org_id,
           template_approver: u.template_approver || 'no',
+          is_super_admin: Boolean(u.is_super_admin || u.isSuperAdmin || u.role === 'super_admin'),
           isSuperAdmin: Boolean(u.is_super_admin || u.isSuperAdmin || u.role === 'super_admin')
         }
       };
@@ -73,6 +74,9 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
         setMockUserOverride(match.user);
       }
     }
+    try {
+      window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));
+    } catch (err) {}
   };
 
   return (

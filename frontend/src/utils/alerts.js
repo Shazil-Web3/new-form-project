@@ -144,6 +144,13 @@ export const toastAlert = (title, icon = 'success', options = {}) => {
     showConfirmButton: false,
     timer: 3000,
     timerProgressBar: true,
+    zIndex: 999999,
+    didOpen: (modal) => {
+      const container = document.querySelector('.swal2-container');
+      if (container) {
+        container.style.zIndex = '999999';
+      }
+    },
     ...options
   });
 };

@@ -59,7 +59,7 @@ function App() {
             
             {/* PROTECTED UNIFIED DOCUMENT EDITOR ROUTE */}
             <Route path="/document/:docId" element={
-              <ProtectedRoute requiredCapability="folder_file_access">
+              <ProtectedRoute>
                 <EditDocumentHub />
               </ProtectedRoute>
             } />
@@ -118,12 +118,12 @@ function App() {
             } />
             <Route path="/accounts" element={<Navigate to="/workspace/account-management" replace />} />
             <Route path="/published-docs" element={
-              <ProtectedRoute requiredCapability="folder_file_access">
+              <ProtectedRoute>
                 <UnifiedDashboard initialType="all" initialActiveTab="Published" />
               </ProtectedRoute>
             } />
             <Route path="/repository" element={
-              <ProtectedRoute requiredCapability="folder_file_access">
+              <ProtectedRoute>
                 <UnifiedDashboard initialType="all" initialActiveTab="Archived" />
               </ProtectedRoute>
             } />
@@ -138,7 +138,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/template/:tempId" element={
-              <ProtectedRoute requiredCapability="folder_file_access">
+              <ProtectedRoute>
                 <EditTemplateHub />
               </ProtectedRoute>
             } />

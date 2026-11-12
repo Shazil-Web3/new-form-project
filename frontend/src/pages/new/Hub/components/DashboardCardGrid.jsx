@@ -30,6 +30,10 @@ export default function DashboardCardGrid({
 }) {
   const { can, canEditDocument, activeRole } = useRbac();
 
+  if (!can('folder_file_access')) {
+    return null;
+  }
+
   const canReassignItem = (item) => {
     if (!currentUser) return false;
     if (currentUser.role === 'admin' || currentUser.role === 'superadmin' || currentUser.role === 'project_manager') return true;

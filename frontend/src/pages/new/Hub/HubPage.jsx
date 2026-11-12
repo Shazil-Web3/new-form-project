@@ -13,6 +13,7 @@ import EmptyState from '../../../components/new/tailwind/EmptyState';
 import Pagination from '../../../components/new/tailwind/Pagination';
 import { useAuth } from '../../../utils/authService';
 import { useRbac } from '../../../utils/rbacContext';
+import { STORAGE_KEY_MATRIX, normalizeRoleId } from '../../../utils/rbacConstants';
 
 // Subcomponents & Custom hooks / utilities
 
@@ -30,9 +31,36 @@ export default function HubPage({ initialType, initialActiveTab }) {
   const { can, activeRole } = useRbac();
   const navigate = useNavigate();
 
+  const isSuper = user?.role === 'super_admin' || user?.isSuperAdmin || activeRole?.id === 'super_admin';
+  const hasFileAccess = useMemo(() => {
+    if (isSuper) return true;
+    if (!can('folder_file_access')) return false;
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const storedStr = window.localStorage.getItem(STORAGE_KEY_MATRIX);
+        if (storedStr) {
+          const matrixArr = JSON.parse(storedStr);
+          const currentRoleId = normalizeRoleId(activeRole?.id || user?.role || 'viewer');
+          const roleIndex = ['system', 'super_admin', 'admin', 'training_admin', 'approver', 'author', 'people', 'project', 'view', 'temp_view'].indexOf(currentRoleId);
+          if (roleIndex !== -1 && matrixArr[5] && matrixArr[5][roleIndex] === false) {
+            return false;
+          }
+        }
+      }
+    } catch (e) {}
+    return can('folder_file_access');
+  }, [isSuper, user, activeRole, can]);
+
   const state = useDashboardState(initialType, user, initialActiveTab);
 
   const workspaceMetrics = useMemo(() => {
+    if (!hasFileAccess) {
+      return {
+        documentsCount: 0,
+        templatesCount: 0,
+        draftsInProgress: 0,
+      };
+    }
     const documents = state.documents || [];
     const templates = state.templates || [];
 
@@ -48,7 +76,7 @@ export default function HubPage({ initialType, initialActiveTab }) {
       templatesCount: tempCount,
       draftsInProgress: inProgressCount,
     };
-  }, [state.documents, state.templates, state.documentsCount, state.templatesCount, state.getTabCount]);
+  }, [hasFileAccess, state.documents, state.templates, state.documentsCount, state.templatesCount, state.getTabCount]);
 
   const [selectedPreviewItem, setSelectedPreviewItem] = useState(null);
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
@@ -106,14 +134,14 @@ export default function HubPage({ initialType, initialActiveTab }) {
                   ? 'bg-white/20 text-white'
                   : 'bg-surface-container-highest text-on-surface-variant/80'
                   }`}>
-                  {state.scopeCounts ? state.scopeCounts[type] : 0}
+                  {hasFileAccess && state.scopeCounts ? state.scopeCounts[type] : 0}
                 </span>
               </button>
             ))}
           </div>
 
           {/* Add buttons wired directly to RBAC matrix capabilities (d_create & t_create) */}
-          {(can('d_create') || can('t_create')) && (
+          {hasFileAccess && (can('d_create') || can('t_create')) && (
             <div className="flex items-center gap-3">
               {can('d_create') && (
                 <button
@@ -137,36 +165,38 @@ export default function HubPage({ initialType, initialActiveTab }) {
           )}
         </div>
 
-        <FilterBar
-          currentUser={user}
-          activeTab={state.activeTab}
-          searchVal={state.searchVal}
-          onSearchChange={state.setSearchVal}
-          departments={state.distinctDepts}
-          selectedDept={state.selectedDept}
-          onDeptChange={state.setSelectedDept}
-          startDate={state.startDate}
-          endDate={state.endDate}
-          onDateChange={(start, end) => {
-            state.setStartDate(start);
-            state.setEndDate(end);
-          }}
-          owners={state.distinctOwners}
-          selectedOwner={state.selectedOwner}
-          onOwnerChange={state.setSelectedOwner}
-          isPendingTab={state.activeTab === 'In Progress'}
-          approverGroups={state.distinctApproverGroups}
-          selectedApproverGroup={state.selectedApproverGroup}
-          onApproverGroupChange={state.setSelectedApproverGroup}
-          onClear={state.handleClearFilters}
-          viewMode={state.viewMode}
-          onViewModeChange={state.setViewMode}
-          sortBy={state.sortBy}
-          onSortChange={state.setSortBy}
-          viewAllReadOnly={state.viewAllReadOnly}
-          onViewAllReadOnlyChange={state.setViewAllReadOnly}
-          showReadOnlyToggle={state.activeTab === 'In Progress'}
-        />
+        {hasFileAccess && (
+          <FilterBar
+            currentUser={user}
+            activeTab={state.activeTab}
+            searchVal={state.searchVal}
+            onSearchChange={state.setSearchVal}
+            departments={state.distinctDepts}
+            selectedDept={state.selectedDept}
+            onDeptChange={state.setSelectedDept}
+            startDate={state.startDate}
+            endDate={state.endDate}
+            onDateChange={(start, end) => {
+              state.setStartDate(start);
+              state.setEndDate(end);
+            }}
+            owners={state.distinctOwners}
+            selectedOwner={state.selectedOwner}
+            onOwnerChange={state.setSelectedOwner}
+            isPendingTab={state.activeTab === 'In Progress'}
+            approverGroups={state.distinctApproverGroups}
+            selectedApproverGroup={state.selectedApproverGroup}
+            onApproverGroupChange={state.setSelectedApproverGroup}
+            onClear={state.handleClearFilters}
+            viewMode={state.viewMode}
+            onViewModeChange={state.setViewMode}
+            sortBy={state.sortBy}
+            onSortChange={state.setSortBy}
+            viewAllReadOnly={state.viewAllReadOnly}
+            onViewAllReadOnlyChange={state.setViewAllReadOnly}
+            showReadOnlyToggle={state.activeTab === 'In Progress'}
+          />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="rounded-3xl border border-outline-variant bg-surface-container-lowest p-5 shadow-sm">
@@ -202,7 +232,7 @@ export default function HubPage({ initialType, initialActiveTab }) {
                 <span>{tab}</span>
                 {state.getTabCount(tab) !== undefined && (
                   <span className="ml-1.5 bg-surface-container-high text-on-surface-variant text-[10px] px-2 py-0.5 rounded-full font-extrabold">
-                    {state.getTabCount(tab)}
+                    {hasFileAccess ? state.getTabCount(tab) : 0}
                   </span>
                 )}
               </button>
@@ -211,7 +241,9 @@ export default function HubPage({ initialType, initialActiveTab }) {
         </div>
 
         {/* Pinned section fixed above existing filters */}
-        <PinnedSection items={state.pinnedItems} viewMode={state.viewMode} activeTab={state.activeTab} {...sharedProps} />
+        {hasFileAccess && (
+          <PinnedSection items={state.pinnedItems} viewMode={state.viewMode} activeTab={state.activeTab} {...sharedProps} />
+        )}
 
         {/* Content items render views */}
         {state.loading ? (
@@ -219,9 +251,11 @@ export default function HubPage({ initialType, initialActiveTab }) {
             <span className="material-symbols-outlined text-primary text-[48px] animate-spin">sync</span>
             <span className="text-on-surface-variant text-sm font-semibold">Fetching records...</span>
           </div>
-        ) : state.paginatedItems.length === 0 ? (
+        ) : (!hasFileAccess || state.paginatedItems.length === 0) ? (
           <EmptyState
-            searchActive={!!state.searchVal}
+            title={!hasFileAccess ? "No documents or templates available" : undefined}
+            description={!hasFileAccess ? "Folder and file repository access is restricted for this role." : undefined}
+            searchActive={hasFileAccess && !!state.searchVal}
             searchVal={state.searchVal}
             activeTab={state.activeTab}
             onClearSearch={state.handleClearFilters}
@@ -233,7 +267,7 @@ export default function HubPage({ initialType, initialActiveTab }) {
         )}
 
         {/* Pagination Controls */}
-        {!state.loading && state.tabItems.length > 0 && (
+        {!state.loading && hasFileAccess && state.tabItems.length > 0 && (
           <Pagination
             currentPage={state.currentPage}
             onPageChange={state.setCurrentPage}
