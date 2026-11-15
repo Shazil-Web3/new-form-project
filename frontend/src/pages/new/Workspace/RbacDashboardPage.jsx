@@ -125,8 +125,10 @@ export function RbacDashboardContent() {
     setTimeout(() => setNotice(null), 3500);
   };
 
-  // All roles are visible across the matrix
-  const visibleRoles = rolesList;
+  // Visible roles in the matrix columns (excludes temporary view as it is managed below)
+  const visibleRoles = useMemo(() => {
+    return rolesList.filter(role => role.id !== 'temp_view' && role.key !== 'temporary_view');
+  }, [rolesList]);
 
   // Statistics calculation
   const stats = useMemo(() => {
@@ -134,16 +136,13 @@ export function RbacDashboardContent() {
       matrix.reduce((sum, row) => sum + (row[colIdx] ? 1 : 0), 0)
     );
     const totalChecks = perRole.reduce((a, b) => a + b, 0);
-    const totalCells = CAPABILITIES.length * rolesList.length;
+    const totalCells = CAPABILITIES.length * visibleRoles.length;
 
     let violations = 0;
     if (perRole[0] > 0) violations += perRole[0];
-    matrix[6]?.forEach((val, idx) => {
-      if (idx !== 9 && val) violations += 1;
-    });
 
     return { perRole, totalChecks, totalCells, violations };
-  }, [matrix, rolesList]);
+  }, [matrix, rolesList, visibleRoles]);
 
   // Group row counts
   const groupCounts = useMemo(() => ({
@@ -173,6 +172,17 @@ export function RbacDashboardContent() {
 
     if (roleId === 'system') {
       showNotice('System column is grantless (no permissions allowed)');
+      return;
+    }
+
+    if (roleId === 'temp_view' || roleId === 'temporary_view' || CAPABILITIES[rowIdx]?.id === 'temp_view_row') {
+      showNotice('Temp View permissions are managed below in "Assign a role to a user"');
+      const el = document.getElementById('assign-user-role-section');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        el.classList.add('ring-2', 'ring-amber-400');
+        setTimeout(() => el.classList.remove('ring-2', 'ring-amber-400'), 2000);
+      }
       return;
     }
 
@@ -305,9 +315,7 @@ export function RbacDashboardContent() {
     }
   };
 
-  const assigningTemporary = rolesList.some(role =>
-    String(role.id) === String(selectedAssignRoleId) && role.id === 'temp_view'
-  );
+  const assigningTemporary = selectedAssignRoleId === 'temp_view' || selectedAssignRoleId === 'temporary_view';
 
   return (
     <div className="min-h-screen w-full bg-white text-[11px] leading-[1.4] overflow-x-clip font-['Inter',sans-serif]">
@@ -431,6 +439,56 @@ export function RbacDashboardContent() {
                       {groupItems.map(capability => {
                         const rowIdx = CAPABILITIES.indexOf(capability);
 
+                        // If Temp View row: render as a clean horizontal line with text and a small button
+                        if (capability.id === 'temp_view_row') {
+                          return (
+                            <tr
+                              key={capability.id}
+                              className="border-b border-[#2a2a2a]/60 bg-[#181818] hover:bg-[#202020] transition-colors"
+                            >
+                              <td className="py-2.5 px-4 align-middle text-left">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[11px] font-semibold text-white">
+                                    {capability.label}
+                                  </span>
+                                  <span className="text-[10px] text-[#6b7280]">
+                                    / {capability.level || 'Read-Only'}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-[#6b7280] leading-[1.3] mt-0.5">
+                                  {capability.detail}
+                                </div>
+                              </td>
+
+                              <td
+                                colSpan={visibleRoles.length}
+                                className="py-2.5 px-4 align-middle border-l border-[#2a2a2a]/40"
+                              >
+                                <div className="flex items-center justify-between gap-3">
+                                  <span className="text-[11px] text-gray-300">
+                                    You can manage temporary view permissions and approved document access below.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const el = document.getElementById('assign-user-role-section');
+                                      if (el) {
+                                        el.scrollIntoView({ behavior: 'smooth' });
+                                        el.classList.add('ring-2', 'ring-blue-500');
+                                        setTimeout(() => el.classList.remove('ring-2', 'ring-blue-500'), 2000);
+                                      }
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[5px] bg-[#2a2a2a] hover:bg-[#383838] border border-[#444] text-white text-[10px] font-medium transition-all shadow-sm shrink-0 cursor-pointer"
+                                  >
+                                    <span>Manage below</span>
+                                    <span className="text-xs leading-none">↓</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        }
+
                         return (
                           <tr
                             key={capability.id}
@@ -454,12 +512,6 @@ export function RbacDashboardContent() {
                                 {capability.invited && (
                                   <span className="mt-1 inline-flex w-fit px-1.5 py-0.5 rounded-[4px] bg-[rgba(59,130,246,0.15)] border border-[rgba(59,130,246,0.2)] text-[9px] text-[#60a5fa]">
                                     Invited Only • dropdown
-                                  </span>
-                                )}
-
-                                {capability.id === 'temp_view_row' && (
-                                  <span className="mt-1 inline-flex w-fit px-1.5 py-0.5 rounded-[4px] bg-[rgba(234,179,8,0.15)] border border-[rgba(234,179,8,0.2)] text-[9px] text-[#facc15]">
-                                    visitor/auditor • 1-8h • expires_at
                                   </span>
                                 )}
                               </div>
@@ -584,7 +636,7 @@ export function RbacDashboardContent() {
           </section>
 
           {/* Assign a Role to a User Card */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5 text-gray-900 shadow-sm">
+          <section id="assign-user-role-section" className="rounded-xl border border-gray-200 bg-white p-5 text-gray-900 shadow-sm transition-all duration-300">
             <h2 className="text-base font-semibold text-gray-900">Assign a role to a user</h2>
             <p className="mt-1 text-sm text-gray-500">
               This updates permissions only. It does not change the user&apos;s password or login.
@@ -613,7 +665,10 @@ export function RbacDashboardContent() {
               <Form.Item name="roleId" label="Role" rules={[{ required: true, message: 'Please select a role.' }]}>
                 <Select
                   placeholder="Select a role"
-                  options={rolesList.map(role => ({ value: role.id, label: role.label || role.name }))}
+                  options={[
+                    ...visibleRoles.map(role => ({ value: role.id, label: role.label || role.name })),
+                    { value: 'temp_view', label: 'Temp View (Visitor / Auditor)' }
+                  ]}
                 />
               </Form.Item>
 
@@ -666,7 +721,7 @@ export function RbacDashboardContent() {
 
             <h3 className="mt-6 text-sm font-semibold text-gray-900">Roles in this matrix</h3>
             <ul className="mt-2 space-y-1 text-sm text-gray-600 max-h-[160px] overflow-y-auto pr-1">
-              {rolesList.map(role => {
+              {visibleRoles.map(role => {
                 const colIdx = rolesList.findIndex(r => r.id === role.id);
                 const count = colIdx !== -1 ? stats.perRole[colIdx] : 0;
                 return (
@@ -684,7 +739,7 @@ export function RbacDashboardContent() {
 
         {/* Footer Audit Summary */}
         <div className="mt-8 text-center text-[10px] text-gray-500">
-          Watermelon Training Integra • RBAC matrix • {rolesList.length} roles • {CAPABILITIES.length} rows (ACCESS {groupCounts.ACCESS} • TEMPLATE {groupCounts.TEMPLATE} • DOCUMENT {groupCounts.DOCUMENT} • TRAINING {groupCounts.TRAINING}) • {stats.totalChecks}/{stats.totalCells} granted • Inter 11px • Green checks #22c55e
+          Watermelon Training Integra • RBAC matrix • {visibleRoles.length} roles • {CAPABILITIES.length} rows (ACCESS {groupCounts.ACCESS} • TEMPLATE {groupCounts.TEMPLATE} • DOCUMENT {groupCounts.DOCUMENT} • TRAINING {groupCounts.TRAINING}) • {stats.totalChecks}/{stats.totalCells} granted • Inter 11px • Green checks #22c55e
         </div>
 
       </div>

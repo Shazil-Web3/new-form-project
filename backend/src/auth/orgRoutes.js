@@ -1060,15 +1060,19 @@ app.put('/api/edit_org_member/:userId', authenticateToken, async (req, res) => {
     await dbOps.changeUserRole(userId, assignedRole);
 
     if (tempAssignment) {
+      const priorRole = (currentTarget.role && currentTarget.role !== 'temporary_view' && currentTarget.role !== 'temp_view')
+        ? currentTarget.role
+        : 'viewer';
       await pool.execute(
         `UPDATE users
          SET role = 'temporary_view',
+             previous_role = COALESCE(previous_role, ?),
              temp_view_document_id = ?,
              temp_view_extra_hours = ?,
              temp_view_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR),
              access_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)
          WHERE id = ?`,
-        [tempAssignment.approvedDocumentId, tempAssignment.extraHours, tempAssignment.totalHours, tempAssignment.totalHours, userId]
+        [priorRole, tempAssignment.approvedDocumentId, tempAssignment.extraHours, tempAssignment.totalHours, tempAssignment.totalHours, userId]
       );
       try {
         await pool.execute(
@@ -1084,7 +1088,8 @@ app.put('/api/edit_org_member/:userId', authenticateToken, async (req, res) => {
       // Role reverted to a normal persistent role - reset temporary restrictions
       await pool.execute(
         `UPDATE users
-         SET temp_view_document_id = NULL,
+         SET previous_role = NULL,
+             temp_view_document_id = NULL,
              temp_view_extra_hours = 0,
              temp_view_expires_at = NULL,
              access_expires_at = NULL
@@ -1093,18 +1098,16 @@ app.put('/api/edit_org_member/:userId', authenticateToken, async (req, res) => {
       );
     }
 
-    // If role or status changed, increment token_version to invalidate stale access tokens
-    if (roleOrStatusChanged) {
+    // If status changed to inactive or deactivated, invalidate access tokens
+    if (status === 'inactive' || status === 'deactivated') {
       await pool.execute(
         'UPDATE users SET token_version = token_version + 1 WHERE id = ?',
         [userId]
       );
-      if (status === 'inactive' || status === 'deactivated') {
-        await pool.execute(
-          'UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ?',
-          [userId]
-        );
-      }
+      await pool.execute(
+        'UPDATE refresh_tokens SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = ?',
+        [userId]
+      );
     }
 
     if (logAuditEvent) {
@@ -1181,15 +1184,19 @@ app.put('/api/rbac/assign-role/:userId', authenticateToken, async (req, res) => 
     await dbOps.changeUserRole(userId, assignedRole);
 
     if (tempAssignment) {
+      const priorRole = (currentTarget.role && currentTarget.role !== 'temporary_view' && currentTarget.role !== 'temp_view')
+        ? currentTarget.role
+        : 'viewer';
       await pool.execute(
         `UPDATE users
          SET role = 'temporary_view',
+             previous_role = COALESCE(previous_role, ?),
              temp_view_document_id = ?,
              temp_view_extra_hours = ?,
              temp_view_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR),
              access_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)
          WHERE id = ?`,
-        [tempAssignment.approvedDocumentId, tempAssignment.extraHours, tempAssignment.totalHours, tempAssignment.totalHours, userId]
+        [priorRole, tempAssignment.approvedDocumentId, tempAssignment.extraHours, tempAssignment.totalHours, tempAssignment.totalHours, userId]
       );
       try {
         await pool.execute(
@@ -1204,7 +1211,8 @@ app.put('/api/rbac/assign-role/:userId', authenticateToken, async (req, res) => 
     } else if (currentTarget.role === 'temporary_view' || currentTarget.role === 'temp_view') {
       await pool.execute(
         `UPDATE users
-         SET temp_view_document_id = NULL,
+         SET previous_role = NULL,
+             temp_view_document_id = NULL,
              temp_view_extra_hours = 0,
              temp_view_expires_at = NULL,
              access_expires_at = NULL
@@ -1213,10 +1221,8 @@ app.put('/api/rbac/assign-role/:userId', authenticateToken, async (req, res) => 
       );
     }
 
-    await pool.execute(
-      'UPDATE users SET token_version = token_version + 1 WHERE id = ?',
-      [userId]
-    );
+    // NOTE: We do not increment token_version here so active sessions are not forcibly disconnected.
+    // authenticateToken reads user.role directly from the database on every request.
 
     res.json({
       success: true,

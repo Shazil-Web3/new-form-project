@@ -30,6 +30,7 @@ const { cleanStaleWorkflowApprovers } = require('./config/workflowMigration');
 const { runGanttMigration } = require('./config/ganttMigration');
 const { runLmsMigration } = require('./config/lmsMigration');
 const { runRelatedDocumentsMigration } = require('./config/relatedDocumentsMigration');
+const { revertExpiredTemporaryUsers } = require('./auth/tempViewSweeper');
 
 
 // Ensure local uploads directory exists
@@ -116,6 +117,9 @@ const initDb = async () => {
       }
       if (!fieldNames.includes('access_expires_at')) {
         await pool.query('ALTER TABLE users ADD COLUMN access_expires_at DATETIME DEFAULT NULL');
+      }
+      if (!fieldNames.includes('previous_role')) {
+        await pool.query('ALTER TABLE users ADD COLUMN previous_role VARCHAR(50) DEFAULT NULL');
       }
       await pool.query("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) DEFAULT 'viewer'");
     } catch (tempErr) {
@@ -866,7 +870,19 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ error: 'User not found or session revoked', code: 'USER_NOT_FOUND' });
     }
 
-    const user = users[0];
+    let user = users[0];
+
+    // Automatic lazy check: if user is in temporary_view and their session has expired, revert immediately
+    if ((user.role === 'temporary_view' || user.role === 'temp_view') && user.access_expires_at && new Date(user.access_expires_at) <= new Date()) {
+      await revertExpiredTemporaryUsers(pool);
+      const [reloaded] = await pool.execute(
+        'SELECT id, email, organization_id, role, status, token_version, temp_view_document_id, access_expires_at FROM users WHERE id = ?',
+        [targetUserId]
+      );
+      if (reloaded && reloaded.length > 0) {
+        user = reloaded[0];
+      }
+    }
 
     if (user.status !== 'active') {
       return res.status(401).json({ error: 'Account is deactivated or inactive', code: 'ACCOUNT_INACTIVE' });
@@ -1336,15 +1352,48 @@ if (tokenCleanupTimer && tokenCleanupTimer.unref) {
   tokenCleanupTimer.unref();
 }
 
+// Endpoint to check & revert expired temporary view sessions
+app.post('/api/rbac/revert-expired', authenticateToken, async (req, res) => {
+  try {
+    const count = await revertExpiredTemporaryUsers(pool);
+    const [userRows] = await pool.execute(
+      `SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.department, u.status,
+              u.temp_view_document_id, u.access_expires_at, d.title AS temp_view_document_title
+       FROM users u
+       LEFT JOIN documents d ON u.temp_view_document_id = d.document_id
+       WHERE u.id = ?`,
+      [req.user.userId]
+    );
+    res.json({
+      success: true,
+      revertedCount: count,
+      user: userRows[0] || null
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to revert expired users' });
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 runMigrations().then(() => {
   // Run initial token cleanup after migrations have ensured revoked_at column exists
   cleanupExpiredTokens();
+  // Start background heartbeat sweeper for expired temporary view users
+  const tempSweeper = setInterval(() => {
+    revertExpiredTemporaryUsers(pool).catch(() => {});
+  }, 15000);
+  if (tempSweeper.unref) tempSweeper.unref();
+
   server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
 }).catch((err) => {
   console.error('Startup migration error:', err);
+  const tempSweeper = setInterval(() => {
+    revertExpiredTemporaryUsers(pool).catch(() => {});
+  }, 15000);
+  if (tempSweeper.unref) tempSweeper.unref();
+
   server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });

@@ -3,12 +3,12 @@
  * @description Central definitions for RBAC roles, 25 capabilities, initial matrix, and permission mappings.
  */
 
-export const STORAGE_KEY_MATRIX = 'watermelon_rbac_permission_matrix_v5';
-export const STORAGE_KEY_ROLES = 'watermelon_rbac_roles_v5';
+export const STORAGE_KEY_MATRIX = 'watermelon_rbac_permission_matrix_v7';
+export const STORAGE_KEY_ROLES = 'watermelon_rbac_roles_v7';
 export const STORAGE_KEY_USER_ASSIGNMENTS = 'watermelon_rbac_user_assignments_v1';
 export const STORAGE_KEY_TEMP_EXPIRATION = 'watermelon_rbac_temp_expiration_v1';
 
-// 10 Roles matching Rbac-Matrix-Temp-View.html
+// 9 Matrix Roles
 export const INITIAL_ROLES = [
   { id: 'system', label: 'System', short: 'SYS', sub: 'SaaS owner / licence giver', key: 'system', is_system: true },
   { id: 'super_admin', label: 'Super Admin', short: 'SA', sub: 'Creates sites London/Paris, numbering', key: 'super_admin', is_system: true },
@@ -18,29 +18,44 @@ export const INITIAL_ROLES = [
   { id: 'author', label: 'Author', short: 'AUTH', sub: '', key: 'author', is_system: true },
   { id: 'people', label: 'People Manager', short: 'PEO', sub: '', key: 'people_manager', is_system: true },
   { id: 'project', label: 'Project Manager', short: 'PM', sub: '', key: 'project_manager', is_system: true },
-  { id: 'view', label: 'View', short: 'VIEW', sub: 'read-only permanent', key: 'view_only', is_system: true },
-  { id: 'temp_view', label: 'Temp View', short: 'TEMP', sub: 'visitor / auditor certain doc temporarily', key: 'temporary_view', is_system: true }
+  { id: 'view', label: 'View', short: 'VIEW', sub: 'read-only permanent', key: 'view_only', is_system: true }
 ];
 
-// 25 Capabilities across 4 Groups matching Rbac-Matrix-Temp-View.html
+export const TEMP_VIEW_ROLE = {
+  id: 'temp_view',
+  label: 'Temp View',
+  short: 'TEMP',
+  sub: 'visitor / auditor certain doc temporarily',
+  key: 'temporary_view',
+  is_system: true
+};
+
+// 25 Capabilities across 4 Groups matching matrix layout
 export const CAPABILITIES = [
+  // GROUP 1 - ACCESS: 9 rows (Temp View is moved to the bottom, below Data Import)
   { id: 'create_account', group: 'ACCESS', label: 'Create Personal Account', detail: 'Self-signup / personal account creation', level: 'System Level' },
   { id: 'reset_pwd', group: 'ACCESS', label: 'Reset Password', detail: 'Can reset own password', level: 'System Level' },
   { id: 'manage_site', group: 'ACCESS', label: 'Manage Site', detail: 'Create / configure sites (London/Paris), licence', level: 'System Level' },
   { id: 'manage_user', group: 'ACCESS', label: 'Manage User', detail: 'Invite, deactivate, roles', level: 'System Level' },
   { id: 'manage_training', group: 'ACCESS', label: 'Manage Training', detail: 'Assign training matrix - now includes Training Admin', level: 'System Level' },
   { id: 'folder_file_access', group: 'ACCESS', label: 'Full / Partial Folder & File (Document) Access', detail: 'SYSTEM LEVEL folder browse + ANALYTICS & ACCESS file open - can view approved doc content', level: 'System Level', note: 'SYSTEM LEVEL - 7 checks - View ✓ / ANALYTICS & ACCESS' },
-  { id: 'temp_view_row', group: 'ACCESS', label: 'Temp View / Read-Only = certain document temporarily access (1-8h expires_at)', detail: 'Visitor/auditor link: certain approved doc ONLY, 1-8h + expires_at', level: 'Read-Only' },
   { id: 'report_access', group: 'ACCESS', label: 'Report Access', detail: 'View analytics / compliance reports', level: 'ANALYTICS & ACCESS' },
   { id: 'data_import', group: 'ACCESS', label: 'Data Import', detail: 'Bulk import users / docs', level: 'System Level' },
+  { id: 'temp_view_row', group: 'ACCESS', label: 'Temp View / Read-Only Access', detail: 'Visitor / auditor link: certain approved doc ONLY (1-8h duration)', level: 'Read-Only' },
+
+  // GROUP 2 - TEMPLATE: 4 rows
   { id: 't_comment_review_approve', group: 'TEMPLATE', label: 'Template Comment / Review / Approve (Invited Only)', detail: 'Reviewer can comment by default, approver as part of Review/Approve - Invited Only + dropdown - includes comment count + resolve', level: 'Content Operations', invited: true, note: 'Includes comment counting +1/-1, resolve -1, warning if unresolved' },
   { id: 't_create', group: 'TEMPLATE', label: 'Template Create/Update', detail: 'Create/Update template', level: 'Content Operations' },
   { id: 't_edit', group: 'TEMPLATE', label: 'Template Edit', detail: 'Edit (Template)', level: 'Content Operations' },
   { id: 't_delete', group: 'TEMPLATE', label: 'Template Delete / Pull Back', detail: 'Delete or pull back template', level: 'Content Operations', note: 'Only if not approved by all approvers' },
+
+  // GROUP 3 - DOCUMENT: 4 rows
   { id: 'd_comment_review_approve', group: 'DOCUMENT', label: 'Document Comment / Review / Approve (Invited Only)', detail: 'Reviewer can comment by default, approver as part of Review/Approve - Invited Only + dropdown', level: 'Content Operations', invited: true },
   { id: 'd_edit_same', group: 'DOCUMENT', label: 'Document Edit (Invited Only Same Dept)', detail: 'Edit doc - Same Dept + Invited Only - 6 checks all except System, View, Temp View', level: 'Content Operations', invited: true },
   { id: 'd_create', group: 'DOCUMENT', label: 'Document Create', detail: 'Create new document - 6 checks all except System, View, Temp View', level: 'Content Operations' },
   { id: 'd_delete', group: 'DOCUMENT', label: 'Document Delete / Pull Back', detail: 'Delete or pull back doc', level: 'Content Operations', note: 'Only if not approved by all approvers' },
+
+  // GROUP 4 - TRAINING: 8 rows
   { id: 'tr_create', group: 'TRAINING', label: 'Training Curriculum / Exam Create/Update', detail: 'Create/Update curriculum + exams from approved docs - Training Admin only', level: 'Training Admin Only', note: 'Training Admin only = 1 check' },
   { id: 'tr_content_catalog', group: 'TRAINING', label: 'Content Catalog', detail: 'Training Admin responsibility - manage Content Catalog', level: 'Training Admin Only' },
   { id: 'tr_class_library', group: 'TRAINING', label: 'Class Library', detail: 'Training Admin responsibility - manage Class Library', level: 'Training Admin Only' },
@@ -51,33 +66,40 @@ export const CAPABILITIES = [
   { id: 'tr_numbering_rule', group: 'TRAINING', label: 'Numbering Rule', detail: 'Training Admin responsibility - manage Numbering Rule', level: 'Training Admin Only' }
 ];
 
-// Exact 25 x 10 initial matrix from Rbac-Matrix-Temp-View.html (83 total checks)
+// Initial 25 x 9 matrix (9 columns matching the 9 real roles)
 export const INITIAL_MATRIX = [
-  [false, true, true, false, true, true, true, true, true, false],
-  [false, true, true, false, true, true, true, true, true, false],
-  [false, true, true, false, false, false, false, false, false, false],
-  [false, true, true, false, false, false, true, true, false, false],
-  [false, true, true, true, false, false, true, true, false, false],
-  [false, true, true, false, true, true, true, true, true, false],
-  [false, false, false, false, false, false, false, false, false, true],
-  [false, true, true, false, true, true, true, true, false, false],
-  [false, true, true, false, false, false, true, false, false, false],
-  [false, true, true, false, true, true, false, false, false, false],
-  [false, true, true, false, false, false, false, false, false, false],
-  [false, true, true, false, false, true, false, false, false, false],
-  [false, false, true, false, true, true, false, false, false, false],
-  [false, true, true, false, true, true, true, true, false, false],
-  [false, true, true, false, true, true, true, true, false, false],
-  [false, true, true, false, true, true, true, true, false, false],
-  [false, false, true, false, true, true, false, false, false, false],
-  [false, false, false, true, false, false, false, false, false, false],
-  [false, false, false, true, false, false, false, false, false, false],
-  [false, false, false, true, false, false, false, false, false, false],
-  [false, false, false, true, false, false, false, false, false, false],
-  [false, false, false, true, false, false, false, false, false, false],
-  [false, false, false, true, false, false, false, false, false, false],
-  [false, false, false, true, false, false, false, false, false, false],
-  [false, false, false, true, false, false, false, false, false, false]
+  // GROUP 1 - ACCESS
+  [false, true, true, false, true, true, true, true, true],   // create_account
+  [false, true, true, false, true, true, true, true, true],   // reset_pwd
+  [false, true, true, false, false, false, false, false, false], // manage_site
+  [false, true, true, false, false, false, true, true, false],  // manage_user
+  [false, true, true, true, false, false, true, true, false],   // manage_training
+  [false, true, true, false, true, true, true, true, true],   // folder_file_access
+  [false, true, true, false, true, true, true, true, false],  // report_access
+  [false, true, true, false, false, false, true, false, false], // data_import
+  [false, false, false, false, false, false, false, false, false], // temp_view_row (managed below)
+
+  // GROUP 2 - TEMPLATE
+  [false, true, true, false, true, true, false, false, false], // t_comment_review_approve
+  [false, true, true, false, false, false, false, false, false], // t_create
+  [false, true, true, false, false, true, false, false, false],  // t_edit
+  [false, false, true, false, true, true, false, false, false],  // t_delete
+
+  // GROUP 3 - DOCUMENT
+  [false, true, true, false, true, true, true, true, false],  // d_comment_review_approve
+  [false, true, true, false, true, true, true, true, false],  // d_edit_same
+  [false, true, true, false, true, true, true, true, false],  // d_create
+  [false, false, true, false, true, true, false, false, false],  // d_delete
+
+  // GROUP 4 - TRAINING
+  [false, false, false, true, false, false, false, false, false], // tr_create
+  [false, false, false, true, false, false, false, false, false], // tr_content_catalog
+  [false, false, false, true, false, false, false, false, false], // tr_class_library
+  [false, false, false, true, false, false, false, false, false], // tr_assignments
+  [false, false, false, true, false, false, false, false, false], // tr_training_matrix
+  [false, false, false, true, false, false, false, false, false], // tr_reports
+  [false, false, false, true, false, false, false, false, false], // tr_records
+  [false, false, false, true, false, false, false, false, false]  // tr_numbering_rule
 ];
 
 export const GROUP_CONFIG = {

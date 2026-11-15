@@ -5,12 +5,13 @@
  * @author Codegen
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../../../components/new/tailwind/MainLayout';
 import FilterBar from '../../../components/new/tailwind/FilterBar';
 import EmptyState from '../../../components/new/tailwind/EmptyState';
 import Pagination from '../../../components/new/tailwind/Pagination';
+import { toastAlert } from '../../../utils/alerts';
 import { useAuth } from '../../../utils/authService';
 import { useRbac } from '../../../utils/rbacContext';
 import { STORAGE_KEY_MATRIX, STORAGE_KEY_ROLES, normalizeRoleId } from '../../../utils/rbacConstants';
@@ -91,6 +92,15 @@ export default function HubPage({ initialType, initialActiveTab }) {
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [reassignModalVisible, setReassignModalVisible] = useState(false);
   const [reassignTarget, setReassignTarget] = useState(null);
+
+  useEffect(() => {
+    const handleTempExpired = (e) => {
+      const msg = e.detail?.message || 'Temporary access session has ended. Your previous role and permissions have been restored.';
+      toastAlert(msg, 'info');
+    };
+    window.addEventListener('temp_session_expired', handleTempExpired);
+    return () => window.removeEventListener('temp_session_expired', handleTempExpired);
+  }, []);
 
   const handlePreviewItem = (item) => {
     setSelectedPreviewItem(item);

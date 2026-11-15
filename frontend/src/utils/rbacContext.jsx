@@ -9,6 +9,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo, useCall
 import { useAuth } from './authService';
 import {
   INITIAL_ROLES,
+  TEMP_VIEW_ROLE,
   INITIAL_MATRIX,
   CAPABILITIES,
   CAPABILITY_TO_PERMISSIONS,
@@ -105,9 +106,15 @@ export const RbacProvider = ({ children }) => {
     // Check user-specific assignment first
     const userId = user.id || user.userId;
     if (userId && userAssignments[userId]) {
-      const assignedRoleId = userAssignments[userId].roleId;
-      const matched = roles.find(r => String(r.id) === String(assignedRoleId));
-      if (matched) return matched;
+      const assignment = userAssignments[userId];
+      const isExpiredTemp = (assignment.roleId === 'temp_view' || assignment.roleKey === 'temporary_view') &&
+        assignment.expiresAt && new Date(assignment.expiresAt) <= new Date();
+
+      if (!isExpiredTemp) {
+        const assignedRoleId = assignment.roleId;
+        const matched = roles.find(r => String(r.id) === String(assignedRoleId));
+        if (matched) return matched;
+      }
     }
 
     if (user.customRoleId) {
@@ -118,6 +125,10 @@ export const RbacProvider = ({ children }) => {
     // Next check user's direct role or isSuperAdmin
     if (user.role === 'super_admin' || (user.isSuperAdmin && (!user.role || user.role === 'admin'))) {
       return roles.find(r => r.id === 'super_admin') || INITIAL_ROLES[1];
+    }
+
+    if (user.role === 'temporary_view' || user.role === 'temp_view') {
+      return TEMP_VIEW_ROLE;
     }
 
     const normalized = normalizeRoleId(user.role);
@@ -370,11 +381,41 @@ export const RbacProvider = ({ children }) => {
           setTempTimeRemaining(diff);
 
           if (diff <= 0) {
-            // Session expired: disconnect and redirect to dashboard
+            // Session expired: clean up temporary storage and tell backend to restore previous role
             window.localStorage.removeItem(STORAGE_KEY_TEMP_EXPIRATION);
+            try {
+              const currentUserId = user?.id || user?.userId;
+              const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+              if (currentUserId && assignments[currentUserId]) {
+                delete assignments[currentUserId];
+                window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
+                setUserAssignments(assignments);
+              }
+              const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+              if (token) {
+                fetch('/api/rbac/revert-expired', {
+                  method: 'POST',
+                  headers: { Authorization: `Bearer ${token}` }
+                }).then(async (res) => {
+                  if (res.ok) {
+                    const data = await res.json();
+                    if (data?.user) {
+                      try {
+                        const localU = JSON.parse(localStorage.getItem('user') || '{}');
+                        const updated = { ...localU, ...data.user };
+                        localStorage.setItem('user', JSON.stringify(updated));
+                      } catch (e) {}
+                    }
+                    window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));
+                  }
+                }).catch(() => {});
+              }
+            } catch (_) {}
+
             window.dispatchEvent(new CustomEvent('temp_session_expired', {
-              detail: { message: 'Temporary access session expired. Redirecting to dashboard.' }
+              detail: { message: 'Temporary access window has ended. Your previous role and permissions have been restored.' }
             }));
+            window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));
           }
         }
       } catch (e) {}

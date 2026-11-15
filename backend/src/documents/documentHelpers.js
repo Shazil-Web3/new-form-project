@@ -252,6 +252,10 @@ async function assertUserDocumentAccess(documentId, userId, dbPool, requiredActi
     const expires = user.temp_view_expires_at || user.access_expires_at;
     const expiresAt = expires ? new Date(expires).getTime() : NaN;
     if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      try {
+        const { revertExpiredTemporaryUsers } = require('../auth/tempViewSweeper');
+        revertExpiredTemporaryUsers(db).catch(() => {});
+      } catch (_) {}
       return false; // Access window has expired
     }
     if (String(user.temp_view_document_id) !== String(documentId)) {

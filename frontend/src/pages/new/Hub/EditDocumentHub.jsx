@@ -135,6 +135,16 @@ export default function EditDocumentHub() {
     }
   }, [searchParams, isReferenceView, document]);
 
+  useEffect(() => {
+    const handleTempExpired = (e) => {
+      const msg = e.detail?.message || 'Temporary access session ended. Returning to dashboard.';
+      toastAlert('info', msg);
+      navigate('/dashboard');
+    };
+    window.addEventListener('temp_session_expired', handleTempExpired);
+    return () => window.removeEventListener('temp_session_expired', handleTempExpired);
+  }, [navigate]);
+
   const loadData = async () => {
     const userId = user?.id || user?.userId;
     const orgId = user?.organization_id || user?.orgId || user?.org_id;
