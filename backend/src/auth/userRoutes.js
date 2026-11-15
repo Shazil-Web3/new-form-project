@@ -401,7 +401,7 @@ module.exports = function registerUserRoutes({
   app.get('/api/users/me', authenticateToken, async (req, res) => {
     try {
       const [user] = await pool.execute(
-        'SELECT id, email, first_name, last_name, role, template_approver, organization_id, site, department, status FROM users WHERE id = ?',
+        'SELECT id, email, first_name, last_name, role, template_approver, organization_id, site, department, status, temp_view_document_id, temp_view_extra_hours, temp_view_expires_at, access_expires_at FROM users WHERE id = ?',
         [req.user.userId]
       );
 
@@ -419,7 +419,11 @@ module.exports = function registerUserRoutes({
         department: user[0].department,
         site: user[0].site,
         status: user[0].status,
-        template_approver: user[0].template_approver
+        template_approver: user[0].template_approver,
+        temp_view_document_id: user[0].temp_view_document_id,
+        temp_view_extra_hours: user[0].temp_view_extra_hours,
+        temp_view_expires_at: user[0].temp_view_expires_at,
+        access_expires_at: user[0].access_expires_at
       });
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -619,7 +623,7 @@ module.exports = function registerUserRoutes({
     try {
       const orgId = req.user.organization_id || req.user.orgId;
       const [users] = await pool.execute(
-        'SELECT id, first_name, last_name, email, role, department, site, template_approver, status FROM users WHERE organization_id = ? AND status != ?',
+        'SELECT id, first_name, last_name, email, role, department, site, template_approver, status, temp_view_document_id, temp_view_extra_hours, temp_view_expires_at, access_expires_at FROM users WHERE organization_id = ? AND status != ?',
         [orgId, 'inactive']
       );
       res.json(users);

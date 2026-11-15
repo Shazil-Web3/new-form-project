@@ -329,20 +329,27 @@ export const assignUserRbacRole = async (userId, data) => {
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
       const existing = JSON.parse(window.localStorage.getItem('watermelon_rbac_user_assignments_v1') || '{}');
+      const hours = data.expiresIn === '1h' ? 1 : data.expiresIn === '4h' ? 4 : (data.expiresIn === '8h' ? 8 : 4);
+      const expiresAt = data.expiresIn ? new Date(Date.now() + hours * 3600 * 1000).toISOString() : null;
+
       existing[userId] = {
         roleId: data.roleId,
+        roleKey: data.roleId === 'temp_view' ? 'temporary_view' : (data.roleKey || data.roleId),
         expiresIn: data.expiresIn || null,
+        expiresAt,
+        approvedDocumentId: data.approvedDocumentId || null,
         assignedAt: new Date().toISOString()
       };
       window.localStorage.setItem('watermelon_rbac_user_assignments_v1', JSON.stringify(existing));
 
-      if (data.expiresIn) {
-        const hours = data.expiresIn === '1h' ? 1 : data.expiresIn === '4h' ? 4 : 8;
-        const expiresAt = new Date(Date.now() + hours * 3600 * 1000).toISOString();
+      if (data.expiresIn || data.roleId === 'temp_view') {
         window.localStorage.setItem('watermelon_rbac_temp_expiration_v1', JSON.stringify({
           userId,
-          expiresAt,
-          duration: data.expiresIn
+          roleKey: 'temporary_view',
+          expiresAt: expiresAt || new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+          duration: data.expiresIn || '4h',
+          approvedDocumentId: data.approvedDocumentId || null,
+          approvedDocumentTitle: data.approvedDocumentTitle || null
         }));
       }
       window.dispatchEvent(new CustomEvent('watermelon_rbac_matrix_changed'));

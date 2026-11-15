@@ -118,8 +118,8 @@ app.get('/api/my-docs/:userId', authenticateToken, async (req, res) => {
   }
 });
 
-// Route to get all published/revised documents for Hyperlink / @-mention system
-app.get(['/api/published-documents', '/api/published-docs'], authenticateToken, async (req, res) => {
+// Route to get all published/revised/approved documents for Hyperlink / @-mention system and Temp View selection
+app.get(['/api/published-documents', '/api/published-docs', '/api/documents/approved'], authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
     const orgId = req.user.organization_id || req.user.orgId;

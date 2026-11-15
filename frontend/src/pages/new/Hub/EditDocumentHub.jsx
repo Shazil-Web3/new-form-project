@@ -11,7 +11,7 @@ import ObsoleteReferenceWarningBar from '../../../components/Unified/UnifiedText
 import InboundReferencesModal from '../../../components/Unified/UnifiedTextEditor/components/InboundReferencesModal';
 import { useObsoleteReferences } from '../../../components/Unified/UnifiedTextEditor/hooks/useObsoleteReferences';
 import { checkInboundReferences } from '../../../api/references';
-import { toastAlert, successAlert } from '../../../utils/alerts';
+import { toastAlert, successAlert, errorAlert } from '../../../utils/alerts';
 import { Spin } from 'antd';
 
 // Same parsing rule used elsewhere (e.g. OverviewProgressTab) for the workflow JSON
@@ -36,7 +36,7 @@ const parseWorkflowParticipants = (raw) => {
 export default function EditDocumentHub() {
   const { docId } = useParams();
   const { user } = useAuth();
-  const { can, canEditDocument, isTemporary } = useRbac();
+  const { can, canEditDocument, canViewDocument, isTemporary } = useRbac();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
@@ -152,7 +152,18 @@ export default function EditDocumentHub() {
 
       if (docRes.status === 'fulfilled' && docRes.value?.data) {
         const raw = docRes.value.data;
-        setDocument(raw?.document || raw);
+        const loadedDoc = raw?.document || raw;
+        if (isTemporary && canViewDocument && !canViewDocument(loadedDoc)) {
+          errorAlert('Access Denied', 'Temporary view access is restricted exclusively to your designated approved document.');
+          setTimeout(() => navigate('/dashboard'), 1500);
+          return;
+        }
+        setDocument(loadedDoc);
+      } else if (docRes.status === 'rejected') {
+        const errorMsg = docRes.reason?.response?.data?.error || 'Access denied to this document';
+        errorAlert('Access Denied', errorMsg);
+        setTimeout(() => navigate('/dashboard'), 1500);
+        return;
       }
       if (usersRes.status === 'fulfilled') {
         const raw = usersRes.value?.data;

@@ -202,3 +202,20 @@ export const publishDocumentGroup = async (documentIds) => {
   const response = await apiClient.post('/api/documents/publish-group', { documentIds });
   return response.data;
 };
+
+/**
+ * Fetch approved/published documents for Temp View and link assignments.
+ */
+export const getApprovedDocuments = async () => {
+  try {
+    const res = await apiClient.get('/api/documents/approved');
+    return res.data || [];
+  } catch (err) {
+    try {
+      const fallback = await apiClient.get('/api/published-documents');
+      return fallback.data || [];
+    } catch (_) {
+      return [];
+    }
+  }
+};

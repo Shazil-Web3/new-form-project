@@ -8,11 +8,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useAuth } from '../../../utils/authService';
+import { useRbac } from '../../../utils/rbacContext';
+import { STORAGE_KEY_TEMP_EXPIRATION } from '../../../utils/rbacConstants';
 import apiClient from '../../../api/apiClient';
 
 export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchChange, showSearch = true }) {
   const isDev = process.env.NODE_ENV === 'development';
   const { mockUserOverride, setMockUserOverride } = useAuth();
+  const { isTemporary, tempTimeRemaining, tempDocId } = useRbac();
   const [orgUsers, setOrgUsers] = useState([]);
   const [matrixRevision, setMatrixRevision] = useState(0);
 
@@ -107,26 +110,85 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
       }
     }));
 
+    const tempAuditorOption = {
+      label: '⏱️ Temp View Auditor (4h Access)',
+      value: 'mock_temp_view_auditor',
+      user: {
+        id: 'temp_auditor_mock',
+        userId: 'temp_auditor_mock',
+        name: 'Auditor Guest',
+        firstName: 'Auditor',
+        lastName: 'Guest',
+        role: 'temporary_view',
+        department: 'Compliance',
+        email: 'auditor.guest@example.com',
+        is_super_admin: false,
+        isSuperAdmin: false,
+        temp_view_document_id: '0dfbf75c-c11c-46e4-a5be-c709155b9dc1',
+        access_expires_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString()
+      }
+    };
+
     return [
       { label: 'Real User (Admin)', value: 'real_user', user: null },
+      tempAuditorOption,
       ...userOptions,
       ...customRoleOptions
     ];
   }, [isDev, orgUsers, matrixRevision]);
 
   const currentSelectedValue = (isDev && mockUserOverride)
-    ? (mockUserOverride.customRoleId ? `custom_role_${mockUserOverride.customRoleId}` : String(mockUserOverride.id))
+    ? (mockUserOverride.customRoleId
+        ? `custom_role_${mockUserOverride.customRoleId}`
+        : (mockUserOverride.id === 'temp_auditor_mock' ? 'mock_temp_view_auditor' : String(mockUserOverride.id)))
     : 'real_user';
+
+  const formatTimeLeft = (seconds) => {
+    if (seconds === null || seconds === undefined) return '04h:00m:00s';
+    if (seconds <= 0) return 'Expired';
+    const hrs = String(Math.floor(seconds / 3600)).padStart(2, '0');
+    const mins = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
+    const secs = String(seconds % 60).padStart(2, '0');
+    return `${hrs}h:${mins}m:${secs}s`;
+  };
 
   const handleRoleChange = (e) => {
     if (!isDev) return;
     const val = e.target.value;
     if (val === 'real_user') {
       setMockUserOverride(null);
+      if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY_TEMP_EXPIRATION);
+    } else if (val === 'mock_temp_view_auditor') {
+      const match = actorOptions.find(opt => opt.value === val);
+      if (match) {
+        setMockUserOverride(match.user);
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(STORAGE_KEY_TEMP_EXPIRATION, JSON.stringify({
+            roleKey: 'temporary_view',
+            expiresAt: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+            approvedDocumentId: '0dfbf75c-c11c-46e4-a5be-c709155b9dc1',
+            approvedDocumentTitle: 'oijoihoi (Published Document)',
+            assignedUserId: 'temp_auditor_mock'
+          }));
+        }
+      }
     } else {
       const match = actorOptions.find(opt => opt.value === val);
       if (match) {
         setMockUserOverride(match.user);
+        if (match.user.role === 'temporary_view' || match.user.role === 'temp_view') {
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(STORAGE_KEY_TEMP_EXPIRATION, JSON.stringify({
+              roleKey: 'temporary_view',
+              expiresAt: match.user.access_expires_at || new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+              approvedDocumentId: match.user.temp_view_document_id || '0dfbf75c-c11c-46e4-a5be-c709155b9dc1',
+              approvedDocumentTitle: 'oijoihoi (Published Document)',
+              assignedUserId: match.user.id
+            }));
+          }
+        } else {
+          if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY_TEMP_EXPIRATION);
+        }
       }
     }
     try {
@@ -178,6 +240,35 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
       {/* Right items: mock switcher (development only) and user profile avatar status */}
       <div className="flex items-center gap-4">
         
+        {/* Live Temporary Access Countdown Timer Pill & Direct Auditor Link Opener */}
+        {isTemporary && (
+          <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold border shadow-sm ${
+              tempTimeRemaining !== null && tempTimeRemaining <= 0
+                ? 'bg-rose-50 text-rose-700 border-rose-300 animate-pulse'
+                : 'bg-amber-100 text-amber-900 border-amber-300'
+            }`}>
+              <span className="material-symbols-outlined text-[16px] text-amber-600">timer</span>
+              <span>
+                {tempTimeRemaining !== null && tempTimeRemaining <= 0
+                  ? 'Temp View: Expired'
+                  : `Temp View: ${formatTimeLeft(tempTimeRemaining)} left`}
+              </span>
+            </div>
+
+            {tempDocId && (
+              <a
+                href={`/document/${tempDocId}`}
+                className="flex items-center gap-1 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer no-underline"
+                title="Open your assigned approved document in read-only mode"
+              >
+                <span className="material-symbols-outlined text-[15px]">description</span>
+                <span>Open Approved Doc</span>
+              </a>
+            )}
+          </div>
+        )}
+
         {/* Development Permissions Simulator switcher pill */}
         {isDev && user && (
           <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-3 py-1 text-xs shadow-sm">

@@ -237,12 +237,28 @@ async function assertUserDocumentAccess(documentId, userId, dbPool, requiredActi
 
   if (docRows.length === 0) return false;
 
-  const [userRows] = await db.execute('SELECT id, role, email, organization_id FROM users WHERE id = ?', [userId]);
+  const [userRows] = await db.execute('SELECT id, role, email, organization_id, temp_view_document_id, temp_view_expires_at, access_expires_at FROM users WHERE id = ?', [userId]);
   const user = userRows[0] || {};
   if (user.organization_id && docRows[0].organization_id && String(user.organization_id) !== String(docRows[0].organization_id)) {
     return false;
   }
   if (user.role === 'admin') return true;
+
+  // Temp View / Read-Only enforcement:
+  // Visitor/auditor link: certain approved doc ONLY, 1-8h + expires_at
+  const isTempUser = user.role === 'temporary_view' || user.role === 'temp_view' || Boolean(user.temp_view_document_id);
+  if (isTempUser) {
+    if (requiredAction !== 'read') return false; // Strictly read-only
+    const expires = user.temp_view_expires_at || user.access_expires_at;
+    const expiresAt = expires ? new Date(expires).getTime() : NaN;
+    if (!Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+      return false; // Access window has expired
+    }
+    if (String(user.temp_view_document_id) !== String(documentId)) {
+      return false; // Restricted to designated approved document only
+    }
+    return true;
+  }
 
   const isCreator = String(docRows[0].created_by) === String(userId);
   const hasActivePerm = docRows.some(r => r.perm_status === 'active');

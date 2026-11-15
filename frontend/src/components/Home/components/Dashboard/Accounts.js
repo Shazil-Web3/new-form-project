@@ -9,6 +9,7 @@ import {
   Button, 
   Typography, 
   Input, 
+  InputNumber,
   Space,
   Modal,
   Form,
@@ -55,7 +56,7 @@ import TemplateApproversConfig from './TemplateApproversConfig';
 import NumbersManagement from './NumbersManagement';
 import { RbacDashboardContent } from '../../../../pages/new/Workspace/RbacDashboardPage';
 import { useRbac } from '../../../../utils/rbacContext';
-import { STORAGE_KEY_ROLES, STORAGE_KEY_USER_ASSIGNMENTS, INITIAL_ROLES } from '../../../../utils/rbacConstants';
+import { STORAGE_KEY_ROLES, STORAGE_KEY_USER_ASSIGNMENTS, STORAGE_KEY_TEMP_EXPIRATION, INITIAL_ROLES } from '../../../../utils/rbacConstants';
 import { getAssignableRbacRoles } from '../../../../api/rbac';
 
 const LEGACY_ROLE_BY_RBAC_KEY = {
@@ -118,7 +119,9 @@ const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetch
   const [form] = Form.useForm();
   const selectedRoleKey = Form.useWatch('roleKey', form);
   const [rbacRoles, setRbacRoles] = useState([]);
+  const [approvedDocs, setApprovedDocs] = useState([]);
   const [inviteForm] = Form.useForm();
+  const inviteRoleKey = Form.useWatch('roleKey', inviteForm);
   const [templateApprovers, setTemplateApprovers] = useState([]);
   const [departmentForm] = Form.useForm();
   const [renameDepartmentForm] = Form.useForm();
@@ -222,6 +225,29 @@ const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetch
     setRbacRoles(result);
   }, []);
 
+  const fetchApprovedDocs = useCallback(async () => {
+    try {
+      const res = await axios.get('/api/documents/approved');
+      if (Array.isArray(res.data) && res.data.length > 0) {
+        setApprovedDocs(res.data);
+        return;
+      }
+    } catch (e) {}
+
+    try {
+      const fallback = await axios.get('/api/published-documents');
+      if (Array.isArray(fallback.data)) {
+        setApprovedDocs(fallback.data);
+      }
+    } catch (err) {
+      console.warn('Failed to load published documents:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchApprovedDocs();
+  }, [fetchApprovedDocs]);
+
   useEffect(() => {
     fetchAssignableRoles();
     const handleMatrixChanged = () => fetchAssignableRoles();
@@ -234,8 +260,9 @@ const Accounts = ({requirePasswordConfirmation, users, invitedUsers, user, fetch
   useEffect(() => {
     if (isModalVisible || isInviteModalVisible || isMultipleInviteModalVisible) {
       fetchAssignableRoles();
+      fetchApprovedDocs();
     }
-  }, [isModalVisible, isInviteModalVisible, isMultipleInviteModalVisible, fetchAssignableRoles]);
+  }, [isModalVisible, isInviteModalVisible, isMultipleInviteModalVisible, fetchAssignableRoles, fetchApprovedDocs]);
 
   // Check if there's already a project manager when users change
   useEffect(() => {
@@ -327,13 +354,24 @@ useEffect(() => {
 
       const legacyRole = LEGACY_ROLE_BY_RBAC_KEY[selectedRole] || selectedRole || 'viewer';
 
+      const isTemp = selectedRole === 'temporary_view' || selectedRole === 'temp_view';
+      const baseHours = values.expiresIn === '8h' ? 8 : (values.expiresIn === '4h' ? 4 : 1);
+      const extraHours = Number(values.extraHours) || 0;
+      const totalHours = Math.min(baseHours + extraHours, 8);
+      const expiresAt = new Date(Date.now() + totalHours * 3600 * 1000).toISOString();
+
       const payload = {
         firstName: values.first_name,
         lastName: values.last_name,
         email: values.email,
         password: values.password,
-        role: legacyRole,
+        role: isTemp ? 'temporary_view' : legacyRole,
         roleKey: selectedRole,
+        ...(isTemp ? {
+          expiresIn: values.expiresIn || '1h',
+          extraHours: extraHours,
+          approvedDocumentId: values.approvedDocumentId
+        } : {}),
         department: values.department || null,
         site: values.site && values.site.length > 0 ? JSON.stringify(values.site) : null,
         status: values.status || 'active',
@@ -347,11 +385,30 @@ useEffect(() => {
           if (typeof window !== 'undefined' && window.localStorage && selectedRole) {
             try {
               const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
-              assignments[currentUser.id] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+              const rec = {
+                roleKey: selectedRole,
+                assignedAt: new Date().toISOString(),
+                ...(isTemp ? {
+                  expiresAt,
+                  expiresIn: values.expiresIn,
+                  extraHours,
+                  approvedDocumentId: values.approvedDocumentId
+                } : {})
+              };
+              assignments[currentUser.id] = rec;
               if (currentUser.email) {
-                assignments[currentUser.email] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+                assignments[currentUser.email] = rec;
               }
               window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
+
+              if (isTemp) {
+                window.localStorage.setItem(STORAGE_KEY_TEMP_EXPIRATION, JSON.stringify({
+                  roleKey: selectedRole,
+                  expiresAt,
+                  approvedDocumentId: values.approvedDocumentId,
+                  assignedUserId: currentUser.id
+                }));
+              }
             } catch (e) {}
           }
 
@@ -364,9 +421,28 @@ useEffect(() => {
             try {
               const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
               const newId = res?.data?.id || values.email;
-              assignments[newId] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
-              assignments[values.email] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+              const rec = {
+                roleKey: selectedRole,
+                assignedAt: new Date().toISOString(),
+                ...(isTemp ? {
+                  expiresAt,
+                  expiresIn: values.expiresIn,
+                  extraHours,
+                  approvedDocumentId: values.approvedDocumentId
+                } : {})
+              };
+              assignments[newId] = rec;
+              assignments[values.email] = rec;
               window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
+
+              if (isTemp) {
+                window.localStorage.setItem(STORAGE_KEY_TEMP_EXPIRATION, JSON.stringify({
+                  roleKey: selectedRole,
+                  expiresAt,
+                  approvedDocumentId: values.approvedDocumentId,
+                  assignedUserId: newId
+                }));
+              }
             } catch (e) {}
           }
 
@@ -707,10 +783,21 @@ useEffect(() => {
 
       const legacyRole = LEGACY_ROLE_BY_RBAC_KEY[selectedRole] || selectedRole || null;
 
+      const isTemp = selectedRole === 'temporary_view' || selectedRole === 'temp_view';
+      const baseHours = values.expiresIn === '8h' ? 8 : (values.expiresIn === '4h' ? 4 : 1);
+      const extraHours = Number(values.extraHours) || 0;
+      const totalHours = Math.min(baseHours + extraHours, 8);
+      const expiresAt = new Date(Date.now() + totalHours * 3600 * 1000).toISOString();
+
       const payload = {
         email: values.email,
-        role: legacyRole,
+        role: isTemp ? 'temporary_view' : legacyRole,
         roleKey: selectedRole,
+        ...(isTemp ? {
+          expiresIn: values.expiresIn || '1h',
+          extraHours: extraHours,
+          approvedDocumentId: values.approvedDocumentId
+        } : {}),
         department: values.department || null,
         site: values.site && values.site.length > 0 ? JSON.stringify(values.site) : null,
         message: values.message || null
@@ -722,7 +809,17 @@ useEffect(() => {
         if (typeof window !== 'undefined' && window.localStorage && selectedRole && values.email) {
           try {
             const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
-            assignments[values.email] = { roleKey: selectedRole, assignedAt: new Date().toISOString() };
+            assignments[values.email] = {
+              roleKey: selectedRole,
+              assignedAt: new Date().toISOString(),
+              ...(isTemp ? {
+                expiresAt,
+                expiresIn: values.expiresIn,
+                extraHours,
+                approvedDocumentId: values.approvedDocumentId
+              } : {})
+            };
+            window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
             window.localStorage.setItem(STORAGE_KEY_USER_ASSIGNMENTS, JSON.stringify(assignments));
           } catch (e) {}
         }
@@ -852,7 +949,15 @@ useEffect(() => {
       status: member.status,
       template_approver: member.template_approver
     });
+    fetchApprovedDocs();
     setIsModalVisible(true);
+    setTimeout(() => {
+      form.setFieldsValue({
+        expiresIn: member.expiresIn || '1h',
+        approvedDocumentId: member.temp_view_document_id || undefined,
+        extraHours: member.temp_view_extra_hours ?? 0
+      });
+    }, 0);
   };
 
   // Open rename department modal
@@ -1153,11 +1258,36 @@ const renderUserTableView = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role, record) => (
-        <Tag color={getRoleColor(role)}>
-          {formatRoleName(role, record)}
-        </Tag>
-      ),
+      render: (role, record) => {
+        let isTemp = role === 'temporary_view' || role === 'temp_view';
+        let expiresAt = record?.access_expires_at || record?.temp_view_expires_at;
+        try {
+          if (!isTemp && typeof window !== 'undefined' && window.localStorage) {
+            const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+            const assigned = assignments[record?.id] || assignments[record?.email];
+            if (assigned?.roleKey === 'temporary_view' || assigned?.roleKey === 'temp_view') {
+              isTemp = true;
+              if (assigned.expiresAt) expiresAt = assigned.expiresAt;
+            }
+          }
+        } catch (e) {}
+
+        const isExpired = expiresAt ? new Date(expiresAt).getTime() <= Date.now() : false;
+        const expiryFormatted = expiresAt ? moment(expiresAt).format('MMM D, h:mm A') : null;
+
+        return (
+          <Tooltip title={isTemp && expiresAt ? `Access Expires: ${expiryFormatted}${isExpired ? ' (Expired)' : ''}` : undefined}>
+            <Tag color={isTemp ? (isExpired ? 'volcano' : 'gold') : getRoleColor(role)}>
+              {formatRoleName(role, record)}
+              {isTemp && expiresAt && (
+                <span style={{ fontSize: '11px', marginLeft: 4, fontWeight: 'bold' }}>
+                  ({isExpired ? 'Expired' : 'Active'})
+                </span>
+              )}
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Status',
@@ -1416,11 +1546,36 @@ const renderUserListView = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role, record) => (
-        <Tag color={getRoleColor(role)}>
-          {formatRoleName(role, record)}
-        </Tag>
-      ),
+      render: (role, record) => {
+        let isTemp = role === 'temporary_view' || role === 'temp_view';
+        let expiresAt = record?.access_expires_at || record?.temp_view_expires_at;
+        try {
+          if (!isTemp && typeof window !== 'undefined' && window.localStorage) {
+            const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+            const assigned = assignments[record?.id] || assignments[record?.email];
+            if (assigned?.roleKey === 'temporary_view' || assigned?.roleKey === 'temp_view') {
+              isTemp = true;
+              if (assigned.expiresAt) expiresAt = assigned.expiresAt;
+            }
+          }
+        } catch (e) {}
+
+        const isExpired = expiresAt ? new Date(expiresAt).getTime() <= Date.now() : false;
+        const expiryFormatted = expiresAt ? moment(expiresAt).format('MMM D, h:mm A') : null;
+
+        return (
+          <Tooltip title={isTemp && expiresAt ? `Access Expires: ${expiryFormatted}${isExpired ? ' (Expired)' : ''}` : undefined}>
+            <Tag color={isTemp ? (isExpired ? 'volcano' : 'gold') : getRoleColor(role)}>
+              {formatRoleName(role, record)}
+              {isTemp && expiresAt && (
+                <span style={{ fontSize: '11px', marginLeft: 4, fontWeight: 'bold' }}>
+                  ({isExpired ? 'Expired' : 'Active'})
+                </span>
+              )}
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Department',
@@ -1489,11 +1644,36 @@ const renderUserListView = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role, record) => (
-        <Tag color={getRoleColor(role)}>
-          {formatRoleName(role, record)}
-        </Tag>
-      ),
+      render: (role, record) => {
+        let isTemp = role === 'temporary_view' || role === 'temp_view';
+        let expiresAt = record?.access_expires_at || record?.temp_view_expires_at;
+        try {
+          if (!isTemp && typeof window !== 'undefined' && window.localStorage) {
+            const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+            const assigned = assignments[record?.id] || assignments[record?.email];
+            if (assigned?.roleKey === 'temporary_view' || assigned?.roleKey === 'temp_view') {
+              isTemp = true;
+              if (assigned.expiresAt) expiresAt = assigned.expiresAt;
+            }
+          }
+        } catch (e) {}
+
+        const isExpired = expiresAt ? new Date(expiresAt).getTime() <= Date.now() : false;
+        const expiryFormatted = expiresAt ? moment(expiresAt).format('MMM D, h:mm A') : null;
+
+        return (
+          <Tooltip title={isTemp && expiresAt ? `Access Expires: ${expiryFormatted}${isExpired ? ' (Expired)' : ''}` : undefined}>
+            <Tag color={isTemp ? (isExpired ? 'volcano' : 'gold') : getRoleColor(role)}>
+              {formatRoleName(role, record)}
+              {isTemp && expiresAt && (
+                <span style={{ fontSize: '11px', marginLeft: 4, fontWeight: 'bold' }}>
+                  ({isExpired ? 'Expired' : 'Active'})
+                </span>
+              )}
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Department',
@@ -1669,11 +1849,36 @@ const renderUserListView = () => {
       title: 'Role',
       dataIndex: 'role',
       key: 'role',
-      render: (role, record) => (
-        <Tag color={getRoleColor(role)}>
-          {formatRoleName(role, record)}
-        </Tag>
-      ),
+      render: (role, record) => {
+        let isTemp = role === 'temporary_view' || role === 'temp_view';
+        let expiresAt = record?.access_expires_at || record?.temp_view_expires_at;
+        try {
+          if (!isTemp && typeof window !== 'undefined' && window.localStorage) {
+            const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+            const assigned = assignments[record?.id] || assignments[record?.email];
+            if (assigned?.roleKey === 'temporary_view' || assigned?.roleKey === 'temp_view') {
+              isTemp = true;
+              if (assigned.expiresAt) expiresAt = assigned.expiresAt;
+            }
+          }
+        } catch (e) {}
+
+        const isExpired = expiresAt ? new Date(expiresAt).getTime() <= Date.now() : false;
+        const expiryFormatted = expiresAt ? moment(expiresAt).format('MMM D, h:mm A') : null;
+
+        return (
+          <Tooltip title={isTemp && expiresAt ? `Access Expires: ${expiryFormatted}${isExpired ? ' (Expired)' : ''}` : undefined}>
+            <Tag color={isTemp ? (isExpired ? 'volcano' : 'gold') : getRoleColor(role)}>
+              {formatRoleName(role, record)}
+              {isTemp && expiresAt && (
+                <span style={{ fontSize: '11px', marginLeft: 4, fontWeight: 'bold' }}>
+                  ({isExpired ? 'Expired' : 'Active'})
+                </span>
+              )}
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Department',
@@ -2208,6 +2413,56 @@ const renderUserListView = () => {
             </Select>
           </Form.Item>
           )}
+
+          {(selectedRoleKey === 'temporary_view' || selectedRoleKey === 'temp_view') && (
+            <>
+              <Form.Item
+                name="expiresIn"
+                label="Access Duration (1-8 hours)"
+                rules={[{ required: true, message: 'Please select how long access lasts.' }]}
+                initialValue="1h"
+              >
+                <Select placeholder="Select access duration">
+                  <Option value="1h">1 hour</Option>
+                  <Option value="4h">4 hours</Option>
+                  <Option value="8h">8 hours</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item
+                name="approvedDocumentId"
+                label="Approved Document Access"
+                rules={[{ required: true, message: 'Select an approved document for this temporary user.' }]}
+              >
+                <Select
+                  showSearch
+                  placeholder="Select approved document"
+                  optionFilterProp="label"
+                  filterOption={(input, option) =>
+                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {approvedDocs.map((doc) => {
+                    const docId = doc.document_id || doc.id;
+                    const docTitle = doc.title || 'Untitled Document';
+                    const docNum = doc.document_number ? ` (${doc.document_number})` : '';
+                    return (
+                      <Option key={docId} value={docId} label={`${docTitle}${docNum}`}>
+                        {docTitle}{docNum}
+                      </Option>
+                    );
+                  })}
+                </Select>
+              </Form.Item>
+              <Form.Item
+                name="extraHours"
+                label="Additional View Hours (0 to 8)"
+                tooltip="Additional hours to add on top of the base duration (0-8 hours, total max 8 hours)"
+                initialValue={0}
+              >
+                <InputNumber min={0} max={8} style={{ width: '100%' }} />
+              </Form.Item>
+            </>
+          )}
           <Form.Item
             name="department"
             label="Department"
@@ -2283,6 +2538,56 @@ const renderUserListView = () => {
                 })}
             </Select>
           </Form.Item>
+
+          {(inviteRoleKey === 'temporary_view' || inviteRoleKey === 'temp_view') && (
+            <>
+              <Form.Item
+                name="expiresIn"
+                label="Access Duration (1-8 hours)"
+                rules={[{ required: true, message: 'Please select how long access lasts.' }]}
+                initialValue="1h"
+              >
+                <Select placeholder="Select access duration">
+                  <Option value="1h">1 hour</Option>
+                  <Option value="4h">4 hours</Option>
+                  <Option value="8h">8 hours</Option>
+                </Select>
+              </Form.Item>
+              <Form.Item
+                name="approvedDocumentId"
+                label="Approved Document Access"
+                rules={[{ required: true, message: 'Select an approved document for this temporary user.' }]}
+              >
+                <Select
+                  showSearch
+                  placeholder="Select approved document"
+                  optionFilterProp="label"
+                  filterOption={(input, option) =>
+                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                >
+                  {approvedDocs.map((doc) => {
+                    const docId = doc.document_id || doc.id;
+                    const docTitle = doc.title || 'Untitled Document';
+                    const docNum = doc.document_number ? ` (${doc.document_number})` : '';
+                    return (
+                      <Option key={docId} value={docId} label={`${docTitle}${docNum}`}>
+                        {docTitle}{docNum}
+                      </Option>
+                    );
+                  })}
+                </Select>
+              </Form.Item>
+              <Form.Item
+                name="extraHours"
+                label="Additional View Hours (0 to 8)"
+                tooltip="Additional hours to add on top of the base duration (0-8 hours, total max 8 hours)"
+                initialValue={0}
+              >
+                <InputNumber min={0} max={8} style={{ width: '100%' }} />
+              </Form.Item>
+            </>
+          )}
           <Form.Item
             name="department"
             label="Department"

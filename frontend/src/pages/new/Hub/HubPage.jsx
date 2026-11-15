@@ -28,7 +28,7 @@ import { getDisplayCategory, getMockedDueDate, getApproversForTemplate, getAppro
 
 export default function HubPage({ initialType, initialActiveTab }) {
   const { user } = useAuth();
-  const { can, activeRole } = useRbac();
+  const { can, activeRole, isTemporary, tempDocId, tempDocTitle } = useRbac();
   const navigate = useNavigate();
 
   const isSuper = user?.role === 'super_admin' || user?.isSuperAdmin || activeRole?.id === 'super_admin';
@@ -255,6 +255,48 @@ export default function HubPage({ initialType, initialActiveTab }) {
         )}
 
         {/* Content items render views */}
+        {isTemporary && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm mb-6">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center font-bold flex-shrink-0 shadow-sm">
+                  <span className="material-symbols-outlined text-[24px]">visibility</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-extrabold text-amber-950">
+                      Visitor / Auditor Temporary Access Active
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 text-[10px] font-bold">
+                      Read-Only Scope
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800 mt-1 max-w-xl leading-relaxed">
+                    Under the RBAC Matrix policy, this role is strictly limited to your designated approved document. General workspace folder browsing and template authoring are locked.
+                  </p>
+                  {tempDocTitle && (
+                    <div className="mt-2 text-xs font-semibold text-amber-950 flex items-center gap-1.5 bg-amber-100/70 w-fit px-2.5 py-1 rounded-lg border border-amber-200">
+                      <span className="material-symbols-outlined text-[16px] text-amber-700">description</span>
+                      <span>Assigned Document: <strong>{tempDocTitle}</strong></span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {tempDocId && (
+                <button
+                  type="button"
+                  onClick={() => navigate(`/document/${tempDocId}`)}
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow transition-all flex items-center gap-2 cursor-pointer flex-shrink-0"
+                >
+                  <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                  <span>Open Approved Document</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {state.loading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <span className="material-symbols-outlined text-primary text-[48px] animate-spin">sync</span>

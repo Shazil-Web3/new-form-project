@@ -15,6 +15,7 @@ import {
   createRbacRole,
   assignUserRbacRole
 } from '../../../api/rbac';
+import { getApprovedDocuments } from '../../../api/documents';
 import {
   INITIAL_ROLES,
   INITIAL_MATRIX,
@@ -95,13 +96,14 @@ export function RbacDashboardContent() {
   // Forms state
   const [organizations, setOrganizations] = useState([]);
   const [users, setUsers] = useState([]);
+  const [approvedDocs, setApprovedDocs] = useState([]);
   const [savingForm, setSavingForm] = useState(false);
 
   const [createForm] = Form.useForm();
   const [assignForm] = Form.useForm();
   const selectedAssignRoleId = Form.useWatch('roleId', assignForm);
 
-  // Load organizations on mount
+  // Load organizations and approved documents on mount
   useEffect(() => {
     async function initFormData() {
       try {
@@ -109,6 +111,12 @@ export function RbacDashboardContent() {
         setOrganizations(orgs || []);
       } catch (err) {
         console.error('Failed to init forms data', err);
+      }
+      try {
+        const docs = await getApprovedDocuments();
+        setApprovedDocs(docs || []);
+      } catch (err) {
+        console.error('Failed to load approved docs', err);
       }
     }
     initFormData();
@@ -286,12 +294,20 @@ export function RbacDashboardContent() {
   const handleAssign = async (values) => {
     setSavingForm(true);
     try {
+      const selectedDoc = approvedDocs.find(d => String(d.document_id || d.id) === String(values.approvedDocumentId));
+      const docTitle = selectedDoc ? (selectedDoc.title || 'Approved Document') : undefined;
+
       await assignUserRbacRole(values.userId, {
         roleId: values.roleId,
-        ...(values.expiresIn ? { expiresIn: values.expiresIn } : {})
+        ...(values.expiresIn ? { expiresIn: values.expiresIn } : {}),
+        ...(values.approvedDocumentId ? {
+          approvedDocumentId: values.approvedDocumentId,
+          approvedDocumentTitle: docTitle
+        } : {})
       });
+
       message.success('Role assigned. The user keeps their existing login.');
-      assignForm.resetFields(['userId', 'roleId', 'expiresIn']);
+      assignForm.resetFields(['userId', 'roleId', 'expiresIn', 'approvedDocumentId']);
       showNotice('Role assigned successfully');
     } catch (error) {
       message.error('Unable to assign role.');
@@ -613,19 +629,45 @@ export function RbacDashboardContent() {
               </Form.Item>
 
               {assigningTemporary && (
-                <Form.Item
-                  name="expiresIn"
-                  label="Temporary access duration"
-                  rules={[{ required: true, message: 'Please select duration.' }]}
-                >
-                  <Select
-                    placeholder="Select duration"
-                    options={[
-                      { value: '1h', label: '1 hour' },
-                      { value: '4h', label: '4 hours' }
-                    ]}
-                  />
-                </Form.Item>
+                <>
+                  <Form.Item
+                    name="expiresIn"
+                    label="Temporary access duration (1 to 8 hours)"
+                    rules={[{ required: true, message: 'Please select duration.' }]}
+                    initialValue="4h"
+                  >
+                    <Select
+                      placeholder="Select duration"
+                      options={[
+                        { value: '1h', label: '1 hour' },
+                        { value: '2h', label: '2 hours' },
+                        { value: '4h', label: '4 hours (Standard Auditor Review)' },
+                        { value: '8h', label: '8 hours (Full Working Day)' }
+                      ]}
+                    />
+                  </Form.Item>
+
+                  <Form.Item
+                    name="approvedDocumentId"
+                    label="Approved Document Access (Auditor Single-Doc Only)"
+                    rules={[{ required: true, message: 'Please select an approved document for this visitor/auditor.' }]}
+                  >
+                    <Select
+                      placeholder="Select approved document"
+                      showSearch
+                      optionFilterProp="label"
+                      options={approvedDocs.map(doc => {
+                        const docId = doc.document_id || doc.id;
+                        const docTitle = doc.title || 'Untitled Document';
+                        const docNum = doc.document_number ? ` (${doc.document_number})` : '';
+                        return {
+                          value: docId,
+                          label: `${docTitle}${docNum} — Published`
+                        };
+                      })}
+                    />
+                  </Form.Item>
+                </>
               )}
 
               <Button type="primary" htmlType="submit" loading={savingForm} className="bg-blue-600">

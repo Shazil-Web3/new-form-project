@@ -844,10 +844,63 @@ app.delete('/api/reject_invite/:userId', authenticateToken, async (req, res) => 
   }
 });
 
+async function resolveTempViewAssignment(pool, { roleKey, expiresIn, extraHours, approvedDocumentId }) {
+  if (roleKey !== 'temporary_view' && roleKey !== 'temp_view') {
+    return null;
+  }
+  let baseHours = 1;
+  if (expiresIn === '4h') baseHours = 4;
+  else if (expiresIn === '8h') baseHours = 8;
+  else if (expiresIn === '1h') baseHours = 1;
+
+  const extra = extraHours === undefined || extraHours === null || extraHours === ''
+    ? 0
+    : Number(extraHours);
+  const safeExtra = (!Number.isInteger(extra) || extra < 0 || extra > 8) ? 0 : extra;
+  const totalHours = Math.min(baseHours + safeExtra, 8); // Max 8 hours total duration
+
+  if (!approvedDocumentId) {
+    const error = new Error('Select the approved document this temporary user may view');
+    error.status = 400;
+    throw error;
+  }
+
+  // Verify document exists and is published or approved
+  const [docRows] = await pool.execute(
+    `SELECT document_id, title FROM documents
+     WHERE document_id = ? AND (status = 'published' OR status = 'revised' OR status = 'approved')`,
+    [approvedDocumentId]
+  );
+  if (docRows.length === 0) {
+    const error = new Error('The selected document is not a published or approved document');
+    error.status = 400;
+    throw error;
+  }
+
+  return {
+    totalHours,
+    extraHours: safeExtra,
+    approvedDocumentId: String(approvedDocumentId)
+  };
+}
+
 // Add new team member (admin only)
 app.post('/api/add_org_member/:orgId', authenticateToken, async (req, res) => {
   try {
-    const { email, password, firstName, lastName, role, department, template_approver, site } = req.body;
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      role,
+      roleKey,
+      expiresIn,
+      extraHours,
+      approvedDocumentId,
+      department,
+      template_approver,
+      site
+    } = req.body;
     const { orgId } = req.params;
     if (!verifyOrgAndRole(req, res, orgId, true)) return;
 
@@ -859,6 +912,21 @@ app.post('/api/add_org_member/:orgId', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
+    let tempAssignment = null;
+    const effectiveRoleKey = roleKey || role;
+    if (effectiveRoleKey === 'temporary_view' || effectiveRoleKey === 'temp_view') {
+      try {
+        tempAssignment = await resolveTempViewAssignment(pool, {
+          roleKey: effectiveRoleKey,
+          expiresIn,
+          extraHours,
+          approvedDocumentId
+        });
+      } catch (valErr) {
+        return res.status(valErr.status || 400).json({ error: valErr.message });
+      }
+    }
+
     const [existing] = await pool.execute(
       'SELECT id FROM users WHERE email = ?',
       [email]
@@ -867,7 +935,35 @@ app.post('/api/add_org_member/:orgId', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'An account with this email already exists' });
     }
 
-    const userId = await dbOps.registerUser(orgId, email, password, firstName, lastName, role || 'viewer', department || null, template_approver || 'no', 'active', site || null);
+    const assignedRole = (effectiveRoleKey === 'temporary_view' || effectiveRoleKey === 'temp_view')
+      ? 'temporary_view'
+      : (role || 'viewer');
+
+    const userId = await dbOps.registerUser(orgId, email, password, firstName, lastName, assignedRole, department || null, template_approver || 'no', 'active', site || null);
+
+    if (tempAssignment) {
+      await pool.execute(
+        `UPDATE users
+         SET role = 'temporary_view',
+             temp_view_document_id = ?,
+             temp_view_extra_hours = ?,
+             temp_view_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR),
+             access_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)
+         WHERE id = ?`,
+        [tempAssignment.approvedDocumentId, tempAssignment.extraHours, tempAssignment.totalHours, tempAssignment.totalHours, userId]
+      );
+
+      try {
+        await pool.execute(
+          `INSERT INTO documentpermissions (document_id, user_id, permission_type, status, assigned_at)
+           VALUES (?, ?, 'view', 'active', NOW())
+           ON DUPLICATE KEY UPDATE permission_type = 'view', status = 'active'`,
+          [tempAssignment.approvedDocumentId, userId]
+        );
+      } catch (permErr) {
+        console.warn('Failed to grant initial document permissions for temp view:', permErr);
+      }
+    }
 
     if (logAuditEvent) {
       await logAuditEvent(pool, {
@@ -876,7 +972,7 @@ app.post('/api/add_org_member/:orgId', authenticateToken, async (req, res) => {
         actionType: 'USER_ADDED',
         resourceType: 'user',
         resourceId: String(userId),
-        details: { email, role: role || 'viewer', department, site },
+        details: { email, role: assignedRole, department, site, tempAssignment },
         req
       });
     }
@@ -898,7 +994,20 @@ app.put('/api/edit_org_member/:userId', authenticateToken, async (req, res) => {
     const userOrgId = req.user?.organization_id || req.user?.orgId;
     if (!verifyOrgAndRole(req, res, userOrgId, true)) return;
 
-    const { firstName, lastName, email, role, department, template_approver, status, site } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      role,
+      roleKey,
+      expiresIn,
+      extraHours,
+      approvedDocumentId,
+      department,
+      template_approver,
+      status,
+      site
+    } = req.body;
 
     if (!firstName || !lastName || !email || !status) {
       return res.status(400).json({ error: 'Required fields missing' });
@@ -915,7 +1024,27 @@ app.put('/api/edit_org_member/:userId', authenticateToken, async (req, res) => {
     }
 
     const currentTarget = targetUsers[0];
-    const roleOrStatusChanged = currentTarget.role !== role || currentTarget.status !== status;
+    const effectiveRoleKey = roleKey || role;
+
+    let tempAssignment = null;
+    if (effectiveRoleKey === 'temporary_view' || effectiveRoleKey === 'temp_view') {
+      try {
+        tempAssignment = await resolveTempViewAssignment(pool, {
+          roleKey: effectiveRoleKey,
+          expiresIn,
+          extraHours,
+          approvedDocumentId
+        });
+      } catch (valErr) {
+        return res.status(valErr.status || 400).json({ error: valErr.message });
+      }
+    }
+
+    const assignedRole = (effectiveRoleKey === 'temporary_view' || effectiveRoleKey === 'temp_view')
+      ? 'temporary_view'
+      : (role || currentTarget.role);
+
+    const roleOrStatusChanged = currentTarget.role !== assignedRole || currentTarget.status !== status;
 
     // Update user profile
     await dbOps.updateUserProfile(userId, {
@@ -928,7 +1057,41 @@ app.put('/api/edit_org_member/:userId', authenticateToken, async (req, res) => {
       site
     });
 
-    await dbOps.changeUserRole(userId, role);
+    await dbOps.changeUserRole(userId, assignedRole);
+
+    if (tempAssignment) {
+      await pool.execute(
+        `UPDATE users
+         SET role = 'temporary_view',
+             temp_view_document_id = ?,
+             temp_view_extra_hours = ?,
+             temp_view_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR),
+             access_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)
+         WHERE id = ?`,
+        [tempAssignment.approvedDocumentId, tempAssignment.extraHours, tempAssignment.totalHours, tempAssignment.totalHours, userId]
+      );
+      try {
+        await pool.execute(
+          `INSERT INTO documentpermissions (document_id, user_id, permission_type, status, assigned_at)
+           VALUES (?, ?, 'view', 'active', NOW())
+           ON DUPLICATE KEY UPDATE permission_type = 'view', status = 'active'`,
+          [tempAssignment.approvedDocumentId, userId]
+        );
+      } catch (permErr) {
+        console.warn('Failed to update temp document permissions:', permErr);
+      }
+    } else if (currentTarget.role === 'temporary_view' || currentTarget.role === 'temp_view') {
+      // Role reverted to a normal persistent role - reset temporary restrictions
+      await pool.execute(
+        `UPDATE users
+         SET temp_view_document_id = NULL,
+             temp_view_extra_hours = 0,
+             temp_view_expires_at = NULL,
+             access_expires_at = NULL
+         WHERE id = ?`,
+        [userId]
+      );
+    }
 
     // If role or status changed, increment token_version to invalidate stale access tokens
     if (roleOrStatusChanged) {

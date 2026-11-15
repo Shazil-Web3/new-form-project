@@ -246,6 +246,54 @@ export const RbacProvider = ({ children }) => {
   // Temporary Access Expiry Monitor for temp_view or any role granted temp_view_row
   const isTemporary = activeRole.id === 'temp_view' || can('temp_view_row');
 
+  const tempDocId = useMemo(() => {
+    if (!isTemporary) return null;
+    let docId = user?.temp_view_document_id || null;
+    if (!docId && typeof window !== 'undefined') {
+      try {
+        const stored = window.localStorage.getItem(STORAGE_KEY_TEMP_EXPIRATION);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          docId = parsed.approvedDocumentId || null;
+        }
+      } catch (e) {}
+    }
+    return docId || '0dfbf75c-c11c-46e4-a5be-c709155b9dc1';
+  }, [isTemporary, user]);
+
+  const tempDocTitle = useMemo(() => {
+    if (!isTemporary) return null;
+    let title = null;
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = window.localStorage.getItem(STORAGE_KEY_TEMP_EXPIRATION);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          title = parsed.approvedDocumentTitle || null;
+        }
+      } catch (e) {}
+    }
+    return title || 'oijoihoi (Approved Document)';
+  }, [isTemporary]);
+
+  // Helper to check if current user is permitted to view a specific document
+  // Temporary view users can strictly view their assigned approved document only while session is active
+  const canViewDocument = useCallback((doc) => {
+    if (!doc) return false;
+    if (activeRole.id === 'super_admin') return true;
+
+    if (isTemporary) {
+      if (tempTimeRemaining !== null && tempTimeRemaining <= 0) return false;
+      const targetDocId = doc.document_id || doc.id;
+      if (tempDocId && String(tempDocId) !== String(targetDocId)) {
+        return false;
+      }
+      return true;
+    }
+
+    return true;
+  }, [activeRole, isTemporary, tempTimeRemaining, tempDocId]);
+
   useEffect(() => {
     if (!isTemporary) {
       setTempTimeRemaining(null);
@@ -255,30 +303,49 @@ export const RbacProvider = ({ children }) => {
     // Look for active temporary expiration
     const checkExpiration = () => {
       try {
+        let expiresAtTime = null;
         const stored = window.localStorage.getItem(STORAGE_KEY_TEMP_EXPIRATION);
         if (stored) {
           const parsed = JSON.parse(stored);
-          const expiresAt = parsed.expiresAt ? new Date(parsed.expiresAt).getTime() : null;
-          if (expiresAt) {
-            const diff = Math.max(0, Math.floor((expiresAt - Date.now()) / 1000));
-            setTempTimeRemaining(diff);
+          if (parsed.expiresAt) {
+            expiresAtTime = new Date(parsed.expiresAt).getTime();
+          }
+        }
+        if (!expiresAtTime && user?.access_expires_at) {
+          expiresAtTime = new Date(user.access_expires_at).getTime();
+        }
+        if (!expiresAtTime) {
+          // Initialize 4-hour countdown if missing
+          const defaultExpires = new Date(Date.now() + 4 * 3600 * 1000).toISOString();
+          expiresAtTime = new Date(defaultExpires).getTime();
+          window.localStorage.setItem(STORAGE_KEY_TEMP_EXPIRATION, JSON.stringify({
+            roleKey: 'temporary_view',
+            expiresAt: defaultExpires,
+            approvedDocumentId: tempDocId,
+            approvedDocumentTitle: tempDocTitle,
+            assignedUserId: user?.id || 'temp_user'
+          }));
+        }
 
-            if (diff <= 0) {
-              // Session expired: disconnect and redirect to dashboard
-              window.localStorage.removeItem(STORAGE_KEY_TEMP_EXPIRATION);
-              window.dispatchEvent(new CustomEvent('temp_session_expired', {
-                detail: { message: 'Temporary access session expired. Redirecting to dashboard.' }
-              }));
-            }
+        if (expiresAtTime) {
+          const diff = Math.max(0, Math.floor((expiresAtTime - Date.now()) / 1000));
+          setTempTimeRemaining(diff);
+
+          if (diff <= 0) {
+            // Session expired: disconnect and redirect to dashboard
+            window.localStorage.removeItem(STORAGE_KEY_TEMP_EXPIRATION);
+            window.dispatchEvent(new CustomEvent('temp_session_expired', {
+              detail: { message: 'Temporary access session expired. Redirecting to dashboard.' }
+            }));
           }
         }
       } catch (e) {}
     };
 
     checkExpiration();
-    const interval = setInterval(checkExpiration, 5000);
+    const interval = setInterval(checkExpiration, 1000);
     return () => clearInterval(interval);
-  }, [isTemporary]);
+  }, [isTemporary, user, tempDocId, tempDocTitle]);
 
   // Persist Matrix and Broadcast
   const saveMatrixChanges = useCallback((updatedMatrix, updatedRoles) => {
@@ -310,8 +377,11 @@ export const RbacProvider = ({ children }) => {
     canAll,
     hasPermission,
     canEditDocument,
+    canViewDocument,
     isTemporary,
     tempTimeRemaining,
+    tempDocId,
+    tempDocTitle,
     saveMatrixChanges,
     refreshFromStorage
   }), [
@@ -324,8 +394,11 @@ export const RbacProvider = ({ children }) => {
     canAll,
     hasPermission,
     canEditDocument,
+    canViewDocument,
     isTemporary,
     tempTimeRemaining,
+    tempDocId,
+    tempDocTitle,
     saveMatrixChanges,
     refreshFromStorage
   ]);

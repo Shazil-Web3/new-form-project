@@ -100,6 +100,27 @@ const initDb = async () => {
     await runDeduplicationMigration(pool).catch(e => console.log('Deduplication notice:', e.message));
     await cleanStaleWorkflowApprovers(pool).catch(e => console.log('Workflow notice:', e.message));
     await runRelatedDocumentsMigration(pool).catch(e => console.log('Related documents notice:', e.message));
+
+    // Temp View & Access Expiry Schema Migration
+    try {
+      const [cols] = await pool.query('DESCRIBE users');
+      const fieldNames = cols.map(c => c.Field);
+      if (!fieldNames.includes('temp_view_document_id')) {
+        await pool.query('ALTER TABLE users ADD COLUMN temp_view_document_id VARCHAR(255) DEFAULT NULL');
+      }
+      if (!fieldNames.includes('temp_view_extra_hours')) {
+        await pool.query('ALTER TABLE users ADD COLUMN temp_view_extra_hours INT DEFAULT 0');
+      }
+      if (!fieldNames.includes('temp_view_expires_at')) {
+        await pool.query('ALTER TABLE users ADD COLUMN temp_view_expires_at DATETIME DEFAULT NULL');
+      }
+      if (!fieldNames.includes('access_expires_at')) {
+        await pool.query('ALTER TABLE users ADD COLUMN access_expires_at DATETIME DEFAULT NULL');
+      }
+      await pool.query("ALTER TABLE users MODIFY COLUMN role VARCHAR(50) DEFAULT 'viewer'");
+    } catch (tempErr) {
+      console.log('Temp view migration notice:', tempErr.message);
+    }
   } catch (error) {
     console.error('❌ Error initializing database:', error);
   }
