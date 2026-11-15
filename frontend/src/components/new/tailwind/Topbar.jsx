@@ -87,7 +87,11 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
           organization_id: u.organization_id || u.orgId || u.org_id,
           template_approver: u.template_approver || 'no',
           is_super_admin: Boolean(u.is_super_admin || u.isSuperAdmin || u.role === 'super_admin'),
-          isSuperAdmin: Boolean(u.is_super_admin || u.isSuperAdmin || u.role === 'super_admin')
+          isSuperAdmin: Boolean(u.is_super_admin || u.isSuperAdmin || u.role === 'super_admin'),
+          temp_view_document_id: u.temp_view_document_id || null,
+          temp_view_document_title: u.temp_view_document_title || null,
+          temp_view_expires_at: u.temp_view_expires_at || null,
+          access_expires_at: u.access_expires_at || null
         }
       };
     });
@@ -110,28 +114,8 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
       }
     }));
 
-    const tempAuditorOption = {
-      label: '⏱️ Temp View Auditor (4h Access)',
-      value: 'mock_temp_view_auditor',
-      user: {
-        id: 'temp_auditor_mock',
-        userId: 'temp_auditor_mock',
-        name: 'Auditor Guest',
-        firstName: 'Auditor',
-        lastName: 'Guest',
-        role: 'temporary_view',
-        department: 'Compliance',
-        email: 'auditor.guest@example.com',
-        is_super_admin: false,
-        isSuperAdmin: false,
-        temp_view_document_id: '0dfbf75c-c11c-46e4-a5be-c709155b9dc1',
-        access_expires_at: new Date(Date.now() + 4 * 3600 * 1000).toISOString()
-      }
-    };
-
     return [
       { label: 'Real User (Admin)', value: 'real_user', user: null },
-      tempAuditorOption,
       ...userOptions,
       ...customRoleOptions
     ];
@@ -158,20 +142,6 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
     if (val === 'real_user') {
       setMockUserOverride(null);
       if (typeof window !== 'undefined') window.localStorage.removeItem(STORAGE_KEY_TEMP_EXPIRATION);
-    } else if (val === 'mock_temp_view_auditor') {
-      const match = actorOptions.find(opt => opt.value === val);
-      if (match) {
-        setMockUserOverride(match.user);
-        if (typeof window !== 'undefined') {
-          window.localStorage.setItem(STORAGE_KEY_TEMP_EXPIRATION, JSON.stringify({
-            roleKey: 'temporary_view',
-            expiresAt: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
-            approvedDocumentId: '0dfbf75c-c11c-46e4-a5be-c709155b9dc1',
-            approvedDocumentTitle: 'oijoihoi (Published Document)',
-            assignedUserId: 'temp_auditor_mock'
-          }));
-        }
-      }
     } else {
       const match = actorOptions.find(opt => opt.value === val);
       if (match) {
@@ -181,8 +151,8 @@ export default function Topbar({ title, user, onMenuToggle, searchVal, onSearchC
             window.localStorage.setItem(STORAGE_KEY_TEMP_EXPIRATION, JSON.stringify({
               roleKey: 'temporary_view',
               expiresAt: match.user.access_expires_at || new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
-              approvedDocumentId: match.user.temp_view_document_id || '0dfbf75c-c11c-46e4-a5be-c709155b9dc1',
-              approvedDocumentTitle: 'oijoihoi (Published Document)',
+              approvedDocumentId: match.user.temp_view_document_id || null,
+              approvedDocumentTitle: match.user.temp_view_document_title || null,
               assignedUserId: match.user.id
             }));
           }

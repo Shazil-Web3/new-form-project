@@ -259,7 +259,12 @@ module.exports = function registerUserRoutes({
       }
 
       const [users] = await pool.execute(
-        'SELECT id, email, password_hash, first_name, last_name, role, department, template_approver, organization_id, site, token_version, status FROM users WHERE email = ?',
+        `SELECT u.id, u.email, u.password_hash, u.first_name, u.last_name, u.role, u.department, u.template_approver,
+                u.organization_id, u.site, u.token_version, u.status, u.temp_view_document_id, u.temp_view_extra_hours,
+                u.temp_view_expires_at, u.access_expires_at, d.title AS temp_view_document_title
+         FROM users u
+         LEFT JOIN documents d ON u.temp_view_document_id = d.document_id
+         WHERE u.email = ?`,
         [email]
       );
 
@@ -401,7 +406,12 @@ module.exports = function registerUserRoutes({
   app.get('/api/users/me', authenticateToken, async (req, res) => {
     try {
       const [user] = await pool.execute(
-        'SELECT id, email, first_name, last_name, role, template_approver, organization_id, site, department, status, temp_view_document_id, temp_view_extra_hours, temp_view_expires_at, access_expires_at FROM users WHERE id = ?',
+        `SELECT u.id, u.email, u.first_name, u.last_name, u.role, u.template_approver, u.organization_id, u.site,
+                u.department, u.status, u.temp_view_document_id, u.temp_view_extra_hours, u.temp_view_expires_at,
+                u.access_expires_at, d.title AS temp_view_document_title
+         FROM users u
+         LEFT JOIN documents d ON u.temp_view_document_id = d.document_id
+         WHERE u.id = ?`,
         [req.user.userId]
       );
 
@@ -421,6 +431,7 @@ module.exports = function registerUserRoutes({
         status: user[0].status,
         template_approver: user[0].template_approver,
         temp_view_document_id: user[0].temp_view_document_id,
+        temp_view_document_title: user[0].temp_view_document_title,
         temp_view_extra_hours: user[0].temp_view_extra_hours,
         temp_view_expires_at: user[0].temp_view_expires_at,
         access_expires_at: user[0].access_expires_at
@@ -622,10 +633,19 @@ module.exports = function registerUserRoutes({
   app.get('/api/users', authenticateToken, async (req, res) => {
     try {
       const orgId = req.user.organization_id || req.user.orgId;
-      const [users] = await pool.execute(
-        'SELECT id, first_name, last_name, email, role, department, site, template_approver, status, temp_view_document_id, temp_view_extra_hours, temp_view_expires_at, access_expires_at FROM users WHERE organization_id = ? AND status != ?',
-        [orgId, 'inactive']
-      );
+      let query = `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.department, u.site,
+                          u.template_approver, u.status, u.temp_view_document_id, u.temp_view_extra_hours,
+                          u.temp_view_expires_at, u.access_expires_at, d.title AS temp_view_document_title
+                   FROM users u
+                   LEFT JOIN documents d ON u.temp_view_document_id = d.document_id
+                   WHERE u.status != ?`;
+      let params = ['inactive'];
+      if (orgId) {
+        query += ' AND (u.organization_id = ? OR u.organization_id IS NULL)';
+        params.push(orgId);
+      }
+      query += ' ORDER BY u.first_name ASC, u.last_name ASC';
+      const [users] = await pool.execute(query, params);
       res.json(users);
     } catch (error) {
       console.error('Error fetching users:', error);

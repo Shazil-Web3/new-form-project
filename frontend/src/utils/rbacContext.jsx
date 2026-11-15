@@ -245,6 +245,7 @@ export const RbacProvider = ({ children }) => {
 
   // Temporary Access Expiry Monitor for temp_view or any role granted temp_view_row
   const isTemporary = activeRole.id === 'temp_view' || can('temp_view_row');
+  const [docTitleFromApi, setDocTitleFromApi] = useState(null);
 
   const tempDocId = useMemo(() => {
     if (!isTemporary) return null;
@@ -258,23 +259,60 @@ export const RbacProvider = ({ children }) => {
         }
       } catch (e) {}
     }
-    return docId || '0dfbf75c-c11c-46e4-a5be-c709155b9dc1';
+    if (!docId && typeof window !== 'undefined') {
+      try {
+        const assignments = JSON.parse(window.localStorage.getItem(STORAGE_KEY_USER_ASSIGNMENTS) || '{}');
+        const assigned = assignments[user?.id] || assignments[user?.email];
+        if (assigned?.approvedDocumentId) {
+          docId = assigned.approvedDocumentId;
+        }
+      } catch (e) {}
+    }
+    return docId || null;
   }, [isTemporary, user]);
+
+  useEffect(() => {
+    if (!isTemporary || !tempDocId) {
+      setDocTitleFromApi(null);
+      return;
+    }
+    if (user?.temp_view_document_title) {
+      setDocTitleFromApi(user.temp_view_document_title);
+      return;
+    }
+    let isMounted = true;
+    (async () => {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`/api/get_document/${tempDocId}`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          const doc = data?.document || data;
+          if (isMounted && doc?.title) {
+            setDocTitleFromApi(doc.title);
+          }
+        }
+      } catch (_) {}
+    })();
+    return () => { isMounted = false; };
+  }, [isTemporary, tempDocId, user]);
 
   const tempDocTitle = useMemo(() => {
     if (!isTemporary) return null;
-    let title = null;
+    if (docTitleFromApi) return docTitleFromApi;
+    if (user?.temp_view_document_title) return user.temp_view_document_title;
     if (typeof window !== 'undefined') {
       try {
         const stored = window.localStorage.getItem(STORAGE_KEY_TEMP_EXPIRATION);
         if (stored) {
           const parsed = JSON.parse(stored);
-          title = parsed.approvedDocumentTitle || null;
+          if (parsed.approvedDocumentTitle) return parsed.approvedDocumentTitle;
         }
       } catch (e) {}
     }
-    return title || 'oijoihoi (Approved Document)';
-  }, [isTemporary]);
+    return tempDocId ? 'Approved Document' : null;
+  }, [isTemporary, docTitleFromApi, user, tempDocId]);
 
   // Helper to check if current user is permitted to view a specific document
   // Temporary view users can strictly view their assigned approved document only while session is active

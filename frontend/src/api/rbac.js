@@ -4,6 +4,8 @@
  * Mirrors the reference RBAC contracts for standalone frontend functionality.
  */
 
+import apiClient from './apiClient';
+
 const STORAGE_KEY = 'watermelon_rbac_matrix_v1';
 
 const DEFAULT_ROLES = [
@@ -130,28 +132,6 @@ const DEFAULT_CATALOG_PERMISSIONS = Object.entries(FEATURE_CATALOG).flatMap(([re
   }))
 );
 
-const MOCK_ORGANIZATIONS = [
-  { id: 1, name: 'Watermelon Technologies HQ' },
-  { id: 2, name: 'Global Pharma Operations' },
-  { id: 3, name: 'BioTech Clinical Systems' }
-];
-
-const MOCK_USERS_BY_ORG = {
-  1: [
-    { id: 101, first_name: 'John', last_name: 'Doe', email: 'john.doe@watermelon.io', role: 'admin', organization_id: 1 },
-    { id: 102, first_name: 'Alice', last_name: 'Smith', email: 'alice.smith@watermelon.io', role: 'author', organization_id: 1 },
-    { id: 103, first_name: 'Robert', last_name: 'Johnson', email: 'robert.j@watermelon.io', role: 'reviewer', organization_id: 1 },
-    { id: 104, first_name: 'Emily', last_name: 'Davis', email: 'emily.d@watermelon.io', role: 'viewer', organization_id: 1 }
-  ],
-  2: [
-    { id: 201, first_name: 'Michael', last_name: 'Brown', email: 'michael.b@globalpharma.com', role: 'author', organization_id: 2 },
-    { id: 202, first_name: 'Sarah', last_name: 'Wilson', email: 'sarah.w@globalpharma.com', role: 'reviewer', organization_id: 2 }
-  ],
-  3: [
-    { id: 301, first_name: 'David', last_name: 'Miller', email: 'david.m@biotech.com', role: 'admin', organization_id: 3 }
-  ]
-};
-
 // In-Memory & LocalStorage State Manager
 function getInitialState() {
   try {
@@ -172,7 +152,7 @@ function getInitialState() {
     roles: JSON.parse(JSON.stringify(DEFAULT_ROLES)),
     rows: JSON.parse(JSON.stringify(DEFAULT_FEATURE_GROUPS)),
     permissionsByRole: JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS_BY_ROLE)),
-    usersByOrg: JSON.parse(JSON.stringify(MOCK_USERS_BY_ORG))
+    usersByOrg: {}
   };
 }
 
@@ -247,7 +227,7 @@ export const revertRbacToDefault = async () => {
     roles: JSON.parse(JSON.stringify(DEFAULT_ROLES)),
     rows: JSON.parse(JSON.stringify(DEFAULT_FEATURE_GROUPS)),
     permissionsByRole: JSON.parse(JSON.stringify(DEFAULT_PERMISSIONS_BY_ROLE)),
-    usersByOrg: JSON.parse(JSON.stringify(MOCK_USERS_BY_ORG))
+    usersByOrg: {}
   };
   persistState();
   return getRbacMatrix();
@@ -293,38 +273,54 @@ export const createRbacRole = async (data) => {
 };
 
 export const listRbacOrganizations = async () => {
-  await delay();
-  return JSON.parse(JSON.stringify(MOCK_ORGANIZATIONS));
+  return [];
 };
 
-export const listRbacUsers = async (organizationId) => {
-  await delay();
-  const users = rbacState.usersByOrg[organizationId] || rbacState.usersByOrg[1] || [];
-  return JSON.parse(JSON.stringify(users));
+export const listRbacUsers = async () => {
+  try {
+    const res = await apiClient.get('/api/rbac/users');
+    if (Array.isArray(res.data) && res.data.length > 0) {
+      return res.data;
+    }
+  } catch (e) {
+    console.warn('Fallback fetching users via /api/users', e);
+  }
+  try {
+    const fallback = await apiClient.get('/api/users');
+    if (Array.isArray(fallback.data) && fallback.data.length > 0) {
+      return fallback.data;
+    }
+  } catch (_) {}
+  return [];
 };
 
 export const getUserRbacRoles = async (userId) => {
-  await delay();
+  try {
+    const res = await apiClient.get('/api/users');
+    if (Array.isArray(res.data)) {
+      const match = res.data.find(u => String(u.id) === String(userId));
+      if (match?.role) {
+        return [{ role_key: match.role, name: match.role }];
+      }
+    }
+  } catch (_) {}
   return [{ role_key: 'org_admin', name: 'Admin' }];
 };
 
 export const assignUserRbacRole = async (userId, data) => {
-  await delay(150);
-  // Updates local user entry if present
-  for (const orgUsers of Object.values(rbacState.usersByOrg)) {
-    const user = orgUsers.find(u => String(u.id) === String(userId));
-    if (user) {
-      const selectedRole = rbacState.roles.find(r => String(r.id) === String(data.roleId));
-      if (selectedRole) {
-        user.role = selectedRole.role_key;
-        user.role_name = selectedRole.name;
-        if (data.expiresIn) {
-          user.expiresIn = data.expiresIn;
-        }
-      }
-    }
+  let backendResult = null;
+  try {
+    const res = await apiClient.put(`/api/rbac/assign-role/${userId}`, {
+      roleId: data.roleId,
+      roleKey: data.roleId === 'temp_view' ? 'temporary_view' : (data.roleKey || data.roleId),
+      expiresIn: data.expiresIn,
+      extraHours: data.extraHours,
+      approvedDocumentId: data.approvedDocumentId
+    });
+    backendResult = res.data;
+  } catch (apiErr) {
+    console.error('Failed to assign role on backend API:', apiErr);
   }
-  persistState();
 
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -356,7 +352,7 @@ export const assignUserRbacRole = async (userId, data) => {
     }
   } catch (e) {}
 
-  return { success: true, userId, ...data };
+  return backendResult || { success: true, userId, ...data };
 };
 
 export const removeUserRbacRole = async (userId, roleId) => {

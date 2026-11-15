@@ -955,10 +955,10 @@ app.post('/api/add_org_member/:orgId', authenticateToken, async (req, res) => {
 
       try {
         await pool.execute(
-          `INSERT INTO documentpermissions (document_id, user_id, permission_type, status, assigned_at)
-           VALUES (?, ?, 'view', 'active', NOW())
-           ON DUPLICATE KEY UPDATE permission_type = 'view', status = 'active'`,
-          [tempAssignment.approvedDocumentId, userId]
+          `INSERT INTO documentpermissions (document_id, user_id, permission_type, assigned_by, status)
+           VALUES (?, ?, 'viewer', ?, 'active')
+           ON DUPLICATE KEY UPDATE permission_type = 'viewer', status = 'active'`,
+          [tempAssignment.approvedDocumentId, userId, req.user?.userId || userId]
         );
       } catch (permErr) {
         console.warn('Failed to grant initial document permissions for temp view:', permErr);
@@ -1072,10 +1072,10 @@ app.put('/api/edit_org_member/:userId', authenticateToken, async (req, res) => {
       );
       try {
         await pool.execute(
-          `INSERT INTO documentpermissions (document_id, user_id, permission_type, status, assigned_at)
-           VALUES (?, ?, 'view', 'active', NOW())
-           ON DUPLICATE KEY UPDATE permission_type = 'view', status = 'active'`,
-          [tempAssignment.approvedDocumentId, userId]
+          `INSERT INTO documentpermissions (document_id, user_id, permission_type, assigned_by, status)
+           VALUES (?, ?, 'viewer', ?, 'active')
+           ON DUPLICATE KEY UPDATE permission_type = 'viewer', status = 'active'`,
+          [tempAssignment.approvedDocumentId, userId, req.user?.userId || userId]
         );
       } catch (permErr) {
         console.warn('Failed to update temp document permissions:', permErr);
@@ -1133,6 +1133,124 @@ app.put('/api/edit_org_member/:userId', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Error updating team member:', error);
     res.status(500).json({ error: 'Failed to update team member' });
+  }
+});
+
+// RBAC Assign Role directly to any workspace user
+app.put('/api/rbac/assign-role/:userId', authenticateToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const {
+      roleId,
+      roleKey,
+      expiresIn,
+      extraHours,
+      approvedDocumentId
+    } = req.body;
+
+    const [targetUsers] = await pool.execute(
+      'SELECT id, email, first_name, last_name, role, status, organization_id FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (targetUsers.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const currentTarget = targetUsers[0];
+    const effectiveRoleKey = roleKey || roleId;
+
+    let tempAssignment = null;
+    if (effectiveRoleKey === 'temporary_view' || effectiveRoleKey === 'temp_view') {
+      try {
+        tempAssignment = await resolveTempViewAssignment(pool, {
+          roleKey: effectiveRoleKey,
+          expiresIn,
+          extraHours,
+          approvedDocumentId
+        });
+      } catch (valErr) {
+        return res.status(valErr.status || 400).json({ error: valErr.message });
+      }
+    }
+
+    const assignedRole = (effectiveRoleKey === 'temporary_view' || effectiveRoleKey === 'temp_view')
+      ? 'temporary_view'
+      : (effectiveRoleKey || currentTarget.role);
+
+    await dbOps.changeUserRole(userId, assignedRole);
+
+    if (tempAssignment) {
+      await pool.execute(
+        `UPDATE users
+         SET role = 'temporary_view',
+             temp_view_document_id = ?,
+             temp_view_extra_hours = ?,
+             temp_view_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR),
+             access_expires_at = DATE_ADD(NOW(), INTERVAL ? HOUR)
+         WHERE id = ?`,
+        [tempAssignment.approvedDocumentId, tempAssignment.extraHours, tempAssignment.totalHours, tempAssignment.totalHours, userId]
+      );
+      try {
+        await pool.execute(
+          `INSERT INTO documentpermissions (document_id, user_id, permission_type, assigned_by, status)
+           VALUES (?, ?, 'viewer', ?, 'active')
+           ON DUPLICATE KEY UPDATE permission_type = 'viewer', status = 'active'`,
+          [tempAssignment.approvedDocumentId, userId, req.user?.userId || userId]
+        );
+      } catch (permErr) {
+        console.warn('Failed to update temp document permissions:', permErr);
+      }
+    } else if (currentTarget.role === 'temporary_view' || currentTarget.role === 'temp_view') {
+      await pool.execute(
+        `UPDATE users
+         SET temp_view_document_id = NULL,
+             temp_view_extra_hours = 0,
+             temp_view_expires_at = NULL,
+             access_expires_at = NULL
+         WHERE id = ?`,
+        [userId]
+      );
+    }
+
+    await pool.execute(
+      'UPDATE users SET token_version = token_version + 1 WHERE id = ?',
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      userId,
+      role: assignedRole,
+      tempAssignment
+    });
+  } catch (error) {
+    console.error('Error in /api/rbac/assign-role:', error);
+    res.status(500).json({ error: error.message || 'Failed to assign role' });
+  }
+});
+
+// RBAC List all active workspace users from real database
+app.get('/api/rbac/users', authenticateToken, async (req, res) => {
+  try {
+    const orgId = req.user?.organization_id || req.user?.orgId;
+    let query = `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.department, u.site,
+                        u.status, u.temp_view_document_id, u.temp_view_expires_at, u.access_expires_at,
+                        d.title AS temp_view_document_title
+                 FROM users u
+                 LEFT JOIN documents d ON u.temp_view_document_id = d.document_id
+                 WHERE u.status != ?`;
+    let params = ['inactive'];
+    if (orgId) {
+      query += ' AND (u.organization_id = ? OR u.organization_id IS NULL)';
+      params.push(orgId);
+    }
+    query += ' ORDER BY u.first_name ASC, u.last_name ASC';
+    const [users] = await pool.execute(query, params);
+    res.json(users);
+  } catch (error) {
+    console.error('Error in /api/rbac/users:', error);
+    res.status(500).json({ error: 'Failed to fetch rbac users' });
   }
 });
 

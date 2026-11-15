@@ -858,7 +858,7 @@ const authenticateToken = async (req, res, next) => {
 
     // Server-side account state and token_version enforcement
     const [users] = await pool.execute(
-      'SELECT id, email, organization_id, role, status, token_version FROM users WHERE id = ?',
+      'SELECT id, email, organization_id, role, status, token_version, temp_view_document_id, access_expires_at FROM users WHERE id = ?',
       [targetUserId]
     );
 
@@ -899,7 +899,9 @@ const authenticateToken = async (req, res, next) => {
       organization_id: user.organization_id,
       orgId: user.organization_id,
       role: effectiveRole,
-      token_version: user.token_version
+      token_version: user.token_version,
+      temp_view_document_id: user.temp_view_document_id,
+      access_expires_at: user.access_expires_at
     };
 
     next();

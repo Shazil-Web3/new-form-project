@@ -10,7 +10,6 @@ import { Button, Form, Input, message, Select } from 'antd';
 import MainLayout from '../../../components/new/tailwind/MainLayout';
 import { toastAlert } from '../../../utils/alerts';
 import {
-  listRbacOrganizations,
   listRbacUsers,
   createRbacRole,
   assignUserRbacRole
@@ -94,7 +93,6 @@ export function RbacDashboardContent() {
   const [notice, setNotice] = useState(null);
 
   // Forms state
-  const [organizations, setOrganizations] = useState([]);
   const [users, setUsers] = useState([]);
   const [approvedDocs, setApprovedDocs] = useState([]);
   const [savingForm, setSavingForm] = useState(false);
@@ -103,14 +101,14 @@ export function RbacDashboardContent() {
   const [assignForm] = Form.useForm();
   const selectedAssignRoleId = Form.useWatch('roleId', assignForm);
 
-  // Load organizations and approved documents on mount
+  // Load real workspace users and approved documents on mount
   useEffect(() => {
     async function initFormData() {
       try {
-        const orgs = await listRbacOrganizations();
-        setOrganizations(orgs || []);
+        const realUsers = await listRbacUsers();
+        setUsers(realUsers || []);
       } catch (err) {
-        console.error('Failed to init forms data', err);
+        console.error('Failed to load users', err);
       }
       try {
         const docs = await getApprovedDocuments();
@@ -230,19 +228,6 @@ export function RbacDashboardContent() {
     toastAlert('Matrix reverted to default.', 'info');
   };
 
-  // Handle Organization change in user assignment form
-  const handleOrgChange = async (orgId) => {
-    assignForm.resetFields(['userId']);
-    setUsers([]);
-    if (!orgId) return;
-    try {
-      const orgUsers = await listRbacUsers(orgId);
-      setUsers(orgUsers || []);
-    } catch (error) {
-      message.error('Unable to load organization users.');
-    }
-  };
-
   // Handle Custom Role Creation
   const handleCreateRole = async (values) => {
     setSavingForm(true);
@@ -306,7 +291,11 @@ export function RbacDashboardContent() {
         } : {})
       });
 
-      message.success('Role assigned. The user keeps their existing login.');
+      message.success('Role assigned successfully. Updated in database.');
+      try {
+        const updated = await listRbacUsers();
+        setUsers(updated || []);
+      } catch (_) {}
       assignForm.resetFields(['userId', 'roleId', 'expiresIn', 'approvedDocumentId']);
       showNotice('Role assigned successfully');
     } catch (error) {
@@ -602,22 +591,22 @@ export function RbacDashboardContent() {
             </p>
 
             <Form form={assignForm} layout="vertical" onFinish={handleAssign} className="mt-3">
-              <Form.Item name="organizationId" label="Organization" rules={[{ required: true, message: 'Please select an organization.' }]}>
+              <Form.Item name="userId" label="Workspace User" rules={[{ required: true, message: 'Please select a user.' }]}>
                 <Select
-                  placeholder="Select an organization"
-                  onChange={handleOrgChange}
-                  options={organizations.map(org => ({ value: org.id, label: org.name }))}
-                />
-              </Form.Item>
-
-              <Form.Item name="userId" label="User" rules={[{ required: true, message: 'Please select a user.' }]}>
-                <Select
-                  placeholder="Select a user"
-                  disabled={!users.length}
-                  options={users.map(user => ({
-                    value: user.id,
-                    label: `${user.first_name} ${user.last_name} (${user.email})`
-                  }))}
+                  showSearch
+                  placeholder="Select a user from your workspace"
+                  optionFilterProp="label"
+                  filterOption={(input, option) =>
+                    String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={users.map(user => {
+                    const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Unnamed User';
+                    const currentRole = user.role ? ` · Current: ${user.role}` : '';
+                    return {
+                      value: user.id,
+                      label: `${fullName} (${user.email})${currentRole}`
+                    };
+                  })}
                 />
               </Form.Item>
 
