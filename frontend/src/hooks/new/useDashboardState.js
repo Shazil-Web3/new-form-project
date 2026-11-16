@@ -179,7 +179,7 @@ export default function useDashboardState(initialType, user, initialActiveTab) {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 30;
 
-  const fetchData = async () => {
+  const fetchData = async (forceRefresh = false) => {
     if (!user) return;
     const userId = user.id || user.userId;
     const orgId = user.organization_id || user.orgId || user.org_id;
@@ -197,13 +197,27 @@ export default function useDashboardState(initialType, user, initialActiveTab) {
         apiClient.get('/api/users').catch(() => apiClient.get(`/api/org_members/${userId}`))
       ]);
 
-      setTemplates(tRes.status === 'fulfilled' && Array.isArray(tRes.value) ? tRes.value : []);
+      const fetchedTemplates = tRes.status === 'fulfilled' && Array.isArray(tRes.value) ? tRes.value : [];
+      const fetchedDocs = dRes.status === 'fulfilled' && Array.isArray(dRes.value) ? dRes.value : [];
+
+      setTemplates(fetchedTemplates);
       setCategories(cRes.status === 'fulfilled' && Array.isArray(cRes.value) ? cRes.value : []);
-      setDocuments(dRes.status === 'fulfilled' && Array.isArray(dRes.value) ? dRes.value : []);
+      setDocuments(fetchedDocs);
       setDepartments(deptsRes.status === 'fulfilled' && Array.isArray(deptsRes.value) ? deptsRes.value : []);
       if (usersRes.status === 'fulfilled') {
         const rawUsers = usersRes.value?.data;
         setUsers(Array.isArray(rawUsers) ? rawUsers : rawUsers?.data || []);
+      }
+
+      // Self-healing: if workspace is empty (0 templates and 0 documents), automatically trigger backend auto-heal
+      if (!forceRefresh && fetchedTemplates.length === 0 && fetchedDocs.length === 0) {
+        try {
+          const healRes = await apiClient.post('/api/system/auto-heal-workspace');
+          if (healRes.data?.success && (healRes.data.documentsCount > 0 || healRes.data.templatesCount > 0)) {
+            fetchData(true);
+            return;
+          }
+        } catch (_) {}
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);

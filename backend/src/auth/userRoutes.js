@@ -149,6 +149,14 @@ module.exports = function registerUserRoutes({
       const template_approver = 'no';
       const userId = await dbOps.registerUser(orgId, email, password, firstName, lastName, assignedRole, department, template_approver);
       
+      // Auto-provision starter templates, departments, and sample items for newly registered organizations
+      try {
+        const { seedDefaults } = require('../config/seedDefaults');
+        await seedDefaults(pool, orgId, userId);
+      } catch (provErr) {
+        console.warn('Notice auto-provisioning organization defaults:', provErr.message);
+      }
+      
       if (logAuditEvent) {
         await logAuditEvent(pool, {
           orgId,

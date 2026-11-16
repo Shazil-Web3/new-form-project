@@ -31,6 +31,7 @@ const { runGanttMigration } = require('./config/ganttMigration');
 const { runLmsMigration } = require('./config/lmsMigration');
 const { runRelatedDocumentsMigration } = require('./config/relatedDocumentsMigration');
 const { revertExpiredTemporaryUsers } = require('./auth/tempViewSweeper');
+const { seedDefaults } = require('./config/seedDefaults');
 
 
 // Ensure local uploads directory exists
@@ -1325,6 +1326,9 @@ async function runMigrations() {
 
     // 11. Run Training / LMS Module Migration
     await runLmsMigration(pool);
+
+    // 12. Run Workspace Baseline Seeder & Self-Healing
+    await seedDefaults(pool);
   } catch (err) {
     console.error('❌ Error running database migrations on startup:', err);
   }
@@ -1351,6 +1355,47 @@ const tokenCleanupTimer = setInterval(cleanupExpiredTokens, 24 * 60 * 60 * 1000)
 if (tokenCleanupTimer && tokenCleanupTimer.unref) {
   tokenCleanupTimer.unref();
 }
+
+// Workspace Self-Healing and Health Diagnostic Endpoints
+app.post('/api/system/auto-heal-workspace', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const orgId = req.user.organization_id || req.user.orgId;
+    await seedDefaults(pool, orgId, userId);
+
+    const [d] = await pool.execute('SELECT count(*) as count FROM documents WHERE organization_id = ?', [orgId]);
+    const [t] = await pool.execute('SELECT count(*) as count FROM templates WHERE organization_id = ?', [orgId]);
+    res.json({
+      success: true,
+      message: 'Workspace successfully healed and initialized with starter data.',
+      documentsCount: d[0]?.count || 0,
+      templatesCount: t[0]?.count || 0
+    });
+  } catch (err) {
+    console.error('Error in auto-heal-workspace:', err);
+    res.status(500).json({ error: 'Failed to auto-heal workspace', details: err.message });
+  }
+});
+
+app.get('/api/system/workspace-health', authenticateToken, async (req, res) => {
+  try {
+    const orgId = req.user.organization_id || req.user.orgId;
+    const [d] = await pool.execute('SELECT count(*) as count FROM documents WHERE organization_id = ?', [orgId]);
+    const [t] = await pool.execute('SELECT count(*) as count FROM templates WHERE organization_id = ?', [orgId]);
+    const [u] = await pool.execute('SELECT count(*) as count FROM users WHERE organization_id = ?', [orgId]);
+    const [dept] = await pool.execute('SELECT count(*) as count FROM departments WHERE organization_id = ?', [orgId]);
+    res.json({
+      healthy: (d[0]?.count > 0 || t[0]?.count > 0),
+      organizationId: orgId,
+      documentsCount: d[0]?.count || 0,
+      templatesCount: t[0]?.count || 0,
+      usersCount: u[0]?.count || 0,
+      departmentsCount: dept[0]?.count || 0
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to inspect workspace health', details: err.message });
+  }
+});
 
 // Endpoint to check & revert expired temporary view sessions
 app.post('/api/rbac/revert-expired', authenticateToken, async (req, res) => {

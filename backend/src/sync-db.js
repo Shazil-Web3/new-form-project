@@ -328,6 +328,14 @@ async function syncDatabase() {
       console.log('  ℹ️ Workflow migration skipped or notice:', wfErr.message);
     }
 
+    try {
+      const { seedDefaults } = require('./config/seedDefaults');
+      console.log('🔧 Step 13: Running Workspace Seeder & Self-Healing...');
+      await seedDefaults(connection);
+    } catch (seedErr) {
+      console.log('  ℹ️ Seeder notice:', seedErr.message);
+    }
+
     console.log('\n========================================');
     console.log('  ✅ DATABASE SYNCHRONIZATION COMPLETE! ');
     console.log('  You can now run: npm start or nodemon server.js');

@@ -9,8 +9,19 @@ const apiClient = axios.create({
   },
 });
 
+// Ensure proper cache-control headers on API requests
+apiClient.defaults.headers.common['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+apiClient.defaults.headers.common['Pragma'] = 'no-cache';
+apiClient.defaults.headers.common['Expires'] = '0';
+
 // Helper to attach authorization header from storage
 const attachAuthToken = (config) => {
+  // Add dynamic cache-busting timestamp to GET requests to prevent browser caching stale data
+  if (config.method === 'get') {
+    config.params = config.params || {};
+    config.params['_t'] = Date.now();
+  }
+
   const savedTokens = localStorage.getItem('auth_tokens');
   if (savedTokens) {
     try {

@@ -699,7 +699,11 @@ app.post('/api/tasks', authenticateToken, async (req, res) => {
 
 app.get('/api/documents', authenticateToken, async (req, res) => {
   try {
-    const docs = await dbOps.getUserAccessibleDocuments(req.user.userId);
+    const userId = req.user.userId || req.user.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID not found in token' });
+    }
+    const docs = await dbOps.getUserAccessibleDocuments(userId);
     res.json(docs);
   } catch (error) {
     console.error('Error fetching documents list:', error);
@@ -710,7 +714,10 @@ app.get('/api/documents', authenticateToken, async (req, res) => {
 
 app.get('/api/tasks/:userId', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID not found in token' });
+    }
     const [tasks] = await pool.execute(
       `SELECT t.* FROM tasks t 
        JOIN taskassignments ta ON t.id = ta.task_id 
@@ -730,9 +737,13 @@ app.post('/api/create-task', authenticateToken, async (req, res) => {
     const { title, description, due_date, priority, assigned_to, document_id, created_by } = req.body;
 
     // Get user's organization_id
+    const userId = req.user.userId || req.user.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID not found in token' });
+    }
     const [user] = await pool.execute(
       'SELECT organization_id FROM users WHERE id = ?',
-      [req.user.userId]
+      [userId]
     );
 
     if (!user.length) {

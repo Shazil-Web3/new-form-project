@@ -98,7 +98,10 @@ app.get('/api/check-name-conflict', authenticateToken, async (req, res) => {
 //Route Get Documents
 app.get('/api/all-docs', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID not found in token' });
+    }
     const docs = await dbOps.getUserAccessibleDocuments(userId);
     res.json(docs);
   } catch (error) {
@@ -109,7 +112,10 @@ app.get('/api/all-docs', authenticateToken, async (req, res) => {
 
 app.get('/api/my-docs/:userId', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID not found in token' });
+    }
     const docs = await dbOps.getUserAccessibleDocuments(userId);
     res.json(docs);
   } catch (error) {

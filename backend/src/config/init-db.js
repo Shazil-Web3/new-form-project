@@ -54,6 +54,9 @@ async function initDb() {
     const { runPhase6bMigration } = require("./phase6bMigration");
     await runPhase6bMigration(connection);
 
+    const { seedDefaults } = require("./seedDefaults");
+    await seedDefaults(connection);
+
 
     await connection.end();
     console.log("Database setup complete! You can now run 'npm start'.");
